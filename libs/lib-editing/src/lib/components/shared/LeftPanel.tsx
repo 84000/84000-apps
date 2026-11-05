@@ -31,14 +31,13 @@ export const LeftPanel = ({
    */
   isEditor?: boolean;
 }) => {
-  const { panels, toh, updatePanel, setToh } = useNavigation();
+  const { panels, toh, updatePanel, setDefaultToh } = useNavigation();
   const isMobile = useIsMobile();
   useTohToggle({ toh });
 
   useEffect(() => {
-    const currentToh = toh || work.toh[0] || '';
-    setToh(currentToh);
-  }, [toh, work.toh, setToh]);
+    if (work.toh[0]) setDefaultToh(work.toh[0]);
+  }, [work.toh, setDefaultToh]);
 
   return (
     <Tabs

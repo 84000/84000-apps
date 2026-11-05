@@ -5,7 +5,7 @@ import { useStackTohVisibility } from './useStackTohVisibility';
 
 const mockNavigation = {
   toh: undefined as TohokuCatalogEntry | undefined,
-  setToh: jest.fn(),
+  setDefaultToh: jest.fn(),
 };
 const mockApplied: (TohokuCatalogEntry | undefined)[] = [];
 
@@ -20,7 +20,7 @@ jest.mock('../shared/hooks/useTohToggle', () => ({
 
 beforeEach(() => {
   mockNavigation.toh = undefined;
-  mockNavigation.setToh.mockClear();
+  mockNavigation.setDefaultToh.mockClear();
   mockApplied.length = 0;
 });
 
@@ -30,17 +30,17 @@ describe('useStackTohVisibility', () => {
 
     // "A default toh should be selected on load" — otherwise no scope is
     // active and the rule below hides every scoped annotation.
-    expect(mockNavigation.setToh).toHaveBeenCalledWith('toh145');
+    expect(mockNavigation.setDefaultToh).toHaveBeenCalledWith('toh145');
   });
 
-  it('leaves an already-active toh alone', () => {
+  it('offers the first entry only as a default', () => {
     mockNavigation.toh = 'toh847';
 
     renderHook(() => useStackTohVisibility({ tohList: ['toh145', 'toh847'] }));
 
-    // `NavigationProvider` resolves `?toh=` and `initialToh`; this must not
-    // overwrite either with the work's first entry.
-    expect(mockNavigation.setToh).toHaveBeenCalledWith('toh847');
+    // `NavigationProvider` resolves `?toh=` and `initialToh`; a default never
+    // overwrites either.
+    expect(mockNavigation.setDefaultToh).toHaveBeenCalledWith('toh145');
     expect(mockApplied).toContain('toh847');
   });
 
@@ -55,6 +55,6 @@ describe('useStackTohVisibility', () => {
   it('asks for no default when the work has no Tohoku entries', () => {
     renderHook(() => useStackTohVisibility({ tohList: [] }));
 
-    expect(mockNavigation.setToh).not.toHaveBeenCalled();
+    expect(mockNavigation.setDefaultToh).not.toHaveBeenCalled();
   });
 });

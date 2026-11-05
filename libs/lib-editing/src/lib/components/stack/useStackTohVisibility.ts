@@ -16,14 +16,13 @@ export const useStackTohVisibility = ({
   /** The work's Tohoku entries, most canonical first. */
   tohList: TohokuCatalogEntry[];
 }) => {
-  const { toh, setToh } = useNavigation();
+  const { toh, setDefaultToh } = useNavigation();
 
   useTohToggle({ toh });
 
   useEffect(() => {
-    const next = toh || tohList[0];
-    if (next) setToh(next);
-  }, [toh, tohList, setToh]);
+    if (tohList[0]) setDefaultToh(tohList[0]);
+  }, [tohList, setDefaultToh]);
 
   return toh;
 };

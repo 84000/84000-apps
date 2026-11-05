@@ -102,6 +102,12 @@ export const NavigationProvider = ({
   const [urlRead, setUrlRead] = useState(false);
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(initialToh);
+  // An update, not a value: a panel hydrated late runs its effects with the
+  // Toh it was rendered with, which can predate the one the URL named.
+  const setDefaultToh = useCallback(
+    (fallback: TohokuCatalogEntry) => setToh((prev) => prev || fallback),
+    [],
+  );
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [highlight, setHighlight] = useState<HighlightRange | undefined>();
@@ -389,6 +395,7 @@ export const NavigationProvider = ({
       focusedComment,
       commentsRevision,
       setToh,
+      setDefaultToh,
       setShowOuterContent,
       setHasTranslationContent,
       setFocusMode,
@@ -416,6 +423,7 @@ export const NavigationProvider = ({
       focusedComment,
       commentsRevision,
       setToh,
+      setDefaultToh,
       setShowOuterContent,
       setHasTranslationContent,
       setFocusMode,

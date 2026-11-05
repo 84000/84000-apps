@@ -51,6 +51,11 @@ export interface NavigationState {
    */
   commentsRevision: number;
   setToh: (toh: TohokuCatalogEntry) => void;
+  /**
+   * Makes `toh` active unless one already is, so a default set on mount never
+   * wins over the Toh the URL named.
+   */
+  setDefaultToh: (toh: TohokuCatalogEntry) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;
   setFocusMode: (focusMode: boolean) => void;
@@ -114,6 +119,9 @@ export const NavigationContext = createContext<NavigationState>({
     throw new Error('Not implemented');
   },
   setToh: () => {
+    throw new Error('Not implemented');
+  },
+  setDefaultToh: () => {
     throw new Error('Not implemented');
   },
   setShowOuterContent: () => {
