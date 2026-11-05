@@ -320,7 +320,10 @@ const PrintDocumentView = ({
   </div>
 );
 
-/** Starts printing the whole text. Draws nothing outside a stack reader. */
+/**
+ * Starts printing the whole text. Draws nothing outside a stack reader, and
+ * is left out of the narrow header, which has no room for it.
+ */
 export const StackPrintButton = () => {
   const print = useContext(StackPrintContext);
   if (!print) return null;
@@ -328,7 +331,7 @@ export const StackPrintButton = () => {
     <Button
       variant="ghost"
       size="icon"
-      className="cursor-pointer [&_svg]:size-5 md:[&_svg]:size-7 size-6 md:size-9 [&_svg]:stroke-1 text-accent hover:text-accent hover:bg-muted"
+      className="hidden md:inline-flex cursor-pointer [&_svg]:size-5 md:[&_svg]:size-7 size-6 md:size-9 [&_svg]:stroke-1 text-accent hover:text-accent hover:bg-muted"
       onClick={print}
     >
       <Printer />
