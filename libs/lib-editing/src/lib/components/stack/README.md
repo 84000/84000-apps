@@ -104,12 +104,12 @@ to a row that is not drawn.
 
 Not carried over, and why:
 
-|                              |                                                                                                                                                                                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The references list          | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past.                                                           |
-| The compare source column    | Compare mode is DEV-743's, and its surface is undecided.                                                                                                                                                                                                                            |
-| `data-toh` on the row        | Correct, but the wrong mechanism: the annotation rule is `display: none`, and the virtualizer keeps a row's last measured size, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below. |
-| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only visible in the endnotes panel, which the stack does not surface yet.                                                                   |
+|                              |                                                                                                                                                                                                                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The references list          | Endnote back-links, and the only source for them is `Passage.references`, which neither the spine's metadata query nor the passage snapshot carries. Worth its own measurement rather than a field added on the way past.                                                                                  |
+| The compare source column    | Compare mode is DEV-743's, and its surface is undecided.                                                                                                                                                                                                                                                   |
+| `data-toh` on the row        | Correct, but the wrong mechanism: the annotation rule is `display: none`, and the virtualizer keeps a row's last measured size, so hiding one leaves a hole the size of the passage. Which passages a toh shows is a question about order — `getOrder` now filters them, see below.                        |
+| Endnote per-slot renumbering | `deleteEndnotePassageNode` keeps one label across the per-text variants of an endnote slot; `Spine.renumberFrom` numbers every passage. Only deleting a note in the stack editor would number the variants apart: the reader draws the stored labels, one marker and one note per slot for the active Toh. |
 
 ### Read-only mode
 
@@ -560,7 +560,17 @@ the inactive ones, or every scope shows at once: two endnote markers numbered
 `useStackTohVisibility({ tohList })`, which installs the rule and settles on a
 default so one toh is always active. The active toh itself comes from
 `NavigationProvider`, which already reads `?toh=` and falls back to its
-`initialToh`.
+`initialToh`. Both panels offer their default through `setDefaultToh`, which
+only fills an empty toh, or replaces one the work does not have: a panel that
+hydrates after the URL is read must not put the work's first toh back over the
+URL's. Only a catalogued toh (`canonicalToh`) gets into the rule, since a URL
+can carry anything.
+
+The rule is installed by an effect, so markup the server draws for another toh
+shows until scripts run. `ReaderLayout` also draws it with the page
+(`TohVisibilityStyle`), for the toh it is given as `initialToh`. A host that
+knows the link's toh on the server passes it there: web-reader's proxy puts
+`?toh=` in the path for its layout to read.
 
 The stack does not do this unprompted: with no `NavigationProvider` above it the
 active toh would be `undefined`, and the rule for that hides _all_ scoped

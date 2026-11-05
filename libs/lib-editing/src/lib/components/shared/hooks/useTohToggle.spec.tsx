@@ -1,6 +1,11 @@
-import { renderHook } from '@testing-library/react';
+import { render, renderHook } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
-import { useTohToggle } from './useTohToggle';
+import {
+  TohVisibilityStyle,
+  tohHiddenSelector,
+  useTohToggle,
+} from './useTohToggle';
 
 const getSheet = () => {
   const styleEl = document.getElementById(
@@ -80,13 +85,65 @@ describe('useTohToggle', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not throw on toh values that are not valid CSS identifiers', () => {
+  // No catalogued Toh has one (production's every value was checked on
+  // 2026-11-05), so it reads as no Toh: everything scoped is hidden.
+  it('does not throw on toh values that are not catalogued', () => {
     expect(() =>
       renderHook(() => useTohToggle({ toh: 'toh4.1' as TohokuCatalogEntry })),
     ).not.toThrow();
 
     const sheet = getSheet();
     expect(sheet?.cssRules.length).toBe(1);
-    expect(sheet?.cssRules[0].cssText).toContain('[data-toh="toh4.1"]');
+    expect((sheet?.cssRules[0] as CSSStyleRule).selectorText).toBe(
+      '[data-toh]',
+    );
+  });
+});
+
+describe('TohVisibilityStyle', () => {
+  it('draws the rule with the page', () => {
+    const html = renderToString(<TohVisibilityStyle toh="toh847" />);
+
+    expect(html).toContain('[data-toh]:not([data-toh="toh847"])');
+    expect(html).toContain('display: none');
+  });
+
+  it('hides the markup of every other toh, and keeps shared markup', () => {
+    const { container } = render(
+      <>
+        <TohVisibilityStyle toh="toh847" />
+        <span data-toh="toh145">a</span>
+        <span data-toh="toh847">b</span>
+        <span data-toh="toh145,toh847">c</span>
+      </>,
+    );
+    const shown = [...container.querySelectorAll('span')]
+      .filter((el) => getComputedStyle(el).display !== 'none')
+      .map((el) => el.textContent);
+
+    expect(shown).toEqual(['b', 'c']);
+  });
+
+  it('draws nothing until a toh is active', () => {
+    expect(renderToString(<TohVisibilityStyle />)).toBe('');
+  });
+});
+
+// The Toh can come from the URL, and the server draws the rule into a <style>.
+describe('a Toh that is not catalogued', () => {
+  const hostile = [
+    'toh8"]{}body{display:none}[x="',
+    'toh8\n}body{display:none}',
+    'toh8</style><script>alert(1)</script>',
+    'toh8\\"]',
+  ] as unknown as TohokuCatalogEntry[];
+
+  it.each(hostile)('selects everything scoped for %j', (toh) => {
+    expect(tohHiddenSelector(toh)).toBe('[data-toh]');
+  });
+
+  it.each(hostile)('draws no rule on the server for %j', (toh) => {
+    const html = renderToString(<TohVisibilityStyle toh={toh} />);
+    expect(html).toBe('');
   });
 });

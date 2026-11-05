@@ -1,4 +1,4 @@
-import { RightPanelPage } from '../../../../reader-renderer';
+import { RightPanelPage } from '../../../../../reader-renderer';
 
 /**
  * Fallback for the `@right` slot when Next cannot match it to the current URL.

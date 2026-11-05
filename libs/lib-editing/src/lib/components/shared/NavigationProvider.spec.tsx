@@ -444,6 +444,91 @@ describe('NavigationProvider static rendering', () => {
     expect(new URLSearchParams(window.location.search).get('toh')).toBe('toh2');
   });
 
+  // A panel hydrated after the URL is read runs its mount effects with the toh
+  // it was rendered with, from before the URL's.
+  it('keeps the toh in the URL over a default set from a stale render', () => {
+    let staleDefault: (() => void) | undefined;
+    const LateDefault = () => {
+      const { setDefaultToh } = useNavigation();
+      useEffect(() => {
+        staleDefault = () => setDefaultToh('toh1');
+      }, [setDefaultToh]);
+      return null;
+    };
+    const TohProbe = () => <span data-testid="toh">{useNavigation().toh}</span>;
+    window.history.replaceState(null, '', '/?toh=toh2');
+
+    render(
+      <NavigationProvider uuid="w1">
+        <LateDefault />
+        <TohProbe />
+      </NavigationProvider>,
+    );
+    act(() => staleDefault?.());
+
+    expect(screen.getByTestId('toh').textContent).toBe('toh2');
+    expect(new URLSearchParams(window.location.search).get('toh')).toBe('toh2');
+  });
+
+  // The server draws the work's first Toh for a link naming one it does not
+  // have; the client must not then switch to the link's.
+  it('replaces a toh in the URL that the work does not have', () => {
+    const Default = () => {
+      const { toh, setDefaultToh } = useNavigation();
+      useEffect(
+        () => setDefaultToh('toh1', ['toh1', 'toh2']),
+        [toh, setDefaultToh],
+      );
+      return <span data-testid="toh">{toh}</span>;
+    };
+    window.history.replaceState(null, '', '/?toh=toh999');
+    render(
+      <NavigationProvider uuid="w1" initialToh="toh1">
+        <Default />
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByTestId('toh').textContent).toBe('toh1');
+    expect(new URLSearchParams(window.location.search).get('toh')).toBe('toh1');
+  });
+
+  it('keeps a toh in the URL that the work has', () => {
+    const Default = () => {
+      const { toh, setDefaultToh } = useNavigation();
+      useEffect(
+        () => setDefaultToh('toh1', ['toh1', 'toh2']),
+        [toh, setDefaultToh],
+      );
+      return <span data-testid="toh">{toh}</span>;
+    };
+    window.history.replaceState(null, '', '/?toh=toh2');
+
+    render(
+      <NavigationProvider uuid="w1" initialToh="toh1">
+        <Default />
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByTestId('toh').textContent).toBe('toh2');
+  });
+
+  it('takes a default when nothing names a toh', () => {
+    const Default = () => {
+      const { toh, setDefaultToh } = useNavigation();
+      useEffect(() => setDefaultToh('toh1'), [setDefaultToh]);
+      return <span data-testid="toh">{toh}</span>;
+    };
+    window.history.replaceState(null, '', '/');
+
+    render(
+      <NavigationProvider uuid="w1">
+        <Default />
+      </NavigationProvider>,
+    );
+
+    expect(screen.getByTestId('toh').textContent).toBe('toh1');
+  });
+
   it('closes a right panel the URL opens when there is no translation', () => {
     window.history.replaceState(null, '', '/?right=open:glossary');
 

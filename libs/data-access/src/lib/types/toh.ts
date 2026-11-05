@@ -59,6 +59,21 @@ export const normalizeToh = (
   return `toh${base}${letter ?? ''}` as TohokuCatalogEntry;
 };
 
+/**
+ * `value` when it is already a Toh in its catalogued form, as `normalizeToh`
+ * writes it, and `undefined` otherwise.
+ *
+ * Unlike `normalizeToh` it reads nothing loosely, so use it where an untrusted
+ * value reaches markup, a selector or a path: what passes is `toh` followed by
+ * digits, with at most a numbered or lettered suffix.
+ */
+export const canonicalToh = (
+  value?: string | null,
+): TohokuCatalogEntry | undefined => {
+  const toh = normalizeToh(value);
+  return toh && toh === value ? toh : undefined;
+};
+
 /** The `1069` and `1073` of a note reading "Toh 1069-1073", either dash. */
 const NUMERIC_RANGE = /(\d+)\s*[-–—]\s*(\d+)/g;
 

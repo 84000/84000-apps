@@ -8,7 +8,7 @@ released. Anonymous and read-only, with no sign-in. Not deployed.
 
 - `/` — redirects to `/translation`
 - `/translation` — index of published works
-- `/translation/[slug]` — the reader, with parallel routes (`@left`, `@main`, `@right`). A Toh slug (`toh8`) redirects to the work's uuid, keeping the query (`src/proxy.ts`). Unpublished and unknown works 404
+- `/translation/[slug]` — the reader, with parallel routes (`@left`, `@main`, `@right`) under `[slug]/[toh]`. A Toh slug (`toh8`) redirects to the work's uuid, keeping the query, and a uuid path is rewritten to carry `?toh=` as its `[toh]` segment (`default` when there is none), so the server draws that Toh's reading (`src/proxy.ts`). Unpublished and unknown works 404
 - `/translation/entity/[type]/[slug]` — resolves a passage, glossary, bibliography, folio, work or translation to its place in the reader
 - Short links, as in the public reader: `/toh8` (proxy) and `/entity/...` (rewrite in `next.config.js`)
 

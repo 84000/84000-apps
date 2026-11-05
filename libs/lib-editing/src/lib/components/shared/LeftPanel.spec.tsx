@@ -23,7 +23,7 @@ jest.mock('./NavigationProvider', () => ({
     panels: { left: { open: true, tab: 'toc' } },
     toh: 'toh251',
     updatePanel: mockUpdatePanel,
-    setToh: jest.fn(),
+    setDefaultToh: jest.fn(),
   }),
 }));
 

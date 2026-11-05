@@ -1,4 +1,4 @@
-import { MainPanelPage } from '../../../../reader-renderer';
+import { MainPanelPage } from '../../../../../reader-renderer';
 
 /**
  * Fallback for the `@main` slot when Next cannot match it to the current URL.

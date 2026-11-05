@@ -6,7 +6,7 @@ import {
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import { notFound } from 'next/navigation';
 import { ReactNode, Suspense } from 'react';
-import { Layout as ReaderLayout } from '../../../reader-renderer';
+import { Layout as ReaderLayout } from '../../../../reader-renderer';
 
 const Layout = async ({
   left,
@@ -17,9 +17,9 @@ const Layout = async ({
   left: ReactNode;
   main: ReactNode;
   right: ReactNode;
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string; toh: string }>;
 }) => {
-  const { slug } = await params;
+  const { slug, toh } = await params;
 
   // Toh slugs are redirected to the uuid by the proxy; anything else is unknown.
   if (!isUuid(slug)) {
@@ -37,11 +37,21 @@ const Layout = async ({
     notFound();
   }
 
+  // The Toh the link names, put in the path by the proxy so the server draws
+  // that reading; the work's first otherwise.
+  const initialToh = work.toh.find((entry) => entry === toh) ?? work.toh[0];
+
   return (
     // ReaderLayout's NavigationProvider reads search params, which needs a
     // Suspense boundary.
     <Suspense>
-      <ReaderLayout left={left} main={main} right={right} params={params} />
+      <ReaderLayout
+        left={left}
+        main={main}
+        right={right}
+        params={params}
+        initialToh={initialToh}
+      />
     </Suspense>
   );
 };
