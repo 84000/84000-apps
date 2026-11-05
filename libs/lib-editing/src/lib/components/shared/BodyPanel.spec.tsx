@@ -78,3 +78,26 @@ describe('BodyPanel imprint', () => {
     expect(screen.queryByText('the title details')).toBeNull();
   });
 });
+
+describe('BodyPanel tab strip', () => {
+  it('sizes the tabs compactly below sm and restores the default from sm up', () => {
+    renderPanel();
+
+    // The strip shares the toolbar row with the action buttons, so on a
+    // phone it must fit the room between them (no clipped "Source").
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Front',
+      'Translation',
+      'Source',
+    ]);
+    for (const tab of tabs) {
+      expect(tab.className).toContain('text-xs');
+      expect(tab.className).toContain('sm:text-sm');
+      expect(tab.className).toContain('px-0.5');
+      expect(tab.className).toContain('sm:px-1');
+    }
+    expect(screen.getByRole('tablist').className).toContain('gap-0.5');
+    expect(screen.getByRole('tablist').className).toContain('sm:gap-3');
+  });
+});
