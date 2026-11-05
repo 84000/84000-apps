@@ -59,7 +59,15 @@ const status = (
   ...overrides,
 });
 
+// On fake timers, findBy* and waitFor advance the clock themselves, so their
+// waits are counted in timer steps rather than against a wall-clock budget that
+// a loaded machine can use up. user-event waits between actions on the same
+// clock, so it has to be told how to advance it.
+let user: ReturnType<typeof userEvent.setup>;
+
 beforeEach(() => {
+  jest.useFakeTimers();
+  user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   jest.clearAllMocks();
   mockGetPublishStatuses.mockResolvedValue([]);
   mockGetPublishReadiness.mockResolvedValue({
@@ -69,6 +77,11 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => jest.useRealTimers());
+
+const bulkButton = () =>
+  screen.getByRole('button', { name: /^Check \d+ works?$/ });
+
 const renderTable = async () => {
   render(
     <TooltipProvider>
@@ -76,10 +89,10 @@ const renderTable = async () => {
     </TooltipProvider>,
   );
   await waitFor(() => expect(mockGetPublishStatuses).toHaveBeenCalled());
+  // The bulk button reads "Check 3 works" from the first render, but stays
+  // disabled until the statuses have loaded: a click before then does nothing.
+  await waitFor(() => expect(bulkButton()).toHaveProperty('disabled', false));
 };
-
-const bulkButton = () =>
-  screen.getByRole('button', { name: /^Check \d+ works?$/ });
 
 describe('DiagnosticsTable bulk check', () => {
   it('counts every work when nothing is filtered', async () => {
@@ -91,7 +104,7 @@ describe('DiagnosticsTable bulk check', () => {
     await renderTable();
     await screen.findByText('Check 3 works');
 
-    await userEvent.type(
+    await user.type(
       screen.getByPlaceholderText('Search translations...'),
       'Ornament',
     );
@@ -99,7 +112,7 @@ describe('DiagnosticsTable bulk check', () => {
     // Singular, and only the matching work — the filter is the selection.
     await waitFor(() => expect(screen.getByText('Check 1 work')).toBeTruthy());
 
-    await userEvent.click(bulkButton());
+    await user.click(bulkButton());
 
     await waitFor(() =>
       expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1),
@@ -119,11 +132,11 @@ describe('DiagnosticsTable bulk check', () => {
     await renderTable();
     await screen.findByText('Check 3 works');
 
-    await userEvent.click(screen.getByLabelText('Cannot publish only'));
+    await user.click(screen.getByLabelText('Cannot publish only'));
 
     await waitFor(() => expect(screen.getByText('Check 1 work')).toBeTruthy());
 
-    await userEvent.click(bulkButton());
+    await user.click(bulkButton());
 
     await waitFor(() =>
       expect(mockGetPublishReadiness).toHaveBeenCalledTimes(1),
@@ -144,7 +157,7 @@ describe('DiagnosticsTable bulk check', () => {
 
     await renderTable();
 
-    await userEvent.click(await screen.findByText('Check 3 works'));
+    await user.click(await screen.findByText('Check 3 works'));
 
     await waitFor(() =>
       expect(mockGetPublishReadiness).toHaveBeenCalledTimes(3),
@@ -155,7 +168,7 @@ describe('DiagnosticsTable bulk check', () => {
     await renderTable();
     expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(await screen.findByText('Check 3 works'));
+    await user.click(await screen.findByText('Check 3 works'));
 
     await waitFor(() =>
       expect(mockGetPublishStatuses).toHaveBeenCalledTimes(2),
@@ -183,7 +196,7 @@ describe('DiagnosticsTable per-row check', () => {
   it('checks only the work whose button was clicked', async () => {
     await renderTable();
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole('button', {
         name: 'Check A Multitude of Buddhas',
       }),
@@ -201,7 +214,7 @@ describe('DiagnosticsTable per-row check', () => {
     await renderTable();
     expect(mockGetPublishStatuses).toHaveBeenCalledTimes(1);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole('button', {
         name: 'Check The Play in Full',
       }),
@@ -225,7 +238,7 @@ describe('DiagnosticsTable per-row check', () => {
     const button = await screen.findByRole('button', {
       name: 'Check The Play in Full',
     });
-    await userEvent.click(button);
+    await user.click(button);
 
     await waitFor(() =>
       expect(
@@ -245,7 +258,7 @@ describe('DiagnosticsTable per-row check', () => {
     await renderTable();
 
     const row = (await screen.findByText('The Play in Full')).closest('tr');
-    await userEvent.click(
+    await user.click(
       within(row as HTMLElement).getByRole('button', {
         name: 'Check The Play in Full',
       }),
@@ -264,7 +277,7 @@ describe('DiagnosticsTable navigation', () => {
     // `right=open:publishing` would open the back matter on a tab that is not there.
     await renderTable();
 
-    await userEvent.click(await screen.findByText('The Play in Full'));
+    await user.click(await screen.findByText('The Play in Full'));
 
     expect(mockPush).toHaveBeenCalledWith(
       '/translations/editor/w1?left=open:publishing',

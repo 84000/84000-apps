@@ -61,8 +61,12 @@ jest.mock('../NavigationProvider', () => ({
   }),
 }));
 
+// One array for every render, as the real hook keeps: a new one each render
+// re-ran the panel's read effect, which re-rendered it, in a loop that read the
+// comments hundreds of times a second for as long as a test ran.
+const mockVisiblePassageUuids = ['p1'];
 jest.mock('./useVisiblePassageUuids', () => ({
-  useVisiblePassageUuids: () => ['p1'],
+  useVisiblePassageUuids: () => mockVisiblePassageUuids,
 }));
 
 const thread = (
@@ -112,7 +116,15 @@ const markInText = (commentUuid: string) => {
   return anchor;
 };
 
+// On fake timers, findBy* and waitFor advance the clock themselves, so their
+// waits are counted in timer steps rather than against a wall-clock budget that
+// a loaded machine can use up. user-event waits between actions on the same
+// clock, so it has to be told how to advance it.
+let user: ReturnType<typeof userEvent.setup>;
+
 beforeEach(() => {
+  jest.useFakeTimers();
+  user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   jest.clearAllMocks();
   mockNavigation.focusedComment = undefined;
   Element.prototype.scrollIntoView = jest.fn();
@@ -125,6 +137,8 @@ beforeEach(() => {
   document.body.innerHTML = '';
   window.history.replaceState(null, '', '/');
 });
+
+afterEach(() => jest.useRealTimers());
 
 describe('CommentsPanel', () => {
   it('shows a thread beside the passage it annotates', async () => {
@@ -184,9 +198,7 @@ describe('CommentsPanel', () => {
     expect(anchorRules()).toContain('[comment="done"]');
     expect(anchorRules()).not.toContain('[comment="live"]');
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Show 1 resolved' }),
-    );
+    await user.click(screen.getByRole('button', { name: 'Show 1 resolved' }));
 
     expect(anchorRules()).not.toContain('[comment="done"]');
   });
@@ -233,7 +245,7 @@ describe('CommentsPanel', () => {
     });
     expect(screen.queryByText('body of done')).toBeNull();
 
-    await userEvent.click(toggle);
+    await user.click(toggle);
 
     expect(screen.getByText('body of done')).toBeTruthy();
   });
@@ -325,9 +337,9 @@ describe('CommentsPanel', () => {
     render(<CommentsPanel workUuid="w1" />);
     await screen.findByText('body of root');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Reply' }));
-    await userEvent.type(screen.getByRole('textbox'), 'Noted.');
-    await userEvent.click(screen.getByRole('button', { name: 'Reply' }));
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
+    await user.type(screen.getByRole('textbox'), 'Noted.');
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
 
     // The composer emits a fragment: a comment is stored as HTML.
     expect(mockReplyToComment).toHaveBeenCalledWith(
@@ -353,7 +365,7 @@ describe('CommentsPanel', () => {
     ]);
 
     render(<CommentsPanel workUuid="w1" />);
-    await userEvent.click(await screen.findByText('body of t1'));
+    await user.click(await screen.findByText('body of t1'));
 
     expect(mockGetBibliographyComments).toHaveBeenCalledWith(
       expect.objectContaining({ workUuid: 'w1' }),
@@ -417,7 +429,7 @@ describe('CommentsPanel', () => {
     ]);
 
     render(<CommentsPanel workUuid="w1" />);
-    await userEvent.click(await screen.findByText('body of t1'));
+    await user.click(await screen.findByText('body of t1'));
 
     // A summary passage is read in the front matter, not the body.
     expect(mockUpdatePanel).toHaveBeenCalledWith({
@@ -434,7 +446,7 @@ describe('CommentsPanel', () => {
     );
 
     render(<CommentsPanel workUuid="w1" />);
-    await userEvent.click(await screen.findByText('body of gone'));
+    await user.click(await screen.findByText('body of gone'));
 
     expect(mockUpdatePanel).not.toHaveBeenCalled();
     expect(mockSetFocusedComment).toHaveBeenCalledWith('gone');
@@ -477,14 +489,14 @@ describe('CommentsPanel', () => {
     render(<CommentsPanel workUuid="w1" />);
     await screen.findByText('body of r1');
 
-    await userEvent.click(screen.getByRole('button', { name: /Hide replies/ }));
+    await user.click(screen.getByRole('button', { name: /Hide replies/ }));
 
     expect(screen.getByText('body of root')).toBeTruthy();
     expect(screen.queryByText('body of r1')).toBeNull();
     // The reply box goes with them: collapsed means the opening comment alone.
     expect(screen.queryByRole('button', { name: 'Reply' })).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: /1 reply/ }));
+    await user.click(screen.getByRole('button', { name: /1 reply/ }));
 
     expect(screen.getByText('body of r1')).toBeTruthy();
   });
@@ -525,7 +537,7 @@ describe('CommentsPanel', () => {
     await screen.findByText('body of t1');
     mockGetPassageComments.mockClear();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Resolve' }));
+    await user.click(screen.getByRole('button', { name: 'Resolve' }));
 
     expect(mockResolveComment).toHaveBeenCalledWith(
       expect.objectContaining({ uuid: 't1', resolved: true }),
@@ -577,8 +589,8 @@ describe('CommentsPanel', () => {
     render(<CommentsPanel workUuid="w1" />);
     await screen.findByText('body of t1');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(mockDeleteComment).toHaveBeenCalled());
     expect(unsetComment).toHaveBeenCalledWith({ comment: 't1' });
@@ -625,8 +637,8 @@ describe('CommentsPanel', () => {
       await screen.findByText('body of r1');
 
       const [, onReply] = screen.getAllByRole('button', { name: '+ Tag' });
-      await userEvent.click(onReply);
-      await userEvent.click(screen.getByRole('button', { name: 'pending' }));
+      await user.click(onReply);
+      await user.click(screen.getByRole('button', { name: 'pending' }));
 
       expect(mockSetCommentTags).toHaveBeenCalledWith(
         expect.objectContaining({ uuid: 'r1', tags: ['pending'] }),
@@ -640,12 +652,10 @@ describe('CommentsPanel', () => {
 
       render(<CommentsPanel workUuid="w1" />);
 
-      await userEvent.click(
-        await screen.findByRole('button', { name: '+ Tag' }),
-      );
+      await user.click(await screen.findByRole('button', { name: '+ Tag' }));
       // Already carried, so not suggested again.
       expect(screen.queryByRole('button', { name: 'pending' })).toBeNull();
-      await userEvent.type(
+      await user.type(
         screen.getByRole('textbox', { name: 'New tag' }),
         '  Link Toh 123{Enter}',
       );
@@ -666,10 +676,8 @@ describe('CommentsPanel', () => {
 
       render(<CommentsPanel workUuid="w1" />);
 
-      await userEvent.click(
-        await screen.findByRole('button', { name: '+ Tag' }),
-      );
-      await userEvent.type(
+      await user.click(await screen.findByRole('button', { name: '+ Tag' }));
+      await user.type(
         screen.getByRole('textbox', { name: 'New tag' }),
         'draft{Escape}',
       );
@@ -685,7 +693,7 @@ describe('CommentsPanel', () => {
 
       render(<CommentsPanel workUuid="w1" />);
 
-      await userEvent.click(
+      await user.click(
         await screen.findByRole('button', { name: 'Remove pending' }),
       );
 
@@ -717,10 +725,10 @@ describe('CommentsPanel', () => {
       render(<CommentsPanel workUuid="w1" />);
       await screen.findByText('body of t1');
 
-      await userEvent.click(
+      await user.click(
         await screen.findByRole('button', { name: 'Filter by tag' }),
       );
-      await userEvent.click(screen.getByRole('button', { name: 'pending' }));
+      await user.click(screen.getByRole('button', { name: 'pending' }));
 
       expect(await screen.findByText('body of t9')).toBeTruthy();
       expect(screen.queryByText('body of t8')).toBeNull();
@@ -751,13 +759,11 @@ describe('CommentsPanel', () => {
       render(<CommentsPanel workUuid="w1" />);
       await screen.findByText('body of t1');
 
-      await userEvent.click(
-        screen.getByRole('button', { name: 'Filter by tag' }),
-      );
+      await user.click(screen.getByRole('button', { name: 'Filter by tag' }));
       expect(screen.getByRole('button', { name: 'pending' })).toBeTruthy();
       expect(screen.getByRole('button', { name: 'needs source' })).toBeTruthy();
 
-      await userEvent.type(
+      await user.type(
         screen.getByRole('textbox', { name: 'Filter tag' }),
         'Link Toh 123{Enter}',
       );
@@ -765,7 +771,7 @@ describe('CommentsPanel', () => {
       expect(mockGetTaggedComments).toHaveBeenLastCalledWith(
         expect.objectContaining({ tag: 'link toh 123', workUuid: 'w1' }),
       );
-      await userEvent.click(
+      await user.click(
         await screen.findByRole('button', {
           name: 'Clear link toh 123 filter',
         }),
