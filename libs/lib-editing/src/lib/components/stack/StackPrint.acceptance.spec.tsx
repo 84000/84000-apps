@@ -1,10 +1,12 @@
 /**
- * Acceptance tests for DEV-837 item 5, AC2.1 to AC2.11: `StackPrint` and
- * `StackPrintButton`, which print a stack reader's whole text.
+ * Acceptance tests for DEV-837 item 5, AC2.1 to AC2.11: `StackPrint`, which
+ * prints a stack reader's whole text. Printing starts only from Cmd/Ctrl+P;
+ * there is no Print control.
  *
  * Written from the spec, not the implementation. Mounted as the spec says:
- * `StackReaderProvider > NavigationProvider > StackPrint > StackPrintButton`,
- * the provider seeded so every section exists from the first render. Only the
+ * `StackReaderProvider > NavigationProvider > StackPrint`, with plain
+ * children, the provider seeded so every section exists from the first
+ * render. Only the
  * network (`client-graphql`), Next's router and `window.print` are faked.
  * `readStackForPrint` is wrapped, not replaced: it still reads, and the tests
  * note which controller each call was given and in what state. That is how the
@@ -24,7 +26,7 @@ import { type ReactNode, useEffect } from 'react';
 
 import { NavigationProvider } from '../shared/NavigationProvider';
 import type { StackController } from './StackController';
-import { StackPrint, StackPrintButton } from './StackPrint';
+import { StackPrint } from './StackPrint';
 import { StackReaderProvider } from './StackReaderProvider';
 import { StackWorkProvider } from './StackWorkProvider';
 import type { StackReaderSeed, StackSectionSeed } from './stack-seed';
@@ -330,20 +332,15 @@ afterEach(() => {
 // ------------------------------------------------------------------- mounting
 
 const Reader = ({
-  buttons = 1,
   toh = 'toh145',
   children,
 }: {
-  buttons?: number;
   toh?: `toh${number}`;
   children?: ReactNode;
 }) => (
   <StackReaderProvider workUuid={WORK} seed={seed}>
     <NavigationProvider uuid={WORK} initialToh={toh}>
       <StackPrint>
-        {Array.from({ length: buttons }, (_, i) => (
-          <StackPrintButton key={i} />
-        ))}
         <span>page content</span>
         <Capture />
         {children}
@@ -376,11 +373,20 @@ const Capture = () => {
   return null;
 };
 
-const printButtons = () => screen.getAllByRole('button', { name: 'Print' });
+const pressPrintShortcut = (init: KeyboardEventInit) =>
+  fireEvent.keyDown(document.body, { key: 'p', code: 'KeyP', ...init });
 
-/** Click Print, and wait for the page to be handed to the browser. */
+/** Press Cmd+P (or the given keys), and let the async reads settle. */
+const startPrint = async (init: KeyboardEventInit = { metaKey: true }) => {
+  await act(async () => {
+    pressPrintShortcut(init);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
+
+/** Press Cmd+P, and wait for the page to be handed to the browser. */
 const printWhole = async () => {
-  await userEvent.click(printButtons()[0]);
+  await startPrint();
   await waitFor(() => expect(window.print).toHaveBeenCalled());
 };
 
@@ -409,9 +415,6 @@ const gate = <T,>() => {
   return { promise, open };
 };
 
-const pressPrintShortcut = (init: KeyboardEventInit) =>
-  fireEvent.keyDown(document.body, { key: 'p', code: 'KeyP', ...init });
-
 // ===================================================================== tests
 
 describe('AC2.1: nothing unless under a read-only stack work', () => {
@@ -426,16 +429,16 @@ describe('AC2.1: nothing unless under a read-only stack work', () => {
 
     const { container } = render(
       <NavigationProvider uuid={WORK}>
-        <StackPrint>
-          {child}
-          <StackPrintButton />
-        </StackPrint>
+        <StackPrint>{child}</StackPrint>
       </NavigationProvider>,
     );
 
     expect(container.innerHTML).toBe(baseline);
-    expect(screen.queryByRole('button', { name: 'Print' })).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
+    // The shortcut is left to the browser.
+    expect(pressPrintShortcut({ metaKey: true })).toBe(true);
+    expect(pressPrintShortcut({ ctrlKey: true })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('AC2.1 under an editing StackWorkProvider it draws its children and nothing else', async () => {
@@ -455,61 +458,54 @@ describe('AC2.1: nothing unless under a read-only stack work', () => {
     bare.unmount();
 
     const { container } = render(
-      withProvider(
-        <StackPrint>
-          {child}
-          <StackPrintButton />
-        </StackPrint>,
-      ),
+      withProvider(<StackPrint>{child}</StackPrint>),
     );
     await screen.findByText('loaded');
 
     expect(container.innerHTML).toBe(baseline);
-    expect(screen.queryByRole('button', { name: 'Print' })).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(pressPrintShortcut({ metaKey: true })).toBe(true);
+    expect(pressPrintShortcut({ ctrlKey: true })).toBe(true);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 
-describe('AC2.2: the button and its one session', () => {
-  it('AC2.2 under StackReaderProvider the button has the accessible name "Print"', async () => {
+describe('AC2.2: no Print control, and one session at a time', () => {
+  it('AC2.2 under StackReaderProvider no button and no element named Print renders before printing starts', async () => {
     await mount();
 
-    expect(screen.getByRole('button', { name: 'Print' })).toBeTruthy();
+    expect(screen.getByText('page content')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /print/i })).toBeNull();
+    expect(
+      screen.queryAllByRole('button', { name: /print/i, hidden: true }),
+    ).toHaveLength(0);
+    expect(screen.queryByText(/^print$/i)).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('AC2.2 clicking either of two buttons starts the session', async () => {
-    await mount({ buttons: 2 });
-    const [first, second] = printButtons();
-    expect(printButtons()).toHaveLength(2);
-
-    await userEvent.click(second);
-    await waitFor(() => expect(window.print).toHaveBeenCalledTimes(1));
-    afterPrint();
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-
-    await userEvent.click(first);
-    await waitFor(() => expect(window.print).toHaveBeenCalledTimes(2));
-  });
-
-  it('AC2.2 two buttons share one session: both clicked, one dialog and one read of each part', async () => {
+  it('AC2.2 pressing Cmd+P a second time while a session runs opens no second dialog', async () => {
     const held = gate<unknown>();
     graphql.getWorkGlossaryTerms.mockReset().mockImplementation(async () => {
       await held.promise;
       return termPage(TERMS, null);
     });
-    await mount({ buttons: 2 });
-    const [first, second] = printButtons();
+    await mount();
 
-    fireEvent.click(first);
-    fireEvent.click(second);
-
+    await startPrint();
     await screen.findByRole('dialog');
+    await waitFor(() =>
+      expect(graphql.getWorkGlossaryTerms).toHaveBeenCalled(),
+    );
+    await startPrint();
+    await startPrint({ ctrlKey: true });
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    await waitFor(() => expect(reads.length).toBe(PARTS.length));
     held.open(null);
+
     await waitFor(() => expect(window.print).toHaveBeenCalled());
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
     expect(window.print).toHaveBeenCalledTimes(1);
+    expect(reads.map((read) => read.tab)).toEqual(PARTS);
     expect(printElements()).toHaveLength(1);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 });
 
@@ -522,7 +518,7 @@ describe('AC2.3: the progress dialog', () => {
     });
     await mount();
 
-    await userEvent.click(printButtons()[0]);
+    await startPrint();
 
     const dialog = await screen.findByRole('dialog');
     const bar = within(dialog).getByRole('progressbar');
@@ -584,7 +580,7 @@ describe('AC2.4: what it reads, and in what order', () => {
       <StackReaderProvider workUuid={WORK} seed={withoutBibliography}>
         <NavigationProvider uuid={WORK} initialToh="toh145">
           <StackPrint>
-            <StackPrintButton />
+            <span>page content</span>
           </StackPrint>
         </NavigationProvider>
       </StackReaderProvider>,
@@ -699,7 +695,7 @@ describe('AC2.6: after printing', () => {
     afterPrint();
     await waitFor(() => expect(printElements()).toHaveLength(0));
 
-    await userEvent.click(printButtons()[0]);
+    await startPrint();
 
     await waitFor(() => expect(window.print).toHaveBeenCalledTimes(2));
     expect(printElements()).toHaveLength(1);
@@ -719,7 +715,7 @@ describe('AC2.7: Cancel during loading', () => {
       });
     await mount();
 
-    await userEvent.click(printButtons()[0]);
+    await startPrint();
     const dialog = await screen.findByRole('dialog');
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Cancel' }),
@@ -744,7 +740,7 @@ describe('AC2.7: Cancel during loading', () => {
     });
     await mount();
 
-    await userEvent.click(printButtons()[0]);
+    await startPrint();
     const dialog = await screen.findByRole('dialog');
     await waitFor(() =>
       expect(graphql.getWorkGlossaryTerms).toHaveBeenCalled(),
@@ -774,7 +770,7 @@ describe('AC2.8: a part that cannot be read', () => {
     );
     await mount();
 
-    await userEvent.click(printButtons()[0]);
+    await startPrint();
 
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(dialog.textContent).toMatch(/could not load/i));
@@ -799,7 +795,7 @@ describe('AC2.8: a part that cannot be read', () => {
       );
     await mount();
 
-    await userEvent.click(printButtons()[0]);
+    await startPrint();
 
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(dialog.textContent).toMatch(/could not load/i));
@@ -849,36 +845,11 @@ describe('AC2.9: Cmd+P and Ctrl+P', () => {
     expect(reads.map((read) => read.tab)).toEqual(PARTS);
   });
 
-  it('AC2.9 a click on Print while a session is under way does not start a second', async () => {
-    const held = gate<unknown>();
-    graphql.getWorkGlossaryTerms.mockReset().mockImplementation(async () => {
-      await held.promise;
-      return termPage(TERMS, null);
-    });
-    await mount();
-
-    pressPrintShortcut({ metaKey: true });
-    await screen.findByRole('dialog');
-    await waitFor(() =>
-      expect(graphql.getWorkGlossaryTerms).toHaveBeenCalled(),
-    );
-    // The button behind the modal dialog, reached as a script would.
-    fireEvent.click(
-      screen.getAllByRole('button', { name: 'Print', hidden: true })[0],
-    );
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    held.open(null);
-
-    await waitFor(() => expect(window.print).toHaveBeenCalled());
-    expect(window.print).toHaveBeenCalledTimes(1);
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
-  });
-
   it('AC2.9 outside a stack reader the shortcut is not intercepted', async () => {
     render(
       <NavigationProvider uuid={WORK}>
         <StackPrint>
-          <StackPrintButton />
+          <span>page content</span>
         </StackPrint>
       </NavigationProvider>,
     );
@@ -896,7 +867,7 @@ describe('AC2.9: Cmd+P and Ctrl+P', () => {
       <StackWorkProvider workUuid={WORK}>
         <NavigationProvider uuid={WORK}>
           <StackPrint>
-            <StackPrintButton />
+            <span>page content</span>
           </StackPrint>
           <Loaded />
         </NavigationProvider>
