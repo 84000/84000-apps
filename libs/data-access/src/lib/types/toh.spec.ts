@@ -1,4 +1,4 @@
-import { normalizeToh, tohNoteMentions } from './toh';
+import { canonicalToh, normalizeToh, tohNoteMentions } from './toh';
 
 /**
  * The three notes in production's `work_toh`, verbatim — the entire population of
@@ -138,5 +138,31 @@ describe('tohNoteMentions', () => {
     expect(tohNoteMentions(null, 'toh418')).toBe(false);
     expect(tohNoteMentions(undefined, 'toh418')).toBe(false);
     expect(tohNoteMentions('', 'toh418')).toBe(false);
+  });
+});
+
+describe('canonicalToh', () => {
+  it.each(['toh8', 'toh847', 'toh1-1', 'toh1059a'])(
+    'passes the catalogued form %s',
+    (value) => {
+      expect(canonicalToh(value)).toBe(value);
+    },
+  );
+
+  it.each([
+    ['a loose form', 'Toh 847'],
+    ['upper case', 'TOH847'],
+    ['a bare number', '847'],
+    ['a leading zero', 'toh0847'],
+    ['a quote', 'toh8"]'],
+    ['a newline', 'toh8\n}'],
+    ['a closing tag', 'toh8</style><script>'],
+    ['a backslash path', 'toh8\\..\\..\\entity'],
+    ['a slash path', 'toh8/../x'],
+    ['nothing', ''],
+    ['null', null],
+    ['undefined', undefined],
+  ])('rejects %s', (_label, value) => {
+    expect(canonicalToh(value)).toBeUndefined();
   });
 });

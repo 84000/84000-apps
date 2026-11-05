@@ -53,9 +53,14 @@ export interface NavigationState {
   setToh: (toh: TohokuCatalogEntry) => void;
   /**
    * Makes `toh` active unless one already is, so a default set on mount never
-   * wins over the Toh the URL named.
+   * wins over the Toh the URL named. With `allowed`, an active Toh outside it
+   * is replaced too: a link naming a Toh the work does not have reads the
+   * default, as the server drew it.
    */
-  setDefaultToh: (toh: TohokuCatalogEntry) => void;
+  setDefaultToh: (
+    toh: TohokuCatalogEntry,
+    allowed?: TohokuCatalogEntry[],
+  ) => void;
   setShowOuterContent: (withTitles: boolean) => void;
   setHasTranslationContent: (hasTranslationContent: boolean) => void;
   setFocusMode: (focusMode: boolean) => void;

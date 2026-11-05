@@ -1,4 +1,7 @@
-import { contentSourceFromEnv } from '@eightyfourthousand/data-access';
+import {
+  canonicalToh,
+  contentSourceFromEnv,
+} from '@eightyfourthousand/data-access';
 import {
   createAnonServerClient,
   lookupEntityWithClient,
@@ -8,7 +11,6 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 const TOH_PATH = /^\/(?:translation\/)?(toh[^/]+)$/i;
 const WORK_PATH = /^\/translation\/([^/]+)$/;
-const TOH = /^toh[^/]+$/i;
 
 /** The path segment for a link that names no Toh: the work's first is read. */
 const NO_TOH = 'default';
@@ -27,9 +29,10 @@ export async function proxy(request: NextRequest) {
 
   const work = pathname.match(WORK_PATH);
   if (work && isUuid(work[1])) {
-    const toh = searchParams.get('toh');
+    // Only a catalogued Toh reaches the path; anything else reads the default.
+    const toh = canonicalToh(searchParams.get('toh')) ?? NO_TOH;
     const url = request.nextUrl.clone();
-    url.pathname = `${pathname}/${toh && TOH.test(toh) ? toh : NO_TOH}`;
+    url.pathname = `${pathname}/${encodeURIComponent(toh)}`;
     return NextResponse.rewrite(url);
   }
 

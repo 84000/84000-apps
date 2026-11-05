@@ -1,7 +1,11 @@
 import { render, renderHook } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
-import { TohVisibilityStyle, useTohToggle } from './useTohToggle';
+import {
+  TohVisibilityStyle,
+  tohHiddenSelector,
+  useTohToggle,
+} from './useTohToggle';
 
 const getSheet = () => {
   const styleEl = document.getElementById(
@@ -81,14 +85,16 @@ describe('useTohToggle', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not throw on toh values that are not valid CSS identifiers', () => {
+  // No catalogued Toh has one (production's every value was checked on
+  // 2026-11-05), so it reads as no Toh: everything scoped is hidden.
+  it('does not throw on toh values that are not catalogued', () => {
     expect(() =>
       renderHook(() => useTohToggle({ toh: 'toh4.1' as TohokuCatalogEntry })),
     ).not.toThrow();
 
     const sheet = getSheet();
     expect(sheet?.cssRules.length).toBe(1);
-    expect(sheet?.cssRules[0].cssText).toContain('[data-toh="toh4.1"]');
+    expect(sheet?.cssRules[0].selectorText).toBe('[data-toh]');
   });
 });
 
@@ -118,5 +124,24 @@ describe('TohVisibilityStyle', () => {
 
   it('draws nothing until a toh is active', () => {
     expect(renderToString(<TohVisibilityStyle />)).toBe('');
+  });
+});
+
+// The Toh can come from the URL, and the server draws the rule into a <style>.
+describe('a Toh that is not catalogued', () => {
+  const hostile = [
+    'toh8"]{}body{display:none}[x="',
+    'toh8\n}body{display:none}',
+    'toh8</style><script>alert(1)</script>',
+    'toh8\\"]',
+  ] as TohokuCatalogEntry[];
+
+  it.each(hostile)('selects everything scoped for %j', (toh) => {
+    expect(tohHiddenSelector(toh)).toBe('[data-toh]');
+  });
+
+  it.each(hostile)('draws no rule on the server for %j', (toh) => {
+    const html = renderToString(<TohVisibilityStyle toh={toh} />);
+    expect(html).toBe('');
   });
 });

@@ -102,10 +102,16 @@ export const NavigationProvider = ({
   const [urlRead, setUrlRead] = useState(false);
   const [panels, setPanels] = useState<PanelsState>(DEFAULT_PANELS);
   const [toh, setToh] = useState<TohokuCatalogEntry | undefined>(initialToh);
+  // The Toh the URL last held, by our write or the reader's navigation.
+  const urlToh = useRef<string | undefined>(undefined);
   // An update, not a value: a panel hydrated late runs its effects with the
-  // Toh it was rendered with, which can predate the one the URL named.
+  // Toh it was rendered with, which can predate the one the URL named. A Toh
+  // the work does not have is replaced, as the server did when it drew the page.
   const setDefaultToh = useCallback(
-    (fallback: TohokuCatalogEntry) => setToh((prev) => prev || fallback),
+    (fallback: TohokuCatalogEntry, allowed?: TohokuCatalogEntry[]) =>
+      setToh((prev) =>
+        prev && (!allowed || allowed.includes(prev)) ? prev : fallback,
+      ),
     [],
   );
   const [showOuterContent, setShowOuterContent] = useState(true);
@@ -224,6 +230,7 @@ export const NavigationProvider = ({
 
     if (toh) {
       params.set('toh', toh);
+      urlToh.current = toh;
     }
 
     if (panels) {
@@ -318,7 +325,11 @@ export const NavigationProvider = ({
 
     setPanels((prev) => (samePanels(prev, newPanels) ? prev : newPanels));
 
-    if (newToh) {
+    // Only a Toh the URL changed to is applied. Until our own write lands, a
+    // panel change can read back a Toh `setDefaultToh` has already replaced,
+    // and applying it again would set the two against each other.
+    if (newToh && newToh !== urlToh.current) {
+      urlToh.current = newToh;
       setToh(newToh);
     }
 

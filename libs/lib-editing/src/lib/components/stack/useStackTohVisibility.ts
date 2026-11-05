@@ -21,8 +21,8 @@ export const useStackTohVisibility = ({
   useTohToggle({ toh });
 
   useEffect(() => {
-    if (tohList[0]) setDefaultToh(tohList[0]);
-  }, [tohList, setDefaultToh]);
+    if (tohList[0]) setDefaultToh(tohList[0], tohList);
+  }, [toh, tohList, setDefaultToh]);
 
   return toh;
 };

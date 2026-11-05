@@ -36,8 +36,8 @@ export const LeftPanel = ({
   useTohToggle({ toh });
 
   useEffect(() => {
-    if (work.toh[0]) setDefaultToh(work.toh[0]);
-  }, [work.toh, setDefaultToh]);
+    if (work.toh[0]) setDefaultToh(work.toh[0], work.toh);
+  }, [toh, work.toh, setDefaultToh]);
 
   return (
     <Tabs

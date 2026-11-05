@@ -30,7 +30,10 @@ describe('useStackTohVisibility', () => {
 
     // "A default toh should be selected on load" — otherwise no scope is
     // active and the rule below hides every scoped annotation.
-    expect(mockNavigation.setDefaultToh).toHaveBeenCalledWith('toh145');
+    expect(mockNavigation.setDefaultToh).toHaveBeenCalledWith('toh145', [
+      'toh145',
+      'toh847',
+    ]);
   });
 
   it('offers the first entry only as a default', () => {
@@ -40,7 +43,10 @@ describe('useStackTohVisibility', () => {
 
     // `NavigationProvider` resolves `?toh=` and `initialToh`; a default never
     // overwrites either.
-    expect(mockNavigation.setDefaultToh).toHaveBeenCalledWith('toh145');
+    expect(mockNavigation.setDefaultToh).toHaveBeenCalledWith('toh145', [
+      'toh145',
+      'toh847',
+    ]);
     expect(mockApplied).toContain('toh847');
   });
 
