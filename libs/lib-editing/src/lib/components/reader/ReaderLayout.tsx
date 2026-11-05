@@ -19,6 +19,7 @@ export const ReaderLayout = ({
   params,
   initialToh,
   initialHasTranslationContent,
+  withImprint,
 }: {
   withHeader?: boolean;
   left: ReactNode;
@@ -27,6 +28,8 @@ export const ReaderLayout = ({
   params: Promise<{ slug: string }>;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
+  /** Whether the work's imprint is read; see `NavigationProvider`. */
+  withImprint?: boolean;
 }) => {
   const { slug } = use(params);
   return (
@@ -34,6 +37,7 @@ export const ReaderLayout = ({
       uuid={slug}
       initialToh={initialToh}
       initialHasTranslationContent={initialHasTranslationContent}
+      withImprint={withImprint}
     >
       <ThreeColumnRenderer withHeader={withHeader} withFocusToggle>
         <LeftPanel>{left}</LeftPanel>

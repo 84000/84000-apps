@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import {
   BODY_MATTER_FILTER,
   FRONT_MATTER_FILTER,
+  type BibliographyEntries,
 } from '@eightyfourthousand/data-access';
 
 import type { RowMetaPage, SpineSection } from './spine-feed';
@@ -53,6 +54,8 @@ export type StackReaderSeed = {
   workUuid: string;
   /** In `STACK_SECTIONS` order. */
   sections: StackSectionSeed[];
+  /** The bibliography as readers see it, in full; drawn in `BIBLIOGRAPHY_TAB`. */
+  bibliography?: BibliographyEntries;
 };
 
 /**

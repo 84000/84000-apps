@@ -1,13 +1,13 @@
 import {
   createBuildGraphQLClient,
   getPassageMetaPage,
-  getWorkBibliography,
   getWorkGlossaryTerms,
 } from '@eightyfourthousand/client-graphql/ssr';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
 import { isUuid } from '@eightyfourthousand/lib-utils';
 import type { GraphQLClient } from 'graphql-request';
 import { notFound } from 'next/navigation';
+import { isReaderPublished } from './reader-publication';
 import { StackReaderBackMatterPanel } from './StackReaderBackMatterPanel';
 
 /** Whether a work has any passages of a type, without reading them. */
@@ -21,9 +21,11 @@ const hasPassages = async (
 };
 
 /**
- * The reader's right panel with its notes and abbreviations drawn from the
- * stacks of the `StackReaderLayout` above it. `ReaderBackMatterPage`'s
- * counterpart: same route, same tabs.
+ * The reader's right panel with its notes, abbreviations and bibliography
+ * drawn from the stacks of the `StackReaderLayout` above it.
+ * `ReaderBackMatterPage`'s counterpart: same route, same tabs.
+ *
+ * Nothing for a work that is not published, for every visitor.
  */
 export const StackReaderBackMatterPage = async ({
   params,
@@ -37,21 +39,21 @@ export const StackReaderBackMatterPage = async ({
   }
 
   const client = createBuildGraphQLClient();
-  const withAttestations = isStaticFeatureEnabled('glossary-attestations');
+  if (!(await isReaderPublished({ client, uuid: slug }))) {
+    return null;
+  }
 
-  const [hasEndnotes, hasAbbreviations, glossary, bibliography] =
-    await Promise.all([
-      hasPassages(client, slug, 'endnotes'),
-      hasPassages(client, slug, 'abbreviations'),
-      getWorkGlossaryTerms({ client, uuid: slug, withAttestations }),
-      getWorkBibliography({ client, uuid: slug }),
-    ]);
+  const withAttestations = isStaticFeatureEnabled('glossary-attestations');
+  const [hasEndnotes, hasAbbreviations, glossary] = await Promise.all([
+    hasPassages(client, slug, 'endnotes'),
+    hasPassages(client, slug, 'abbreviations'),
+    getWorkGlossaryTerms({ client, uuid: slug, withAttestations }),
+  ]);
 
   return (
     <StackReaderBackMatterPanel
       workUuid={slug}
       glossary={glossary}
-      bibliography={bibliography}
       hasEndnotes={hasEndnotes}
       hasAbbreviations={hasAbbreviations}
       withAttestations={withAttestations}

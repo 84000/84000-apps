@@ -458,3 +458,43 @@ describe('NavigationProvider static rendering', () => {
     );
   });
 });
+
+describe('NavigationProvider imprint', () => {
+  const { getTranslationImprint } = jest.requireMock(
+    '@eightyfourthousand/client-graphql',
+  ) as { getTranslationImprint: jest.Mock };
+
+  const ImprintProbe = () => {
+    const { imprint } = useNavigation();
+    return <span data-testid="imprint">{imprint?.toh ?? 'none'}</span>;
+  };
+
+  beforeEach(() => {
+    getTranslationImprint.mockReset().mockResolvedValue({ toh: 'toh8' });
+  });
+
+  it('reads the imprint of the work and Toh it shows', async () => {
+    render(
+      <NavigationProvider uuid="w1" initialToh="toh8">
+        <ImprintProbe />
+      </NavigationProvider>,
+    );
+
+    expect(await screen.findByText('toh8')).toBeTruthy();
+    expect(getTranslationImprint).toHaveBeenCalledWith(
+      expect.objectContaining({ uuid: 'w1', toh: 'toh8' }),
+    );
+  });
+
+  it('reads no imprint for a work the reader does not serve', async () => {
+    render(
+      <NavigationProvider uuid="w1" initialToh="toh8" withImprint={false}>
+        <ImprintProbe />
+      </NavigationProvider>,
+    );
+    await act(async () => undefined);
+
+    expect(getTranslationImprint).not.toHaveBeenCalled();
+    expect(screen.getByTestId('imprint').textContent).toBe('none');
+  });
+});

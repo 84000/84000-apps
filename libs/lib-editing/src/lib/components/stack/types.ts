@@ -136,6 +136,11 @@ export type PassageStackControllerOptions = {
   /** Character counts by passage uuid, for estimating unhydrated row heights. */
   charCounts?: Iterable<readonly [string, number]>;
   /**
+   * Rows' read-only HTML by uuid, drawn in place of their documents. For rows
+   * read as HTML, which a server cannot parse into documents.
+   */
+  staticHTML?: ReadonlyMap<string, string>;
+  /**
    * Grows the spine as the reader approaches the end of it.
    *
    * Optional: a caller holding a complete spine already — the scale harness,

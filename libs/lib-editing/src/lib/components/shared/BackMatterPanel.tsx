@@ -24,17 +24,19 @@ import {
 
 /** Content for a renderer that reads its own. */
 const NO_CONTENT: TranslationEditorContent = [];
+const NO_BIBLIOGRAPHY: BibliographyEntries = [];
 
 export const BackMatterPanel = ({
   workUuid,
   endnotes = NO_CONTENT,
   glossary,
-  bibliography,
+  bibliography = NO_BIBLIOGRAPHY,
   abbreviations = NO_CONTENT,
   endnotesHasMore,
   abbreviationsHasMore,
   hasEndnotes = endnotes.length > 0,
   hasAbbreviations = abbreviations.length > 0,
+  hasBibliography = bibliography.length > 0,
   isEditor = false,
   withAttestations = false,
   renderTranslation,
@@ -44,7 +46,8 @@ export const BackMatterPanel = ({
   /** Omitted when `renderTranslation` reads the endnotes itself. */
   endnotes?: TranslationEditorContent;
   glossary: GlossaryTermsPage;
-  bibliography: BibliographyEntries;
+  /** Omitted when `renderBibliography` draws the bibliography itself. */
+  bibliography?: BibliographyEntries;
   /** Omitted when `renderTranslation` reads the abbreviations itself. */
   abbreviations?: TranslationEditorContent;
   endnotesHasMore?: boolean;
@@ -53,6 +56,8 @@ export const BackMatterPanel = ({
   hasEndnotes?: boolean;
   /** Whether to show Abbr, when that is known without its content. */
   hasAbbreviations?: boolean;
+  /** Whether to show Biblio, when that is known without its content. */
+  hasBibliography?: boolean;
   isEditor?: boolean;
   withAttestations?: boolean;
   renderTranslation: (
@@ -115,7 +120,7 @@ export const BackMatterPanel = ({
         >
           {hasEndnotes && <TabsTrigger value="endnotes">Notes</TabsTrigger>}
           {hasGlossary && <TabsTrigger value="glossary">Glossary</TabsTrigger>}
-          {bibliography.length > 0 && (
+          {hasBibliography && (
             <TabsTrigger value="bibliography">Biblio</TabsTrigger>
           )}
           {hasAbbreviations && (
@@ -160,7 +165,7 @@ export const BackMatterPanel = ({
                 </GlossaryPaginationProvider>
               </TabsContent>
             )}
-            {bibliography.length > 0 && (
+            {hasBibliography && (
               <TabsContent
                 value="bibliography"
                 forceMount

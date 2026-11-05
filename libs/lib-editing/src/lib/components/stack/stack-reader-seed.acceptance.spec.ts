@@ -16,6 +16,8 @@ import { FIRST_PAGE, STACK_SECTIONS } from './stack-seed';
 jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
+  // The bibliography the seed also reads; these tests are about the sections.
+  getWorkBibliography: jest.fn(async () => []),
 }));
 
 const api = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {

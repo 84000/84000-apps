@@ -45,6 +45,9 @@ jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   createBuildGraphQLClient: jest.fn(() => BUILD_CLIENT),
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
+  getTranslationMetadataByUuid: jest.fn(async () => ({
+    publicationStatus: '1',
+  })),
   getWorkGlossaryTerms: jest.fn(),
   getWorkBibliography: jest.fn(),
 }));
@@ -64,6 +67,7 @@ jest.mock('@eightyfourthousand/data-access', () => ({
 const ssrApi = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getPassageMetaPage: jest.Mock;
   getTranslationBlocks: jest.Mock;
+  getTranslationMetadataByUuid: jest.Mock;
   getWorkGlossaryTerms: jest.Mock;
   getWorkBibliography: jest.Mock;
 };
@@ -105,9 +109,16 @@ const glossaryPage = {
 const bibliography = [
   {
     heading: 'Bibliography heading',
-    entries: [{ uuid: 'b1', label: '1', html: '<p>A cited source</p>' }],
+    label: '1',
+    entries: [{ uuid: 'b1', label: '1.1', html: '<p>A cited source</p>' }],
   },
 ];
+
+/**
+ * The bibliography the layout's seed carries (4b AC1, AC6): the page no longer
+ * reads it, so it reaches the panel through the provider.
+ */
+let seededBibliography: unknown[];
 
 beforeEach(() => {
   has = { endnotes: true, abbreviations: true };
@@ -119,7 +130,12 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ blocks: [], hasMoreAfter: false });
   ssrApi.getWorkGlossaryTerms.mockReset().mockResolvedValue(glossaryPage);
-  ssrApi.getWorkBibliography.mockReset().mockResolvedValue(bibliography);
+  // The page reads no bibliography (4b AC5); a read would be a decoy.
+  ssrApi.getWorkBibliography.mockReset().mockResolvedValue([]);
+  ssrApi.getTranslationMetadataByUuid
+    .mockReset()
+    .mockResolvedValue({ publicationStatus: '1' });
+  seededBibliography = bibliography;
 });
 
 /** What the page's provider holds: the endnotes and abbreviations, drawn. */
@@ -170,7 +186,10 @@ const draw = async () => {
   const element = await page(WORK);
   const container = document.createElement('div');
   container.innerHTML = renderToString(
-    <StackReaderProvider workUuid={WORK} seed={seed}>
+    <StackReaderProvider
+      workUuid={WORK}
+      seed={{ ...seed, bibliography: seededBibliography } as StackReaderSeed}
+    >
       {element}
     </StackReaderProvider>,
   );
@@ -218,15 +237,14 @@ describe('StackReaderBackMatterPage (AC2)', () => {
     expect(container.textContent).toContain('abbreviation 1 text');
   });
 
-  it('reads the glossary and the bibliography for the work, and draws them as the paginated panel does', async () => {
+  it('reads the glossary for the work, draws it and the seeded bibliography, and makes no bibliography read itself', async () => {
     const container = await draw();
 
     expect(ssrApi.getWorkGlossaryTerms).toHaveBeenCalledWith(
       expect.objectContaining({ client: BUILD_CLIENT, uuid: WORK }),
     );
-    expect(ssrApi.getWorkBibliography).toHaveBeenCalledWith(
-      expect.objectContaining({ client: BUILD_CLIENT, uuid: WORK }),
-    );
+    // 4b AC5: the bibliography comes from the layout's seed, not from the page.
+    expect(ssrApi.getWorkBibliography).not.toHaveBeenCalled();
     expect(container.textContent).toContain('Glossary term one');
     expect(container.textContent).toContain('Bibliography heading');
     expect(container.textContent).toContain('A cited source');
@@ -281,7 +299,7 @@ describe('StackReaderBackMatterPage (AC2)', () => {
   });
 
   it('shows no Biblio tab when the work has no bibliography, as the paginated panel does not', async () => {
-    ssrApi.getWorkBibliography.mockResolvedValue([]);
+    seededBibliography = [];
 
     const container = await draw();
 

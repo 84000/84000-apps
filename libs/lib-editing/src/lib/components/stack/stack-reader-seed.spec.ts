@@ -9,12 +9,22 @@ import { STACK_SECTIONS } from './stack-seed';
 jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   getPassageMetaPage: jest.fn(),
   getTranslationBlocks: jest.fn(),
+  getWorkBibliography: jest.fn(),
 }));
 
 const api = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getPassageMetaPage: jest.Mock;
   getTranslationBlocks: jest.Mock;
+  getWorkBibliography: jest.Mock;
 };
+
+const BIBLIOGRAPHY = [
+  {
+    heading: 'Sources',
+    label: '1',
+    entries: [{ uuid: 'b1', label: '1.1', html: '<p>One</p>' }],
+  },
+];
 
 const page = (type: string) => ({
   metas: [{ uuid: `${type}-1`, label: '1', type }],
@@ -40,9 +50,20 @@ beforeEach(() => {
   api.getTranslationBlocks
     .mockReset()
     .mockImplementation(async ({ type }) => ({ blocks: [block(`${type}-1`)] }));
+  api.getWorkBibliography.mockReset().mockResolvedValue(BIBLIOGRAPHY);
 });
 
 describe('loadStackReaderSeed', () => {
+  it('reads the bibliography readers see, once, with the build client', async () => {
+    const client = {} as never;
+    const seed = await loadStackReaderSeed({ client, workUuid: 'w1' });
+
+    expect(api.getWorkBibliography.mock.calls).toEqual([
+      [{ client, uuid: 'w1' }],
+    ]);
+    expect(seed.bibliography).toEqual(BIBLIOGRAPHY);
+  });
+
   it('reads every section, in the order the work reads', async () => {
     const seed = await loadStackReaderSeed({
       client: {} as never,

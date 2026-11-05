@@ -22,7 +22,7 @@ const createReaderView: StackViewFactory = (options) =>
  * loads the editing layer, `EditorProvider` included.
  *
  * It reads no bibliography: the stack's read is the editor's, of the draft
- * rows, so its Biblio tab draws the host's fallback.
+ * rows. The seed carries the bibliography readers see instead.
  *
  * Given a `seed` (`loadStackReaderSeed`, on the server), the stacks exist from
  * the first render, so a server draws their first rows and the browser keeps
