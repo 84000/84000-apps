@@ -19,6 +19,9 @@ export const expectMismatch = (
     if (!stored) {
       return `${what}: expected ${field} to be ${JSON.stringify(expected)}, but there is no stored row`;
     }
+    if (!(field in stored)) {
+      return `${what}: ${field} cannot be checked with expect; it is not a stored field that was read`;
+    }
     if (!same(stored[field], expected)) {
       return `${what}: expected ${field} to be ${JSON.stringify(expected)} but found ${JSON.stringify(stored[field] ?? null)}. Re-read before retrying.`;
     }

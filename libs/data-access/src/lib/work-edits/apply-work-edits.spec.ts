@@ -1,4 +1,5 @@
 import { applyWorkEdits } from './apply-work-edits';
+import { workEditOpsFromImport } from './aliases';
 import {
   WORK,
   createFakeClient,
@@ -33,5 +34,19 @@ describe('applyWorkEdits upsert-passage range check', () => {
     expect(result.notAttempted).toEqual(['work-metadata']);
     expect(world.writes).toEqual([]);
     expect(tables).toEqual(before);
+  });
+});
+
+describe('workEditOpsFromImport folio ops', () => {
+  it('keeps only the first folio op with a string source_description, as the import always did', () => {
+    const ops = workEditOpsFromImport([
+      { kind: 'upsert_folio_annotation', patch: {} },
+      { kind: 'upsert_folio_annotation', patch: { source_description: 'a' } },
+      { kind: 'update_folio_annotation', patch: { source_description: 'b' } },
+    ] as unknown as Parameters<typeof workEditOpsFromImport>[0]);
+
+    expect(ops).toEqual([
+      { op: 'upsert-folio-annotation', patch: { source_description: 'a' } },
+    ]);
   });
 });

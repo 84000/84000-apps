@@ -8,33 +8,49 @@ import type { WorkEditOp, WorkMetadataChanges } from './types';
  */
 export const workEditOpsFromImport = (
   operations: ImportOperationInput[],
-): WorkEditOp[] =>
-  operations.map((operation): WorkEditOp => {
-    const kind = operation.kind as string;
-    if (operation.kind === 'update_work') {
-      return { op: 'update-work', patch: operation.patch };
-    }
-    if (operation.kind === 'upsert_title') {
-      return { op: 'upsert-title', title: operation.title };
-    }
-    if (operation.kind === 'upsert_passage') {
-      return {
-        op: 'upsert-passage',
-        passage: operation.passage,
-        annotations: operation.annotations,
-      };
-    }
-    if (
-      kind === 'update_folio_annotation' ||
-      kind === 'upsert_folio_annotation'
-    ) {
-      return {
-        op: 'upsert-folio-annotation',
-        patch: (operation as { patch: Record<string, unknown> }).patch,
-      };
-    }
-    throw new Error(`Nothing was saved: unknown operation kind ${kind}`);
-  });
+): WorkEditOp[] => keepFirstFolioOp(operations.map(importOpToWorkEditOp));
+
+/**
+ * The import has always written only the first folio op whose patch has a
+ * string `source_description`, skipping the rest, so the alias keeps that.
+ */
+const keepFirstFolioOp = (ops: WorkEditOp[]): WorkEditOp[] => {
+  const first = ops.find(
+    (op) =>
+      op.op === 'upsert-folio-annotation' &&
+      typeof op.patch?.['source_description'] === 'string',
+  );
+  return ops.filter(
+    (op) => op.op !== 'upsert-folio-annotation' || op === first,
+  );
+};
+
+const importOpToWorkEditOp = (operation: ImportOperationInput): WorkEditOp => {
+  const kind = operation.kind as string;
+  if (operation.kind === 'update_work') {
+    return { op: 'update-work', patch: operation.patch };
+  }
+  if (operation.kind === 'upsert_title') {
+    return { op: 'upsert-title', title: operation.title };
+  }
+  if (operation.kind === 'upsert_passage') {
+    return {
+      op: 'upsert-passage',
+      passage: operation.passage,
+      annotations: operation.annotations,
+    };
+  }
+  if (
+    kind === 'update_folio_annotation' ||
+    kind === 'upsert_folio_annotation'
+  ) {
+    return {
+      op: 'upsert-folio-annotation',
+      patch: (operation as { patch: Record<string, unknown> }).patch,
+    };
+  }
+  throw new Error(`Nothing was saved: unknown operation kind ${kind}`);
+};
 
 /**
  * Applies import operations to a target work through `applyWorkEdits`:
