@@ -94,7 +94,9 @@ describe('useTohToggle', () => {
 
     const sheet = getSheet();
     expect(sheet?.cssRules.length).toBe(1);
-    expect(sheet?.cssRules[0].selectorText).toBe('[data-toh]');
+    expect((sheet?.cssRules[0] as CSSStyleRule).selectorText).toBe(
+      '[data-toh]',
+    );
   });
 });
 
@@ -134,7 +136,7 @@ describe('a Toh that is not catalogued', () => {
     'toh8\n}body{display:none}',
     'toh8</style><script>alert(1)</script>',
     'toh8\\"]',
-  ] as TohokuCatalogEntry[];
+  ] as unknown as TohokuCatalogEntry[];
 
   it.each(hostile)('selects everything scoped for %j', (toh) => {
     expect(tohHiddenSelector(toh)).toBe('[data-toh]');
