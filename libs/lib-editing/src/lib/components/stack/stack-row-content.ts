@@ -131,6 +131,18 @@ export class StackRowContent {
   };
 
   /**
+   * A row's static HTML without keeping it: for a document read once and then
+   * released, whose HTML the cache would otherwise hold for good, since only
+   * wired documents have theirs dropped.
+   */
+  readStaticHTML = (uuid: string): string | null => {
+    const known = this.givenHTML?.get(uuid) ?? this.staticHTML.get(uuid);
+    if (known !== undefined) return known;
+    const doc = this.work.store.peek(uuid);
+    return doc ? renderStaticPassageHTML(doc.toJSON()) : null;
+  };
+
+  /**
    * The Compare column's top margin for a passage, which follows its first
    * block. Cached with the static HTML, and invalidated with it.
    */
