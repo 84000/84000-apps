@@ -450,7 +450,9 @@ describe('NavigationProvider static rendering', () => {
     let staleDefault: (() => void) | undefined;
     const LateDefault = () => {
       const { setDefaultToh } = useNavigation();
-      staleDefault = () => setDefaultToh('toh1');
+      useEffect(() => {
+        staleDefault = () => setDefaultToh('toh1');
+      }, [setDefaultToh]);
       return null;
     };
     const TohProbe = () => <span data-testid="toh">{useNavigation().toh}</span>;
