@@ -1,6 +1,7 @@
-import { renderHook } from '@testing-library/react';
+import { render, renderHook } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
-import { useTohToggle } from './useTohToggle';
+import { TohVisibilityStyle, useTohToggle } from './useTohToggle';
 
 const getSheet = () => {
   const styleEl = document.getElementById(
@@ -88,5 +89,34 @@ describe('useTohToggle', () => {
     const sheet = getSheet();
     expect(sheet?.cssRules.length).toBe(1);
     expect(sheet?.cssRules[0].cssText).toContain('[data-toh="toh4.1"]');
+  });
+});
+
+describe('TohVisibilityStyle', () => {
+  it('draws the rule with the page', () => {
+    const html = renderToString(<TohVisibilityStyle toh="toh847" />);
+
+    expect(html).toContain('[data-toh]:not([data-toh="toh847"])');
+    expect(html).toContain('display: none');
+  });
+
+  it('hides the markup of every other toh, and keeps shared markup', () => {
+    const { container } = render(
+      <>
+        <TohVisibilityStyle toh="toh847" />
+        <span data-toh="toh145">a</span>
+        <span data-toh="toh847">b</span>
+        <span data-toh="toh145,toh847">c</span>
+      </>,
+    );
+    const shown = [...container.querySelectorAll('span')]
+      .filter((el) => getComputedStyle(el).display !== 'none')
+      .map((el) => el.textContent);
+
+    expect(shown).toEqual(['b', 'c']);
+  });
+
+  it('draws nothing until a toh is active', () => {
+    expect(renderToString(<TohVisibilityStyle />)).toBe('');
   });
 });

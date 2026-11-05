@@ -1,7 +1,12 @@
 'use client';
 
 import { ReactNode, use } from 'react';
-import { NavigationProvider, ThreeColumnRenderer } from '../shared';
+import {
+  NavigationProvider,
+  ThreeColumnRenderer,
+  useNavigation,
+} from '../shared';
+import { TohVisibilityStyle } from '../shared/hooks/useTohToggle';
 import {
   LeftPanel,
   MainPanel,
@@ -10,6 +15,9 @@ import {
 } from '@eightyfourthousand/design-system';
 import { EditorHeader } from '../editor/EditorHeader';
 import type { TohokuCatalogEntry } from '@eightyfourthousand/data-access';
+
+/** Hides, from the first paint, what the server drew for other Tohs. */
+const ActiveTohStyle = () => <TohVisibilityStyle toh={useNavigation().toh} />;
 
 export const ReaderLayout = ({
   withHeader = false,
@@ -39,6 +47,7 @@ export const ReaderLayout = ({
       initialHasTranslationContent={initialHasTranslationContent}
       withImprint={withImprint}
     >
+      <ActiveTohStyle />
       <ThreeColumnRenderer withHeader={withHeader} withFocusToggle>
         <LeftPanel>{left}</LeftPanel>
         <MainPanelHeader>
