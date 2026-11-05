@@ -336,6 +336,16 @@ export class StackController {
   /** The Compare column's top margin for a passage, from its first block. */
   getCompareLead = (uuid: string): string => this.content.getCompareLead(uuid);
 
+  /** See `StackRowContent.readStaticHTML`. */
+  readStaticHTML = (uuid: string): string | null =>
+    this.content.readStaticHTML(uuid);
+
+  /** See `StackHydration.loadWholeRun`. */
+  loadWholeRun = (options: {
+    stopped: () => boolean;
+    onPage?: () => void;
+  }): Promise<void> => this.hydration.loadWholeRun(options);
+
   /** Tell the controller which rows the virtualizer is drawing. */
   setVisibleRange = (range: SpineRange) =>
     this.hydration.setVisibleRange(range);

@@ -14,6 +14,8 @@ export * from './PassageStackController';
 export * from './StackController';
 export * from './StackPassageMenu';
 export * from './StackReaderMenu';
+export * from './StackPrint';
+export * from './stack-print';
 export * from './StaticPassage';
 export * from './static-passage-html';
 export * from './StackWorkProvider';

@@ -143,6 +143,33 @@ export class StackHydration {
   /** Whether the work has passages the spine has not loaded yet. */
   hasMorePassages = () => this.spineFeed?.hasMore ?? false;
 
+  /**
+   * Grow the run to its first and last passages, a page at a time, extending
+   * it rather than replacing it.
+   *
+   * A page that cannot be read ends the run in that direction, as it does
+   * while scrolling: the feed cannot tell it from an empty last page.
+   */
+  loadWholeRun = async ({
+    stopped,
+    onPage,
+  }: {
+    stopped: () => boolean;
+    onPage?: () => void;
+  }) => {
+    const feed = this.spineFeed;
+    if (!feed) return;
+    while (feed.hasMoreBefore && feed.extendBefore && !stopped()) {
+      await feed.extendBefore();
+      onPage?.();
+    }
+    while (feed.hasMore && feed.extend && !stopped()) {
+      await feed.extend();
+      onPage?.();
+    }
+    this.bump();
+  };
+
   /** A page of this run's section past `cursor`. Null when it can't be read. */
   readBeyond = async (
     direction: 'before' | 'after',
