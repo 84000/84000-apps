@@ -10,7 +10,7 @@ import {
 } from '@eightyfourthousand/lib-doc-model';
 import type { PassageExtras } from './types';
 
-import { createStackLoader } from './passage-source';
+import { createStackLoader, graphqlPassageSource } from './passage-source';
 import { buildStackSchemaExtensions } from './stack-extensions';
 
 export type StackWorkOptions = {
@@ -26,6 +26,17 @@ export type StackWorkOptions = {
 
 /** Each work's text origins, which views add to. */
 const textOrigins = new WeakMap<WorkDocument, Set<unknown>>();
+
+/** Each work's network read ahead of the spine, where its source has one. */
+const primers = new WeakMap<WorkDocument, (uuid: string) => void>();
+
+/**
+ * Start reading `uuid` before the spine places it, so revealing it does not
+ * wait on a second round trip. Does nothing for a work whose source can't.
+ */
+export const primeAround = (work: WorkDocument, uuid: string) => {
+  primers.get(work)?.(uuid);
+};
 
 /**
  * A `WorkDocument` configured for the editor stack.
@@ -115,12 +126,18 @@ export const createStackWork = ({
   // before the document exists, and by the time a window is hydrated it does.
   const built: { work?: WorkDocument } = {};
 
+  const spine = () => built.work?.spine;
+  // Built here rather than by the loader, so the work can prime it.
+  const network = source
+    ? undefined
+    : graphqlPassageSource({ client, workUuid, spine, extras });
+
   const loader = createStackLoader({
     client,
     workUuid,
-    spine: () => built.work?.spine,
+    spine,
     local,
-    source,
+    source: source ?? network,
     cache,
     buffer,
     extras,
@@ -133,5 +150,6 @@ export const createStackWork = ({
     extensions,
     outline,
   });
+  if (network) primers.set(built.work, network.prime);
   return built.work;
 };

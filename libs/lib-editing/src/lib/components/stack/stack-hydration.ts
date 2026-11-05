@@ -26,6 +26,7 @@ export class StackHydration {
     options?: { settle?: boolean },
   ) => void;
   private readonly bump: () => void;
+  private readonly prime?: (uuid: string) => void;
 
   private visibleRange: SpineRange = { start: 0, end: 0 };
   private hydrating = false;
@@ -56,6 +57,8 @@ export class StackHydration {
     resetLive: () => void;
     scrollTo: (index: number, options?: { settle?: boolean }) => void;
     bump: () => void;
+    /** Starts reading the passages around one ahead of a reveal. */
+    prime?: (uuid: string) => void;
   }) {
     this.work = host.work;
     this.spineFeed = host.spineFeed;
@@ -68,6 +71,7 @@ export class StackHydration {
     this.resetLive = host.resetLive;
     this.scrollTo = host.scrollTo;
     this.bump = host.bump;
+    this.prime = host.prime;
   }
 
   /**
@@ -227,6 +231,9 @@ export class StackHydration {
       // window is in flight, and arming would prepend under the scroll that
       // is about to happen.
       this.earlierArmed = false;
+      // Alongside the spine's read, not after it, so the target's content is
+      // in hand by the time the spine places it.
+      this.prime?.(uuid);
 
       if ((await this.spineFeed.reveal(uuid)) < 0) return false;
       this.invalidateOrder();

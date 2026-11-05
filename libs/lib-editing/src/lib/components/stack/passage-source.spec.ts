@@ -1,8 +1,9 @@
 import type { GraphQLClient } from 'graphql-request';
-import { Spine } from '@eightyfourthousand/lib-doc-model';
+import { Spine, type PassageSnapshot } from '@eightyfourthousand/lib-doc-model';
 
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { graphqlPassageSource } from './passage-source';
+import type { PassageExtras } from './types';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   getPassageMetaPage: jest.fn(),
@@ -376,5 +377,228 @@ describe('graphqlPassageSource extras', () => {
     expect(extras.get('p5')).toEqual({ references, alignments });
     // A passage whose references are gone no longer lists stale ones.
     expect(extras.get('p6')).toEqual({});
+  });
+});
+
+describe('graphqlPassageSource prime', () => {
+  /** A read that resolves when told to. */
+  const held = <T>() => {
+    let resolve: (value: T) => void = () => undefined;
+    const promise = new Promise<T>((r) => (resolve = r));
+    return { promise, resolve };
+  };
+
+  it('answers the primed passage from the read it started, without another', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround.mockReturnValueOnce(
+      around.promise,
+    );
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    const loading = source.loadPassages('w1', ['p5']);
+    around.resolve(page(['p4', 'p5', 'p6']));
+
+    expect((await loading).map((s) => s.uuid)).toEqual(['p5']);
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
+    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
+      expect.objectContaining({ passageUuid: 'p5' }),
+    );
+    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
+  });
+
+  it('hands each primed passage out once', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      page(['p4', 'p5', 'p6']),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p5']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    await source.loadPassages('w1', ['p5']);
+    const again = await source.loadPassages('w1', ['p5']);
+
+    expect(again.map((s) => s.uuid)).toEqual(['p5']);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p4', maxPassages: 1 }),
+    );
+  });
+
+  it('reads the rest of a load for itself', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      page(['p4', 'p5', 'p6']),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p7', 'p8']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    const loaded = await source.loadPassages('w1', ['p5', 'p6', 'p7', 'p8']);
+
+    expect(loaded.map((s) => s.uuid).sort()).toEqual(['p5', 'p6', 'p7', 'p8']);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledWith(
+      expect.objectContaining({ cursor: 'p6', maxPassages: 2 }),
+    );
+  });
+
+  it('does not hold up a load for other passages while the prime is in flight', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround.mockReturnValueOnce(
+      around.promise,
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p1']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    const loaded = await source.loadPassages('w1', ['p1']);
+
+    expect(loaded.map((s) => s.uuid)).toEqual(['p1']);
+    around.resolve(page(['p5']));
+  });
+
+  /** A page whose passages carry `version`, to tell two reads apart. */
+  const versioned = (uuids: string[], version: string) => {
+    const read = page(uuids);
+    read.blocks.forEach((block) => {
+      block.content = [{ type: 'paragraph', attrs: { version } }] as never;
+      Object.assign(block.attrs, {
+        references: [{ uuid: 'x', label: version, type: 'translation' }],
+      });
+    });
+    return read;
+  };
+  const versionOf = (snapshot: PassageSnapshot) =>
+    (snapshot.content as { attrs?: { version?: string } }[])[0]?.attrs?.version;
+
+  it('never hands out a passage an ordinary read returned while the prime was out', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround.mockReturnValueOnce(
+      around.promise,
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
+      versioned(['p8'], 'new'),
+    );
+    const spine = spineOf(12);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p9');
+    await source.loadPassages('w1', ['p8']);
+    around.resolve(versioned(['p8', 'p9', 'p10'], 'old'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const again = await source.loadPassages('w1', ['p8']);
+
+    expect(again.map(versionOf)).toEqual(['new']);
+    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(2);
+  });
+
+  it('hands nothing out from a prime a newer one replaced while it was out', async () => {
+    const around = held<ReturnType<typeof page>>();
+    clientGraphql.getTranslationBlocksAround
+      .mockReturnValueOnce(around.promise)
+      .mockResolvedValueOnce(versioned(['p19', 'p20', 'p21'], 'later'));
+    clientGraphql.getTranslationBlocks.mockImplementation(
+      async ({ cursor }: { cursor?: string }) =>
+        versioned(cursor === 'p7' ? ['p8', 'p9'] : ['p8'], 'new'),
+    );
+    const extras = new Map<string, PassageExtras>();
+    const spine = spineOf(30);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+      extras,
+    });
+
+    source.prime('p9');
+    const waiting = source.loadPassages('w1', ['p8', 'p9']);
+    source.prime('p20');
+    await source.loadPassages('w1', ['p8']);
+    around.resolve(versioned(['p8', 'p9', 'p10'], 'old'));
+
+    expect((await waiting).map(versionOf)).toEqual(['new', 'new']);
+    expect(extras.get('p8')?.references?.[0]?.label).toBe('new');
+  });
+
+  it('notes row data only for the primed passages it hands out', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      versioned(['p4', 'p5', 'p6'], 'primed'),
+    );
+    const newer: PassageExtras = { references: [] };
+    const extras = new Map<string, PassageExtras>([['p6', newer]]);
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+      extras,
+    });
+
+    source.prime('p5');
+    await source.loadPassages('w1', ['p5']);
+
+    expect(extras.get('p5')?.references?.[0]?.label).toBe('primed');
+    expect(extras.get('p6')).toBe(newer);
+    expect(extras.has('p4')).toBe(false);
+  });
+
+  it('drops the rest of the prime once its target is taken', async () => {
+    clientGraphql.getTranslationBlocksAround.mockResolvedValueOnce(
+      versioned(['p4', 'p5', 'p6'], 'primed'),
+    );
+    clientGraphql.getTranslationBlocks.mockResolvedValue(
+      versioned(['p6'], 'read'),
+    );
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p5');
+    await source.loadPassages('w1', ['p5']);
+    const later = await source.loadPassages('w1', ['p6']);
+
+    expect(later.map(versionOf)).toEqual(['read']);
+  });
+
+  it('falls back to its own read when the prime fails', async () => {
+    clientGraphql.getTranslationBlocksAround
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(page(['p0', 'p1']));
+    const spine = spineOf(10);
+    const source = graphqlPassageSource({
+      client,
+      workUuid: 'w1',
+      spine: () => spine,
+    });
+
+    source.prime('p0');
+    const loaded = await source.loadPassages('w1', ['p0']);
+
+    expect(loaded.map((s) => s.uuid)).toEqual(['p0']);
   });
 });

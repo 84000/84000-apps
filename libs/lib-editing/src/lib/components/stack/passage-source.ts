@@ -21,6 +21,26 @@ export const GRAPHQL_SOURCE_NAME = 'api-graphql';
 const MAX_PAGE = 100;
 
 /**
+ * Passages read around a primed one. Few, as only the primed passage is on
+ * the reveal's critical path: its window follows through the usual reads.
+ */
+const PRIME_AROUND = 3;
+
+/** The API's passage source, which can also start a read before it is asked. */
+export type PrimablePassageSource = PassageSource & {
+  /**
+   * Start reading the passages around `uuid` now, for loads that follow.
+   *
+   * A deep link names a passage the spine has not placed yet, so it can't be
+   * read until the spine's own read returns. Read here alongside it, the
+   * passage is answered from this read instead of a second round trip. Each
+   * primed passage answers one load, and a new prime drops what the last one
+   * left unused.
+   */
+  prime(uuid: string): void;
+};
+
+/**
  * The network half of the doc model's loader.
  *
  * `lib-doc-model` declares what a passage source is and knows nothing about
@@ -75,16 +95,25 @@ export const graphqlPassageSource = ({
    * don't go in the snapshot.
    */
   extras?: Map<string, PassageExtras>;
-}): PassageSource => {
-  /** A block's snapshot, noting its row data on the way. */
-  const snapshotOf = (block: {
-    attrs?: Record<string, unknown>;
-    content?: unknown[];
-  }): PassageSnapshot | null => {
+}): PrimablePassageSource => {
+  type Block = { attrs?: Record<string, unknown>; content?: unknown[] };
+
+  /** A block's snapshot, with its row data kept apart. */
+  const readBlock = (block: Block) => {
     const passage = passageFromBlock(block);
     if (!passage) return null;
-    extras?.set(passage.uuid, passage.extras ?? {});
-    return { uuid: passage.uuid, content: passage.content };
+    return {
+      snapshot: { uuid: passage.uuid, content: passage.content },
+      extras: passage.extras ?? {},
+    };
+  };
+
+  /** A block's snapshot, noting its row data on the way. */
+  const snapshotOf = (block: Block): PassageSnapshot | null => {
+    const read = readBlock(block);
+    if (!read) return null;
+    extras?.set(read.snapshot.uuid, read.extras);
+    return read.snapshot;
   };
 
   const wrongWork = (requested: string) => {
@@ -199,6 +228,89 @@ export const graphqlPassageSource = ({
     return found;
   };
 
+  /** The `AROUND` page for `uuid`, its blocks as an array. */
+  const pageAround = async (uuid: string, limit: number) => {
+    const page = await getTranslationBlocksAround({
+      client,
+      uuid: workUuid,
+      passageUuid: uuid,
+      maxPassages: limit,
+    });
+    const blocks: Block[] = Array.isArray(page.blocks)
+      ? page.blocks
+      : [page.blocks].filter(Boolean);
+    return { blocks, page };
+  };
+
+  /** The passages around `uuid`, it included, in the work's order. */
+  const readAround = async (uuid: string, limit: number) => {
+    const { blocks, page } = await pageAround(uuid, limit);
+    const found: PassageSnapshot[] = [];
+    blocks.forEach((block) => {
+      const snapshot = snapshotOf(block);
+      if (snapshot) found.push(snapshot);
+    });
+    return { found, page };
+  };
+
+  type Primed = {
+    snapshot: PassageSnapshot;
+    extras: PassageExtras;
+  };
+
+  /**
+   * What the last prime read, until its target is taken or a new prime starts.
+   *
+   * A passage an ordinary read returns while the prime is out is `superseded`:
+   * the prime may have been answered before it, so it is never handed out.
+   */
+  let primed: {
+    target: string;
+    read: Promise<Map<string, Primed>>;
+    held?: Map<string, Primed>;
+    superseded: Set<string>;
+  } | null = null;
+
+  /**
+   * The primed snapshots among `uuids`, each handed out once, with their row
+   * data noted as they are.
+   *
+   * Only a load that wants the primed passage itself waits for the read; any
+   * other takes what has arrived, rather than queueing behind a read it may
+   * have no part in. Once the target is taken the rest is dropped: the
+   * target's own load is the one the prime is for, and anything left would
+   * only age.
+   */
+  const takePrimed = async (uuids: string[]) => {
+    const current = primed;
+    if (!current) return [];
+    const wantsTarget = uuids.includes(current.target);
+    const held = current.held ?? (wantsTarget ? await current.read : undefined);
+    // A newer prime, or the target's own load, may have replaced this one
+    // while it was out; only the current one is told what reads superseded.
+    if (!held || primed !== current) return [];
+    const taken: PassageSnapshot[] = [];
+    uuids.forEach((uuid) => {
+      const entry = held.get(uuid);
+      held.delete(uuid);
+      if (!entry || current.superseded.has(uuid)) return;
+      extras?.set(uuid, entry.extras);
+      taken.push(entry.snapshot);
+    });
+    if ((wantsTarget || !held.size) && primed === current) primed = null;
+    return taken;
+  };
+
+  /** Marks what an ordinary read returned as newer than the prime's. */
+  const supersede = (snapshots: PassageSnapshot[]) => {
+    const current = primed;
+    if (!current) return;
+    snapshots.forEach(({ uuid }) => {
+      current.superseded.add(uuid);
+      current.held?.delete(uuid);
+    });
+  };
+
   /**
    * Read a run, starting from its first passage.
    *
@@ -232,21 +344,10 @@ export const graphqlPassageSource = ({
       return forward;
     }
 
-    const page = await getTranslationBlocksAround({
-      client,
-      uuid: workUuid,
-      passageUuid: first,
-      maxPassages: Math.min(MAX_PAGE, Math.max(count * 2, 2)),
-    });
-    const blocks = Array.isArray(page.blocks)
-      ? page.blocks
-      : [page.blocks].filter(Boolean);
-
-    const found: PassageSnapshot[] = [];
-    blocks.forEach((block) => {
-      const snapshot = snapshotOf(block);
-      if (snapshot) found.push(snapshot);
-    });
+    const { found, page } = await readAround(
+      first,
+      Math.min(MAX_PAGE, Math.max(count * 2, 2)),
+    );
 
     // `AROUND` splits its limit either side of the cursor, so a long run needs
     // the remainder read forward from where it stopped.
@@ -267,8 +368,13 @@ export const graphqlPassageSource = ({
     ): Promise<PassageSnapshot[]> {
       if (wrongWork(requestedWorkUuid) || !uuids.length) return [];
 
-      const runs = runsFor(uuids);
-      const wanted = new Set(uuids);
+      const fromPrime = await takePrimed(uuids);
+      const answered = new Set(fromPrime.map((snapshot) => snapshot.uuid));
+      const rest = uuids.filter((uuid) => !answered.has(uuid));
+      if (!rest.length) return fromPrime;
+
+      const runs = runsFor(rest);
+      const wanted = new Set(rest);
 
       // Without a spine there is no cursor to derive, so fall back to reading
       // from the start of the work in pages until the wanted set is covered.
@@ -276,11 +382,40 @@ export const graphqlPassageSource = ({
       const found = runs?.length
         ? (await Promise.all(runs.map((run) => readFrom(run)))).flat()
         : await readSpan(undefined, MAX_PAGE);
+      supersede(found);
 
       // Passages pulled in because they sat inside the run are dropped: the
       // loader treats anything returned as answered, and a passage the caller
       // did not ask for is one it already holds.
-      return found.filter((snapshot) => wanted.has(snapshot.uuid));
+      return [
+        ...fromPrime,
+        ...found.filter((snapshot) => wanted.has(snapshot.uuid)),
+      ];
+    },
+
+    prime(uuid: string) {
+      const next: NonNullable<typeof primed> = {
+        target: uuid,
+        // Row data is held with each snapshot and noted only when it is taken,
+        // so a prime nobody takes never replaces what a newer read noted.
+        read: pageAround(uuid, PRIME_AROUND).then(
+          ({ blocks }) => {
+            const held = new Map<string, Primed>();
+            blocks.forEach((block) => {
+              const read = readBlock(block);
+              if (read) held.set(read.snapshot.uuid, read);
+            });
+            return held;
+          },
+          // A failed prime answers nothing; the loads read for themselves.
+          () => new Map(),
+        ),
+        superseded: new Set(),
+      };
+      void next.read.then((held) => {
+        next.held = held;
+      });
+      primed = next;
     },
 
     /**

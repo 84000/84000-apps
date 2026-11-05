@@ -16,7 +16,7 @@ import { StackHydration } from './stack-hydration';
 import { StackLiveEditors } from './stack-live-editors';
 import { StackPassageSelectionModel } from './stack-passage-selection';
 import { StackRowContent } from './stack-row-content';
-import { trackTextOrigin } from './stack-work';
+import { primeAround, trackTextOrigin } from './stack-work';
 import type {
   PassageExtras,
   StackControllerOptions,
@@ -121,6 +121,9 @@ export class StackController {
       resetLive: () => this.live.reset(),
       scrollTo: (index, options) => this.live.scrollTo(index, options),
       bump: () => this.bump(),
+      // Readers only: a primed passage can answer a load well after the read
+      // was taken, and an editor could have saved over it since.
+      prime: this.editing ? undefined : (uuid) => primeAround(this.work, uuid),
     });
     this.selection = new StackPassageSelectionModel({
       work: this.work,
