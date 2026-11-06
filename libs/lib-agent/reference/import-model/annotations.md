@@ -1,7 +1,7 @@
 # Annotations
 
 Annotations are ranges over a passage's `content`, carried on the
-`upsert_passage` operation that creates it. Source-agnostic: what a `.docx`
+`upsert-passage` operation that creates it. Source-agnostic: what a `.docx`
 style or any other source signals, it signals *as one of these*.
 
 Every annotation has the same envelope:

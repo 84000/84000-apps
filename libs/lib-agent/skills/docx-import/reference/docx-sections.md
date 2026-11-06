@@ -6,7 +6,7 @@ and labels that follow from that are in `import-model/passages.md`.
 ## The base rule
 
 After `Canonical Reference:`, every supported paragraph becomes one
-`upsert_passage`, in source order, with the normalized paragraph text as its
+`upsert-passage`, in source order, with the normalized paragraph text as its
 content — unless a merge rule below applies.
 
 A hard return usually starts a new passage. A soft return never does on its own;

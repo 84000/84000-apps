@@ -13,7 +13,7 @@ is already in the database.
 ### List of Titles
 
 The lines under `List of Titles:` appear in a fixed order, each becoming one
-`upsert_title`:
+`upsert-title`:
 
 | line | type | language |
 |---|---|---|
@@ -34,17 +34,17 @@ than its position, and note it in the preview.
 
 ### Additional Titles
 
-Every line under `Additional Titles:` becomes one `upsert_title` with type
+Every line under `Additional Titles:` becomes one `upsert-title` with type
 `otherTitle`, in source order.
 
 ## Canonical Reference
 
 Three lines, in order:
 
-1. **Toh** — `update_work` with `{ "toh": "toh{number}" }`.
-2. **Source description** — `upsert_folio_annotation` with
+1. **Toh** — `update-work` with `{ "toh": "toh{number}" }`.
+2. **Source description** — `upsert-folio-annotation` with
    `{ "source_description": "…" }`.
-3. **Tantra warning** — when the line contains `☒`, `update_work` with
+3. **Tantra warning** — when the line contains `☒`, `update-work` with
    `{ "restriction": true }`. No warning means no operation; do not send
    `false`.
 

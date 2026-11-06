@@ -1,6 +1,6 @@
 ---
 name: docx-import
-description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-entity-import` tool.
+description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-work-edits` tool.
 allowed-tools: Skill(docx)
 ---
 
@@ -97,11 +97,15 @@ work metadata first, then the passages through the shared passage save path,
 and returns each group with what it wrote and any warnings (e.g. a missing
 folio-annotation row).
 
-A large import is saved in chunks. If the call fails partway (a group comes
-back `applied: false` or `"unknown"`, or the result is lost), call it again
-with the same ops: passages and annotations sent
-without uuids get derived ones, so the re-run updates what the first run saved
-rather than duplicating it.
+If the call is refused (`success: false` with nothing applied), fix what
+`error` names and call it again.
+
+A large import is saved in chunks. If it fails partway (the `passages` group
+comes back `applied: "unknown"`, or the result is lost), call it again with the
+same ops: passages and annotations sent without uuids get derived ones, so the
+re-run updates what the first run saved rather than duplicating it. If the
+work-metadata group was already written, drop any `expect` guards from the
+re-run: they hold the values that group replaced, so they would refuse it.
 
 ### 6. Verify
 

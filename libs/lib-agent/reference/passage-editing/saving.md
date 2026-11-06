@@ -79,8 +79,10 @@ checked against the stored passages first, and one that does not match — a
 refuses the whole call before anything is written.
 
 The result lists each group it planned or wrote under `groups`, and `success`
-says whether all of them went through. The `passages` group's `applied` says
-what happened to it:
+says whether all of them went through. Check `success` and `error` first: a call
+refused outright (an unknown op, or `upsert-passage` mixed with edit ops) wrote
+nothing and may have no `passages` group to read. Otherwise the `passages` group's `applied` says what
+happened to it:
 
 - **`true`** — written.
 - **`"unknown"`** — the write may have landed, but its answer was lost. **Re-read

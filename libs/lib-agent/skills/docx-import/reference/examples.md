@@ -24,12 +24,12 @@ Canonical Reference:
 
 ```json
 [
-  { "kind": "upsert_title", "title": { "content": "bcom ldan 'das", "type": "mainTitle", "language": "Bo-Ltn" } },
-  { "kind": "upsert_title", "title": { "content": "བཅོམ་ལྡན་འདས།", "type": "mainTitle", "language": "bo" } },
-  { "kind": "upsert_title", "title": { "content": "The Blessed One", "type": "mainTitle", "language": "en" } },
-  { "kind": "update_work", "patch": { "toh": "toh44" } },
-  { "kind": "upsert_folio_annotation", "patch": { "source_description": "Degé Kangyur, vol. 3" } },
-  { "kind": "update_work", "patch": { "restriction": true } }
+  { "op": "upsert-title", "title": { "content": "bcom ldan 'das", "type": "mainTitle", "language": "Bo-Ltn" } },
+  { "op": "upsert-title", "title": { "content": "བཅོམ་ལྡན་འདས།", "type": "mainTitle", "language": "bo" } },
+  { "op": "upsert-title", "title": { "content": "The Blessed One", "type": "mainTitle", "language": "en" } },
+  { "op": "update-work", "patch": { "toh": "toh44" } },
+  { "op": "upsert-folio-annotation", "patch": { "source_description": "Degé Kangyur, vol. 3" } },
+  { "op": "update-work", "patch": { "restriction": true } }
 ]
 ```
 
@@ -48,20 +48,20 @@ Paragraph:  Thus have I heard.
 
 ```json
 [
-  { "kind": "upsert_passage",
+  { "op": "upsert-passage",
     "passage": { "label": "", "type": "translationHeader", "content": "The Translation" },
     "annotations": [ { "kind": "heading", "start": 0, "end": 15, "data": { "level": 2, "class": "section-title" } } ] },
-  { "kind": "upsert_passage",
+  { "op": "upsert-passage",
     "passage": { "label": "1", "type": "translation",
                  "content": "Homage to all buddhas and bodhisattvas.\nThe Noble Sūtra of Example" },
     "annotations": [
       { "kind": "heading", "start": 0,  "end": 39, "data": { "level": 2, "class": "body-title-honorific" } },
       { "kind": "heading", "start": 40, "end": 66, "data": { "level": 2, "class": "body-title-main" } }
     ] },
-  { "kind": "upsert_passage",
+  { "op": "upsert-passage",
     "passage": { "label": "1.1", "type": "translationHeader", "content": "Chapter 1" },
     "annotations": [ { "kind": "heading", "start": 0, "end": 9, "data": { "level": 2, "class": "section-title" } } ] },
-  { "kind": "upsert_passage",
+  { "op": "upsert-passage",
     "passage": { "label": "1.1.1", "type": "translation", "content": "Thus have I heard." },
     "annotations": [] }
 ]
@@ -81,11 +81,11 @@ Paragraph:  It concerns the perfection of wisdom.
 
 ```json
 [
-  { "kind": "upsert_passage",
+  { "op": "upsert-passage",
     "passage": { "label": "s.", "type": "summaryHeader", "content": "Summary" },
     "annotations": [ { "kind": "heading", "start": 0, "end": 7, "data": { "level": 2, "class": "section-title" } } ] },
-  { "kind": "upsert_passage", "passage": { "label": "1", "type": "summary", "content": "This sūtra was taught at Rājagṛha." }, "annotations": [] },
-  { "kind": "upsert_passage", "passage": { "label": "2", "type": "summary", "content": "It concerns the perfection of wisdom." }, "annotations": [] }
+  { "op": "upsert-passage", "passage": { "label": "1", "type": "summary", "content": "This sūtra was taught at Rājagṛha." }, "annotations": [] },
+  { "op": "upsert-passage", "passage": { "label": "2", "type": "summary", "content": "It concerns the perfection of wisdom." }, "annotations": [] }
 ]
 ```
 
@@ -101,7 +101,7 @@ Form is emptiness,⏎emptiness is form.
 ```
 
 ```json
-{ "kind": "upsert_passage",
+{ "op": "upsert-passage",
   "passage": { "label": "1.1.2", "type": "translation", "content": "Form is emptiness,\nemptiness is form." },
   "annotations": [
     { "kind": "blockquote",  "start": 0,  "end": 37 },
@@ -124,8 +124,8 @@ Paragraph (bulleted): second witness
 
 ```json
 [
-  { "kind": "upsert_passage", "passage": { "label": "3", "type": "introduction", "content": "first witness" }, "annotations": [] },
-  { "kind": "upsert_passage", "passage": { "label": "4", "type": "introduction", "content": "second witness" }, "annotations": [] }
+  { "op": "upsert-passage", "passage": { "label": "3", "type": "introduction", "content": "first witness" }, "annotations": [] },
+  { "op": "upsert-passage", "passage": { "label": "4", "type": "introduction", "content": "second witness" }, "annotations": [] }
 ]
 ```
 

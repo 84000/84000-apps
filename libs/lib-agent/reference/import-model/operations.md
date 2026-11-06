@@ -50,7 +50,8 @@ insert when there is none. There is no separate insert op.
 The three work-metadata ops also take an `expect` guard: the stored values you
 read, by field, e.g. `"expect": { "toh": "toh1" }`. If any differs the whole
 call is refused and nothing is written. Send it when you change a value that
-is already set.
+is already set. When re-running an import whose work-metadata group was
+already written, drop the guards: they hold the values that run replaced.
 
 `upsert-passage` cannot be mixed with the passage edit ops (`delete-text` and
 the rest, in `passage-editing/saving.md`) in one call.
