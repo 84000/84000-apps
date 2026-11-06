@@ -176,33 +176,82 @@ export const ThreeColumns = ({
     onRightPanelOpenChange?.(!rightPanelOpen);
   };
 
+  const toggleButtonClassName =
+    'cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all';
+
+  // One tree at every width, so the main panel mounts once and the server HTML
+  // is the same for every device. Only the side panels respond to the
+  // breakpoint: below md they are hidden and their content opens in a sheet.
   return (
-    <>
-      {/* Mobile Layout */}
-      <div
+    <div className="overflow-hidden size-full">
+      <ResizablePanelGroup
         className={cn(
-          'flex size-full overflow-hidden md:hidden rounded border bg-background',
+          // A panel left open on desktop must not take width on mobile. Keep
+          // it in the layout at zero width rather than hiding it: the library
+          // orders panels by their offsets, so a hidden panel is misplaced.
+          // `!` because the library sets the flex and touch styles inline.
+          'max-md:[&>[data-side-panel]]:basis-0! max-md:[&>[data-side-panel]]:grow-0! max-md:[&>[data-side-panel]]:overflow-hidden',
+          // Allow pinch zoom on mobile, as the page does.
+          'max-md:touch-auto!',
           className,
         )}
+        orientation="horizontal"
+        // Nothing resizes below md. Toggling this also makes the library
+        // re-read the handles' positions once they are shown again.
+        disabled={isMobile}
       >
-        <div className="flex flex-col" style={{ overflow: 'auto' }}>
+        {leftPanelEnabled && (
+          <>
+            <ResizablePanel
+              data-side-panel="left"
+              panelRef={leftPanelRef}
+              className={cn(
+                'hidden md:block rounded border border-border/60 bg-background',
+                !leftPanelOpen && 'border-none',
+              )}
+              collapsible
+              collapsedSize={pct(MinPanelSizes.COLLAPSED)}
+              defaultSize={
+                leftPanelOpen
+                  ? pct(MinPanelSizes.SIDE_DEFAULT)
+                  : pct(MinPanelSizes.COLLAPSED)
+              }
+              minSize={pct(MinPanelSizes.SIDE_MIN)}
+            >
+              {!isMobile && leftPanelChildren}
+            </ResizablePanel>
+            <ResizableHandle
+              withHandle={leftPanelOpen}
+              className={cn(
+                'hidden md:flex text-muted-foreground transparent',
+                leftPanelOpen && 'w-2',
+              )}
+            />
+          </>
+        )}
+        <ResizablePanel
+          className="flex flex-col rounded border bg-background max-md:touch-auto!"
+          style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
+          defaultSize={pct(MinPanelSizes.FULL)}
+          minSize={pct(MinPanelSizes.MAIN_MIN)}
+        >
           <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
             <Button
               variant="link"
               size="icon"
-              className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+              className={toggleButtonClassName}
               onClick={toggleLeftPanel}
             >
               <PanelLeftIcon />
               <span className="sr-only">Toggle Left Panel</span>
             </Button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 md:gap-2">
               {mainPanelActions}
               {rightPanelEnabled && (
                 <Button
                   variant="link"
                   size="icon"
-                  className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
+                  className={toggleButtonClassName}
                   onClick={toggleRightPanel}
                 >
                   <PanelRightIcon />
@@ -215,139 +264,73 @@ export const ThreeColumns = ({
             {mainHeaderChildren}
             {mainPanelChildren}
           </div>
-        </div>
-        {leftPanelEnabled && (
-          <Sheet
-            open={leftPanelOpen && isMobile}
-            onOpenChange={onLeftPanelOpenChange}
-          >
-            <SheetContent
-              side="left"
-              className="md:hidden w-full sm:max-w-full bg-sidebar"
-            >
-              <SheetHeader className="sr-only">
-                <SheetTitle>Left Panel</SheetTitle>
-                <SheetDescription>
-                  Navigation and content panel
-                </SheetDescription>
-              </SheetHeader>
-              {leftPanelChildren}
-            </SheetContent>
-          </Sheet>
-        )}
+        </ResizablePanel>
         {rightPanelEnabled && (
-          <Sheet
-            open={rightPanelOpen && isMobile}
-            onOpenChange={onRightPanelOpenChange}
-          >
-            <SheetContent
-              side="right"
-              className="md:hidden w-full sm:max-w-full bg-sidebar"
+          <>
+            <ResizableHandle
+              withHandle={rightPanelOpen}
+              className={cn(
+                'hidden md:flex text-muted-foreground',
+                rightPanelOpen && 'w-2',
+              )}
+            />
+            <ResizablePanel
+              data-side-panel="right"
+              panelRef={rightPanelRef}
+              className={cn(
+                'hidden md:block rounded border border-border/60 bg-background',
+                !rightPanelOpen && 'border-none',
+              )}
+              collapsible
+              collapsedSize={pct(MinPanelSizes.COLLAPSED)}
+              defaultSize={
+                rightPanelOpen
+                  ? pct(MinPanelSizes.SIDE_DEFAULT)
+                  : pct(MinPanelSizes.COLLAPSED)
+              }
+              minSize={pct(MinPanelSizes.SIDE_MIN)}
             >
-              <SheetHeader className="sr-only">
-                <SheetTitle>Right Panel</SheetTitle>
-                <SheetDescription>Additional content panel</SheetDescription>
-              </SheetHeader>
-              {rightPanelChildren}
-            </SheetContent>
-          </Sheet>
+              {!isMobile && rightPanelChildren}
+            </ResizablePanel>
+          </>
         )}
-      </div>
-
-      {/* Desktop Layout */}
-      <div className="hidden md:block overflow-hidden size-full">
-        <ResizablePanelGroup className={className} orientation="horizontal">
-          {leftPanelEnabled && (
-            <>
-              <ResizablePanel
-                panelRef={leftPanelRef}
-                className={cn(
-                  'hidden md:block rounded border border-border/60 bg-background',
-                  !leftPanelOpen && 'border-none',
-                )}
-                collapsible
-                collapsedSize={pct(MinPanelSizes.COLLAPSED)}
-                defaultSize={
-                  leftPanelOpen
-                    ? pct(MinPanelSizes.SIDE_DEFAULT)
-                    : pct(MinPanelSizes.COLLAPSED)
-                }
-                minSize={pct(MinPanelSizes.SIDE_MIN)}
-              >
-                {leftPanelChildren}
-              </ResizablePanel>
-              <ResizableHandle
-                withHandle={leftPanelOpen}
-                className={cn(
-                  'text-muted-foreground transparent',
-                  leftPanelOpen && 'w-2',
-                )}
-              />
-            </>
-          )}
-          <ResizablePanel
-            className="hidden md:flex md:flex-col rounded border bg-background"
-            style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
-            defaultSize={pct(MinPanelSizes.FULL)}
-            minSize={pct(MinPanelSizes.MAIN_MIN)}
+      </ResizablePanelGroup>
+      {/* Sheets mount their content only while open, and open only on a tap,
+          so they never change the server HTML. */}
+      {leftPanelEnabled && (
+        <Sheet
+          open={!!leftPanelOpen && isMobile}
+          onOpenChange={onLeftPanelOpenChange}
+        >
+          <SheetContent
+            side="left"
+            className="md:hidden w-full sm:max-w-full bg-sidebar"
           >
-            <div className="bg-background rounded-t-lg sticky top-0 py-1.5 w-full flex justify-between z-10">
-              <Button
-                variant="link"
-                size="icon"
-                className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                onClick={toggleLeftPanel}
-              >
-                <PanelLeftIcon />
-                <span className="sr-only">Toggle Left Panel</span>
-              </Button>
-              <div className="flex items-center gap-2">
-                {mainPanelActions}
-                {rightPanelEnabled && (
-                  <Button
-                    variant="link"
-                    size="icon"
-                    className="cursor-pointer text-accent/60 hover:text-accent [&_svg]:size-5 [&_svg]:stroke-1 transition-all"
-                    onClick={toggleRightPanel}
-                  >
-                    <PanelRightIcon />
-                    <span className="sr-only">Toggle Right Panel</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="bg-surface flex-1">
-              {mainHeaderChildren}
-              {mainPanelChildren}
-            </div>
-          </ResizablePanel>
-          {rightPanelEnabled && (
-            <>
-              <ResizableHandle
-                withHandle={rightPanelOpen}
-                className={cn('text-muted-foreground', rightPanelOpen && 'w-2')}
-              />
-              <ResizablePanel
-                panelRef={rightPanelRef}
-                className={cn(
-                  'hidden md:block rounded border border-border/60 bg-background',
-                  !rightPanelOpen && 'border-none',
-                )}
-                collapsible
-                collapsedSize={pct(MinPanelSizes.COLLAPSED)}
-                defaultSize={
-                  rightPanelOpen
-                    ? pct(MinPanelSizes.SIDE_DEFAULT)
-                    : pct(MinPanelSizes.COLLAPSED)
-                }
-                minSize={pct(MinPanelSizes.SIDE_MIN)}
-              >
-                {rightPanelChildren}
-              </ResizablePanel>
-            </>
-          )}
-        </ResizablePanelGroup>
-      </div>
-    </>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Left Panel</SheetTitle>
+              <SheetDescription>Navigation and content panel</SheetDescription>
+            </SheetHeader>
+            {isMobile && leftPanelChildren}
+          </SheetContent>
+        </Sheet>
+      )}
+      {rightPanelEnabled && (
+        <Sheet
+          open={!!rightPanelOpen && isMobile}
+          onOpenChange={onRightPanelOpenChange}
+        >
+          <SheetContent
+            side="right"
+            className="md:hidden w-full sm:max-w-full bg-sidebar"
+          >
+            <SheetHeader className="sr-only">
+              <SheetTitle>Right Panel</SheetTitle>
+              <SheetDescription>Additional content panel</SheetDescription>
+            </SheetHeader>
+            {isMobile && rightPanelChildren}
+          </SheetContent>
+        </Sheet>
+      )}
+    </div>
   );
 };
