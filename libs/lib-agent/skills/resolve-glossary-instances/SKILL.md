@@ -146,8 +146,8 @@ editor if the counts changed.
 
 ### 7. Apply
 
-For each ops file: call `apply-passage-edits` with the work's uuid, the file's
-array as `edits`, and `dryRun: true`; check the result; then call it again
+For each ops file: call `apply-work-edits` with the work's uuid, the file's
+array as `ops`, and `dryRun: true`; check the result; then call it again
 without `dryRun`. Do one file at a time.
 
 - An edit whose `text` no longer matches is refused, and the whole call with it:
@@ -155,7 +155,7 @@ without `dryRun`. Do one file at a time.
   after that, stop and tell the editor which files are still unapplied.
 - A warning that an identical instance already exists means it was already
   added. That is safe.
-- If a result says `applied: "unknown"`, re-read the passages before sending
+- If the `passages` group comes back `applied: "unknown"`, re-read the passages before sending
   anything again.
 
 ### 8. Verify and report

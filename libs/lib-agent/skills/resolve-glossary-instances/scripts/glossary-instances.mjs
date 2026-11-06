@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Finds glossary-instance candidates in an unpacked work snapshot, and turns the
-// accepted ones into apply-passage-edits ops. No dependencies.
+// accepted ones into apply-work-edits ops. No dependencies.
 //
 //   node glossary-instances.mjs find <snapshot-dir> <out-dir> [--many 150]
 //   node glossary-instances.mjs ops <out-dir> [--chunk 50]

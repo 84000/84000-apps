@@ -1,6 +1,6 @@
 ---
 name: docx-import
-description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-entity-import` tool.
+description: Import a 84000 translation .docx file into the studio as structured passages, titles, and work metadata. Use when an editor wants to ingest a Word document that follows (however loosely) the 84000 copy-editor translation template into an empty work. Reads the docx, maps its structure to the passage schema, shows a preview for review, then writes via the studio MCP `apply-work-edits` tool.
 allowed-tools: Skill(docx)
 ---
 
@@ -31,7 +31,7 @@ Treat them as **strong guidance you reason around**, not exact-match rules:
 ## Prerequisites
 
 - The studio MCP endpoint is connected and you are authenticated as an
-  **editor** (the `apply-entity-import` tool requires `editor.edit`).
+  **editor** (the `apply-work-edits` tool requires `editor.edit`).
 - A **target work exists and has no passages yet.** Import does a first-time
   content fill and refuses a work that already has passages. Titles may already
   exist — it is common for them to be created before the content. The document
@@ -61,13 +61,13 @@ Use `get-translation` (by `toh` or `uuid`) to confirm the work and capture its
 passages yet. If it already has some titles, expect import to update them from
 the document and add any missing ones.
 
-### 3. Map structure → operations
+### 3. Map structure → ops
 
 Two layers, in two places. **`reference/import-model/`** says what the studio
 accepts — it is shared with every other importer, so it is the same contract
 however the content arrived:
 
-- `import-model/operations.md` — the four operation kinds and their shapes
+- `import-model/operations.md` — the four import ops and their shapes
 - `import-model/passages.md` — passage types, section families, label rules
 - `import-model/annotations.md` — the eight importable annotation kinds
 - `import-model/titles.md` — title slots and work metadata
@@ -75,28 +75,40 @@ however the content arrived:
 The `docx-*` files say how a Word document signals those things: read
 `reference/docx-structure.md` first, then `reference/docx-metadata.md`,
 `reference/docx-sections.md`, or `reference/docx-styles.md` for what is in front
-of you. `reference/examples.md` shows input beside the operations it should
+of you. `reference/examples.md` shows input beside the ops it should
 produce — check your reading against it before building the preview.
 
-Build an ordered list of operations in source order.
+Build an ordered list of ops in source order.
 
 ### 4. Present a preview for review (required)
 
 Before writing, show the editor a concise summary: counts (titles, passages,
 annotations, work updates), the section outline with labels, and any deviations
-or assumptions you made. **Do not call the write tool until the editor
-confirms.** This conversational preview is the dry-run gate.
+or assumptions you made. Back it with a dry run: call `apply-work-edits` with
+`{ "workUuid": "…", "ops": [ … ], "dryRun": true }`. It plans every op against
+the stored work and writes nothing; report anything it refuses or warns about,
+and which titles it would update rather than insert. **Do not write until the
+editor confirms.**
 
 ### 5. Apply
 
-Call `apply-entity-import` with `{ "workUuid": "…", "operations": [ … ] }`. It
-writes everything to the empty work through the shared passage save path and
-returns counts plus any warnings (e.g. a missing folio-annotation row).
+Call `apply-work-edits` again with the same ops and no `dryRun`. It writes the
+work metadata first, then the passages through the shared passage save path,
+and returns each group with what it wrote and any warnings (e.g. a missing
+folio-annotation row).
 
-A large import is saved in chunks. If the call fails partway, or its result is
-lost, call it again with the same operations: passages and annotations sent
-without uuids get derived ones, so the re-run updates what the first run saved
-rather than duplicating it.
+If the call is refused (`success: false` with nothing applied), fix what
+`error` names and call it again.
+
+A large import is saved in chunks. If it fails partway (the `passages` group
+comes back `applied: "unknown"`, or the result is lost), call it again with the
+same ops: passages and annotations sent without uuids get derived ones, so the
+re-run updates what the first run saved rather than duplicating it. If the
+work-metadata group was already written, drop any `expect` guards from the
+re-run: they hold the values that group replaced, so they would refuse it.
+If the work-metadata group itself comes back `applied: "unknown"`, part of it
+may be written: re-read the work and its titles, then re-run without the
+guards.
 
 ### 6. Verify
 

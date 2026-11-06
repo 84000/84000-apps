@@ -5,7 +5,7 @@ Source-agnostic: where a reader finds these is its own business.
 
 ## Title slots
 
-A slot is a **type plus a language**, and `upsert_title` addresses one slot. A
+A slot is a **type plus a language**, and `upsert-title` addresses one slot. A
 second title for a slot that already exists replaces it rather than adding to
 it, so a source carrying two candidates for the same slot needs a decision, not
 two operations.
@@ -29,12 +29,12 @@ inserted.
 
 ## Work fields
 
-- `works.toh` — the Tohoku catalog number, as `toh44`, via `update_work`.
+- `works.toh` — the Tohoku catalog number, as `toh44`, via `update-work`.
 - `works.restriction` — `true` for a text carrying a tantra restriction, via
-  `update_work`.
+  `update-work`.
 
 ## Folio metadata
 
 `folio_annotations.source_description` records the source the translation was
-made from, set with `upsert_folio_annotation`. A work with no folio annotation
+made from, set with `upsert-folio-annotation`. A work with no folio annotation
 row yet returns a warning rather than failing the import.
