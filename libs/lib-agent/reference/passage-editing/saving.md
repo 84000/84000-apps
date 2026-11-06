@@ -1,13 +1,19 @@
 # Saving a changed passage
 
-Use **`apply-passage-edits`**. You send what you want changed and it works out
-the consequences: the offsets of every other annotation on those passages, the
-annotations you did not mention, the content, the sort of a passage you insert.
+Use **`apply-work-edits`** with the edit ops below, sent as
+`{ "workUuid": "…", "ops": [ … ] }`. You send what you want changed and it works
+out the consequences: the offsets of every other annotation on those passages,
+the annotations you did not mention, the content, the sort of a passage you
+insert.
 
-`apply-entity-import` is the other tool, and it is for filling a work that has
-no passages yet. It takes a passage's whole end state, which on a populated work
-means reconstructing everything you are not changing — see _Why not the import
-tool_ below.
+The same tool's `upsert-passage` op is for filling a work that has no passages
+yet (see `reference/import-model/operations.md`). It takes a passage's whole end
+state, which on a populated work means reconstructing everything you are not
+changing — see _Why not the import op_ below. The two cannot be mixed in one
+call.
+
+The older `apply-passage-edits` tool takes these same edits as `edits`. It is
+kept only for plugins that have not updated; do not use it.
 
 ## The edits
 
@@ -59,23 +65,35 @@ Read `offsets.md` for why this is the part worth getting right.
 ## Preview with `dryRun`
 
 `dryRun: true` computes the result and returns it without writing. That is the
-preview: the content as it would stand, the annotation counts, and any warnings.
+preview: the `passages` group's `changes` hold each passage's content as it
+would stand and its annotation count, and its `warnings` say what moved or was
+dropped.
 Show the editor that, not a description of your intentions. See `preview.md`.
 
 ## What a write guarantees
 
-A write is **all or nothing**: the content, every annotation and any label the
-insert renumbers land together, or none of them do. The result says which:
+A write of edit ops is **all or nothing**: the content, every annotation and
+any label the insert renumbers land together, or none of them do. Every edit is
+checked against the stored passages first, and one that does not match — a
+`text` that is not there, a passage or annotation that is not in the work —
+refuses the whole call before anything is written.
 
-- **`applied: true`** — written.
-- **an error that begins `applied: "unknown"`** — the write may have landed,
-  but its answer was lost. **Re-read the passages with `get-passage` and compare
-  them with what you sent before you issue anything again.** Send only what is
-  missing.
-- **any other error** — nothing was written. Fix what it names and send the
-  call again.
+The result lists each group it planned or wrote under `groups`, and `success`
+says whether all of them went through. The `passages` group's `applied` says
+what happened to it:
 
-With `dryRun`, the result says `applied: false`: nothing was written.
+- **`true`** — written.
+- **`"unknown"`** — the write may have landed, but its answer was lost. **Re-read
+  the passages with `get-passage` and compare them with what you sent before you
+  issue anything again.** Send only what is missing.
+- **`false`** — nothing was written. `error` says why; fix what it names and
+  send the call again.
+
+With `dryRun`, every group says `applied: false`: nothing was written.
+
+If the same call also changes the work's metadata (`update-work` and the
+other metadata ops), that group is written first. When it fails, the passages
+are listed in `notAttempted` and nothing of them was written.
 
 The tool never retries for you. After `"unknown"`, do not resend the same call
 blindly:
@@ -93,31 +111,30 @@ for an unused number — sorts need not be contiguous and passages may share one
 
 `label` defaults to none and `type` to the anchor's type.
 
-## Why not the import tool
+## Why not the import op
 
-`apply-entity-import` replaces a passage's stored annotations with the set you
+`upsert-passage` replaces a passage's stored annotations with the set you
 send, so on a populated work you would have to re-send every annotation you were
 not changing, at offsets you had re-mapped yourself, along with the passage's
 existing `uuid`, `sort`, `label` and `type`. Anything you omitted would be
 deleted or overwritten.
 
-That is what `apply-passage-edits` exists to do for you. Reach for the import
-tool only to fill a work that has no passages, or to re-run an import that
+That is what the edit ops exist to do for you. Reach for `upsert-passage` only to fill a work that has no passages, or to re-run an import that
 failed partway.
 
 ## Re-running an import
 
-A large `apply-entity-import` is saved in chunks, so it is not all or nothing: a
-failure partway leaves the earlier chunks written, and the error says how many
-passages were saved.
+A large import is saved in chunks, so it is not all or nothing: a failure
+partway leaves the earlier chunks written, and the `passages` group comes back
+`applied: "unknown"`.
 
-**Send the same operations again.** A passage sent without a `uuid` gets one
+**Send the same ops again.** A passage sent without a `uuid` gets one
 derived from the work and its position (its `docx-<sort>` xmlId), and an
 annotation sent without one gets one derived from its passage, kind, range and
 data. A re-run therefore updates the rows the failed run saved instead of adding
 them a second time, and ends with the rows one clean run would have written.
 
-If the operations changed between runs, the re-run still matches by position. A
+If the ops changed between runs, the re-run still matches by position. A
 shorter run leaves the passages past its end in place, and the result warns
 about them by xmlId. If an edit has moved a passage the earlier run saved out
 of order among this import's passages, the re-run is refused and nothing is

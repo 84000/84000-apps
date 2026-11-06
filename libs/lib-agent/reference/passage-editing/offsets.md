@@ -50,7 +50,7 @@ which you chose in the preview. Two markers at the same offset — an end-note
 link and a folio break commonly collide — keep their relative order only if you
 preserve it explicitly.
 
-## What `apply-passage-edits` does for you
+## What `apply-work-edits` does for you
 
 It applies these rules to every annotation on the passage, legacy rows included,
 from the exact list of your cuts. It drops an annotation whose text you cut

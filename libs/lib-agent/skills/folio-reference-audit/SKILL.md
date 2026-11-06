@@ -223,7 +223,7 @@ source first; that is the point of the report.
 
 ### 7. Apply approved fixes
 
-Use `apply-passage-edits`, offsets in the stored passage coordinates, all edits
+Use `apply-work-edits`, offsets in the stored passage coordinates, all edits
 to a passage in one call. It has no way to order two zero-length annotations at
 the same offset, so where a folio joins an end-note marker, ask the editor to
 confirm the order in the studio afterwards.

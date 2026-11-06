@@ -160,7 +160,7 @@ treat it as evidence you have mis-read a work.
 
 ### 6. Describe the edit for each marker
 
-`apply-passage-edits` does the arithmetic. For each marker you accepted, three
+`apply-work-edits` does the arithmetic. For each marker you accepted, three
 edits on its passage, with every offset in the **stored** coordinates — the
 passage as you read it, before any of your edits:
 
@@ -197,11 +197,11 @@ What this conversion specifically owes the editor:
 
 ### 8. Apply
 
-Call `apply-passage-edits` with `dryRun: true` first — its result **is** the
-preview in step 7. Then call it again without `dryRun` once the editor confirms.
+Call `apply-work-edits` with the edits as `ops` and `dryRun: true` first — its
+result **is** the preview in step 7. Then call it again without `dryRun` once the editor confirms.
 
-If the write comes back as an error that begins `applied: "unknown"`, re-read
-the passages before doing anything else. Compare them with what you sent, and send again only the markers
+If the `passages` group comes back `applied: "unknown"`, re-read the passages
+before doing anything else. Compare them with what you sent, and send again only the markers
 that are still there. Never resend an `insert-passage` without checking that the
 first one did not land.
 
