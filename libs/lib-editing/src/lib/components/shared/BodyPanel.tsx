@@ -100,9 +100,7 @@ export const BodyPanel = ({
 
   const tabsRefCallback = useCallback((node: HTMLDivElement | null) => {
     tabsRef.current = node;
-    // Only track scroll for visible instances (skip the hidden mobile duplicate)
-    scrollContainerRef.current =
-      node && node.offsetParent !== null ? findScrollParent(node) : null;
+    scrollContainerRef.current = node ? findScrollParent(node) : null;
   }, []);
 
   const passageAnchorRef = usePassageAnchorRestore(

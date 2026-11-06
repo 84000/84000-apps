@@ -6,7 +6,7 @@ import type { StackController } from './StackController';
 
 /**
  * Whether a stack's root is laid out, rather than inside a `display: none`
- * tab or the layout copy not in use. False until the first check.
+ * tab. False until the first check.
  */
 const useStackDrawn = (ref: RefObject<HTMLElement | null>) => {
   const [drawn, setDrawn] = useState(false);

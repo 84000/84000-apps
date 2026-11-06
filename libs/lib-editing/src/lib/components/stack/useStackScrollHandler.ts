@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react';
 import type { Virtualizer } from '@tanstack/react-virtual';
-import { isRendered } from '@eightyfourthousand/lib-utils';
 
 import type { StackController } from './StackController';
 
@@ -31,15 +30,8 @@ const revealMargin = (scroller: HTMLElement | null, uuid?: string) => {
 };
 
 /**
- * Install this copy's scroll handler on the controller: plain, or held until
+ * Install the view's scroll handler on the controller: plain, or held until
  * settled.
- *
- * Every copy of the view installs one, and only a copy whose scroller is laid
- * out answers. The layout draws the stack in a desktop tree and a mobile one,
- * and the breakpoint hides one of them; scrolling the hidden copy moves
- * nothing on screen. The scroller decides rather than the stack itself: a
- * panel's tabs share one, so a stack in a tab about to be shown still scrolls
- * it.
  */
 export const useStackScrollHandler = (
   controller: StackController,
@@ -48,7 +40,7 @@ export const useStackScrollHandler = (
 ) => {
   useEffect(() => {
     return controller.addScrollHandler((index, options) => {
-      if (!scroller || !isRendered(scroller)) return;
+      if (!scroller) return;
       if (!options?.settle) {
         virtualizer.scrollToIndex(index, { align: 'auto' });
         return;

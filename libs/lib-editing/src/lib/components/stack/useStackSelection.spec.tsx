@@ -116,29 +116,6 @@ describe('useStackSelection', () => {
     ]);
   });
 
-  it('steps once when the stack is mounted twice on one controller', () => {
-    const stack = {
-      ...controller(),
-      hasPassageSelection: jest.fn(() => true),
-      getPassageSelection: jest.fn(() => ({ anchorUuid: 'a', focusUuid: 'b' })),
-      extendPassageSelection: jest.fn(),
-    } as unknown as PassageStackController & {
-      extendPassageSelection: jest.Mock;
-    };
-    renderHook(() => useStackSelection(stack));
-    renderHook(() => useStackSelection(stack));
-
-    document.dispatchEvent(
-      new KeyboardEvent('keydown', {
-        key: 'ArrowDown',
-        shiftKey: true,
-        cancelable: true,
-      }),
-    );
-
-    expect(stack.extendPassageSelection.mock.calls).toEqual([['b', 1]]);
-  });
-
   it('leaves a drag from the Tibetan column to the browser', () => {
     rows();
     const stack = controller();

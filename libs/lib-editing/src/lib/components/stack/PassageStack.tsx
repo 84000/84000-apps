@@ -218,7 +218,7 @@ export const PassageStack = ({
   const windowStart = items.length ? items[0].start - scrollMargin : 0;
   const firstIndex = items[0]?.index ?? 0;
   const lastIndex = items[items.length - 1]?.index ?? 0;
-  const drawn = useStackVisibleRange(controller, parentRef, {
+  useStackVisibleRange(controller, parentRef, {
     count: order.length,
     start: firstIndex,
     end: lastIndex + 1,
@@ -260,7 +260,7 @@ export const PassageStack = ({
 
   // A reader selects text natively, across rows, as the paginated reader does.
   useStackSelection(controller, !readOnly);
-  useStackDeepLink(controller, panel, drawn);
+  useStackDeepLink(controller, panel);
 
   useStackRowPointer({
     parentRef,

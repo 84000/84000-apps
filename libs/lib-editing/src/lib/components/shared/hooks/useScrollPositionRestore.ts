@@ -55,7 +55,7 @@ export function capturePassageAnchor(
 
   for (const el of passages) {
     const rect = el.getBoundingClientRect();
-    // A hidden copy (an inactive tab, the mobile layout) has no box.
+    // A row in an inactive tab has no box.
     if (rect.height === 0) continue;
     // Find the first passage whose bottom is below the container top
     // (i.e. at least partially visible)
@@ -328,9 +328,7 @@ function waitForContentAndRestore(
  * when switching back.
  *
  * Scroll positions are stored in a module-level Map (not a ref) so they
- * survive component remounts — which happen on tab switches because the
- * ThreeColumns layout renders main panel children in both mobile and
- * desktop trees.
+ * survive component remounts.
  *
  * For tabs with async/paginated content (TipTap editor), uses a MutationObserver
  * to wait for enough content to load before restoring the scroll position.
@@ -358,12 +356,6 @@ export function useScrollPositionRestore(
         : undefined;
 
     const container = scrollContainerRef.current;
-
-    // Skip hidden containers (mobile layout on desktop viewport)
-    if (container && container.clientHeight === 0) {
-      prevTabRef.current = activeTab;
-      return;
-    }
 
     // Cancel any in-progress restore from a previous tab switch
     cleanupRef.current?.();

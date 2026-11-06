@@ -22,7 +22,6 @@ import { PassageSkeleton } from '../shared/PassageSkeleton';
 import {
   clearTextRangeHighlight,
   highlightTextRange,
-  isRendered,
   isUuid,
   scrollToElement,
   useIsMobile,
@@ -178,12 +177,6 @@ export const PaginationProvider = ({
 
     // Guard: Don't re-process the same hash
     if (processedNavCursorRef.current === navCursor) {
-      return;
-    }
-
-    // Leave the hash to the copy on screen; a hidden layout copy that consumed
-    // it would clear it before the mobile sheet mounts.
-    if (!isRendered(div)) {
       return;
     }
 

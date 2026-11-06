@@ -145,7 +145,7 @@ export const waitForStableElement = (
 
 /**
  * Whether the element is laid out. False inside a `display: none` ancestor,
- * such as the layout copy a breakpoint hides.
+ * such as an inactive tab.
  */
 export const isRendered = (element: Element): boolean =>
   element.getClientRects().length > 0;

@@ -29,10 +29,8 @@ export const useVisiblePassageUuids = (enabled = true): string[] => {
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const read = () => {
-      // Every main panel, keeping only rows that are drawn: the layout keeps a
-      // hidden copy of the panel, and each panel keeps its inactive tabs
-      // mounted but hidden, so the first panel found is often not the one
-      // being read.
+      // Only rows that are drawn: the panel keeps its inactive tabs mounted
+      // but hidden.
       const labels = [
         ...document.querySelectorAll(
           '[data-panel="main"] [data-passage-label][data-uuid]',
