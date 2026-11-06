@@ -106,6 +106,9 @@ same ops: passages and annotations sent without uuids get derived ones, so the
 re-run updates what the first run saved rather than duplicating it. If the
 work-metadata group was already written, drop any `expect` guards from the
 re-run: they hold the values that group replaced, so they would refuse it.
+If the work-metadata group itself comes back `applied: "unknown"`, part of it
+may be written: re-read the work and its titles, then re-run without the
+guards.
 
 ### 6. Verify
 
