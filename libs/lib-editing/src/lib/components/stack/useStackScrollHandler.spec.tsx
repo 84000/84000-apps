@@ -23,7 +23,7 @@ const virtualizerStub = () =>
   }) as unknown as Virtualizer<HTMLElement, Element>;
 
 /**
- * A controller whose handlers fan out as the real one's do: every copy of a
+ * A controller whose handlers fan out as the real one's do: every mounted
  * view installs its own.
  */
 const controllerStub = () => {

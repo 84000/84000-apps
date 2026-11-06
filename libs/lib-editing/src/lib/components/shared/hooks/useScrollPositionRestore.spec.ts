@@ -48,7 +48,7 @@ describe('capturePassageAnchor', () => {
     });
   });
 
-  it('skips a hidden copy of a passage', () => {
+  it('skips a passage that is not drawn', () => {
     const scroller = container(
       boxed('<div data-stack-passage="p1" id="p1"></div>', 0, 0),
       boxed('<div data-stack-passage="p2" id="p2"></div>', 120, 50),

@@ -150,10 +150,8 @@ export const PassageStack = ({
     [updatePanel, setToh],
   );
   const focusedEditor = controller.getFocusedEditor();
-  // A tab's stack can be mounted more than once (the layout keeps a hidden
-  // copy), and each copy shares the controller. Only the copy holding the
-  // editor draws its menus: two bubble menus would dismiss each other's
-  // clicks.
+  // Only the stack holding the focused editor draws its menus: two bubble
+  // menus on one controller would dismiss each other's clicks.
   const menuEditor =
     focusedEditor && parentRef.current?.contains(focusedEditor.view.dom)
       ? focusedEditor

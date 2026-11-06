@@ -417,8 +417,8 @@ export class StackController {
   getEditor = (uuid: string) => this.live.getEditor(uuid);
 
   /**
-   * Install a drawn copy's scroll handler; each copy of the view installs its
-   * own. Returns a function that removes it.
+   * Install a mounted view's scroll handler; each view installs its own.
+   * Returns a function that removes it.
    */
   addScrollHandler(handler: StackScrollHandler) {
     return this.live.addScrollHandler(handler);

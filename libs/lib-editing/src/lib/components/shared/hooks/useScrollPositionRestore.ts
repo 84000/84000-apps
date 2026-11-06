@@ -245,8 +245,7 @@ const RESTORE_TIMEOUT = 5000;
 
 /**
  * Module-level storage for scroll positions, keyed by `panelId:tabKey`.
- * Survives component remounts (which happen on tab switches due to the
- * ThreeColumns dual-render architecture).
+ * Survives component remounts.
  */
 const scrollPositions = new Map<string, number>();
 

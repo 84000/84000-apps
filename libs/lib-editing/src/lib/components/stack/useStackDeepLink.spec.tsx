@@ -289,8 +289,7 @@ describe('useStackDeepLink to something that is not a passage', () => {
 });
 
 describe('useStackDeepLink highlight', () => {
-  // jsdom lays nothing out: count an element as drawn unless it sits in a
-  // hidden copy.
+  // jsdom lays nothing out: count an element as drawn unless it is hidden.
   const getClientRects = Element.prototype.getClientRects;
   beforeAll(() => {
     Element.prototype.getClientRects = function (this: Element) {
@@ -301,7 +300,7 @@ describe('useStackDeepLink highlight', () => {
     Element.prototype.getClientRects = getClientRects;
   });
 
-  // A print copy carries the same ids, and a hidden copy can come first.
+  // A print copy carries the same ids, and may come first.
   it('paints into the copy of the row that is on show', async () => {
     const { controller } = controllerFor('translation');
     const copies = [true, false].map((hidden) => {
