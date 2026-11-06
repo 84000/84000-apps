@@ -6,7 +6,7 @@ import type { PassageStackController } from './PassageStackController';
 
 type Handler = (index: number, options?: { settle?: boolean }) => void;
 
-/** A scroller that is laid out, as the copy on show has. */
+/** A scroller that is laid out. */
 const laidOut = (scroller = document.createElement('div')) => {
   scroller.getClientRects = () => [{}] as unknown as DOMRectList;
   return scroller;
@@ -23,7 +23,7 @@ const virtualizerStub = () =>
   }) as unknown as Virtualizer<HTMLElement, Element>;
 
 /**
- * A controller whose handlers fan out as the real one's do: every copy of a
+ * A controller whose handlers fan out as the real one's do: every mounted
  * view installs its own.
  */
 const controllerStub = () => {
@@ -127,49 +127,16 @@ describe('useStackScrollHandler', () => {
     expect(virtualizer.scrollToOffset).not.toHaveBeenCalled();
   });
 
-  // DEV-847: the layout draws the stack twice over one controller, desktop and
-  // mobile, and a breakpoint hides one. A single handler slot went to the copy
-  // that installed last; when that was the hidden one, a link to a passage
-  // outside the window swapped the window and scrolled a list nobody saw.
-  describe('with a copy of the view the layout hides', () => {
-    it('scrolls the copy on show, whichever installed last', () => {
-      const { controller, scrollTo } = controllerStub();
-      const shown = virtualizerStub();
-      const hidden = virtualizerStub();
-      renderHook(() => useStackScrollHandler(controller, shown, laidOut()));
-      // A scroller inside `display: none` has no boxes.
-      renderHook(() =>
-        useStackScrollHandler(
-          controller,
-          hidden,
-          document.createElement('div'),
-        ),
-      );
-
-      scrollTo(1, { settle: true });
-      scrollTo(0);
-
-      expect(shown.scrollToOffset).toHaveBeenCalledWith(420, {
-        align: 'start',
-      });
-      expect(shown.scrollToIndex).toHaveBeenCalledWith(0, { align: 'auto' });
-      expect(hidden.scrollToOffset).not.toHaveBeenCalled();
-      expect(hidden.scrollToIndex).not.toHaveBeenCalled();
-    });
-
-    it('keeps the shown copy installed when the hidden one unmounts', () => {
+  describe('with two views of one controller', () => {
+    it('keeps one view installed when the other unmounts', () => {
       const { controller, scrollTo, handlers } = controllerStub();
       const shown = virtualizerStub();
       renderHook(() => useStackScrollHandler(controller, shown, laidOut()));
-      const hidden = renderHook(() =>
-        useStackScrollHandler(
-          controller,
-          virtualizerStub(),
-          document.createElement('div'),
-        ),
+      const other = renderHook(() =>
+        useStackScrollHandler(controller, virtualizerStub(), laidOut()),
       );
 
-      hidden.unmount();
+      other.unmount();
       scrollTo(1);
 
       expect(handlers.size).toBe(1);

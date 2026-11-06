@@ -19,8 +19,8 @@ import type { StackController } from './StackController';
 const RENDER_TIMEOUT_MS = 2000;
 
 /**
- * The laid-out element with this id. A hidden layout copy can carry the same
- * id, so the first in the document is not necessarily the one on show.
+ * The laid-out element with this id. A print copy of the rows carries the same
+ * ids, so the first in the document is not necessarily the one on show.
  */
 const drawn = (id: string): HTMLElement | undefined =>
   Array.from(
@@ -107,12 +107,6 @@ const holdHighlight = (uuid: string, range: { start: number; end: number }) => {
 export const useStackDeepLink = (
   controller: StackController,
   panel: PanelName = panelForTab(controller.getTab()),
-  /**
-   * Whether this stack is laid out. The hash is consumed once, so a hidden
-   * layout copy must leave it to the copy on show, which on mobile mounts
-   * later, in the sheet.
-   */
-  isDrawn = true,
 ) => {
   const { panels, updatePanel, highlight } = useNavigation();
   // A hash is addressed to the panel's active tab, and every stack drawn in
@@ -126,7 +120,7 @@ export const useStackDeepLink = (
     !activeTab ||
     tab === activeTab ||
     (tab === 'translation' && activeTab === 'compare');
-  const target = answers && isDrawn ? panels[panel]?.hash : undefined;
+  const target = answers ? panels[panel]?.hash : undefined;
   const handled = useRef<string>(undefined);
 
   useEffect(() => {

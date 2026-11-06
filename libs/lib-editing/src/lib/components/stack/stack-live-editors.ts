@@ -36,10 +36,8 @@ export class StackLiveEditors {
   private pendingFocus: StackFocusTarget | null = null;
   private keyBuffer = '';
   /**
-   * One per drawn copy of the view. The layout mounts a stack twice — the
-   * desktop tree and the mobile one a breakpoint hides — over one controller,
-   * so a single slot went to whichever copy installed last. When that was the
-   * hidden one, every reveal scrolled a list nobody could see (DEV-847).
+   * One per view drawing this controller. A set rather than a slot, so a view
+   * removing its handler never clears another's.
    */
   private scrollHandlers = new Set<StackScrollHandler>();
 
@@ -83,10 +81,7 @@ export class StackLiveEditors {
     this.reset();
   }
 
-  /**
-   * Scroll the view to a row, through every handler its copies installed.
-   * Each handler answers only for a copy that is laid out.
-   */
+  /** Scroll the view to a row, through every installed handler. */
   scrollTo(index: number, options?: { settle?: boolean }) {
     this.scrollHandlers.forEach((handler) => handler(index, options));
   }
@@ -119,7 +114,7 @@ export class StackLiveEditors {
 
   getEditor = (uuid: string) => this.editors.get(uuid) ?? null;
 
-  /** Install a copy's scroll handler. Returns a function that removes it. */
+  /** Install a view's scroll handler. Returns a function that removes it. */
   addScrollHandler(handler: StackScrollHandler) {
     this.scrollHandlers.add(handler);
     return () => {
@@ -143,8 +138,7 @@ export class StackLiveEditors {
    * buffered twice.
    */
   bufferTyping(event: KeyboardEvent | InputEvent): boolean {
-    // A prevented event was already taken — by a handler, or by another stack
-    // drawing this controller (the mobile layout mounts a second one).
+    // A prevented event was already taken by another handler.
     if (!this.pendingFocus || event.defaultPrevented) return false;
     const text =
       event.type === 'beforeinput'

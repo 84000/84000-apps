@@ -33,30 +33,17 @@ const page = {
   totalCount: 2,
 } as unknown as GlossaryTermsPage;
 
-/** One copy of the panel, as `ThreeColumns` draws it per layout. */
-const Copy = ({ hidden = false }: { hidden?: boolean }) => (
-  <div hidden={hidden}>
-    <GlossaryPaginationProvider workUuid="work-1" initialPage={page}>
-      <div id="term-1" />
-      <div id="term-2" />
-    </GlossaryPaginationProvider>
-  </div>
+const Panel = () => (
+  <GlossaryPaginationProvider workUuid="work-1" initialPage={page}>
+    <div id="term-1" />
+    <div id="term-2" />
+  </GlossaryPaginationProvider>
 );
 
 const scrollIntoView = jest.fn();
-const getClientRects = Element.prototype.getClientRects;
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = scrollIntoView;
-  // jsdom lays nothing out: count an element as drawn unless it sits in a
-  // hidden layout copy.
-  Element.prototype.getClientRects = function (this: Element) {
-    return (this.closest('[hidden]') ? [] : [{}]) as unknown as DOMRectList;
-  };
-});
-
-afterAll(() => {
-  Element.prototype.getClientRects = getClientRects;
 });
 
 beforeEach(() => {
@@ -65,29 +52,12 @@ beforeEach(() => {
 });
 
 describe('GlossaryPaginationProvider hash navigation', () => {
-  it('leaves the hash alone in a copy that is not drawn', async () => {
-    render(<Copy hidden />);
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(scrollIntoView).not.toHaveBeenCalled();
-    expect(mockUpdatePanel).not.toHaveBeenCalled();
-  });
-
-  // On mobile the sheet mounts after the hidden desktop copy has seen the hash.
-  it('navigates in the copy on show when it mounts later', async () => {
-    const { rerender } = render(<Copy hidden />);
-    rerender(
-      <>
-        <Copy hidden />
-        <Copy />
-      </>,
-    );
+  it('scrolls to the term the hash names and clears it once', async () => {
+    render(<Panel />);
 
     await waitFor(() => expect(mockUpdatePanel).toHaveBeenCalledTimes(1));
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(
-      (scrollIntoView.mock.contexts[0] as Element).closest('[hidden]'),
-    ).toBeNull();
+    expect((scrollIntoView.mock.contexts[0] as Element).id).toBe('term-2');
     expect(mockUpdatePanel).toHaveBeenCalledWith({
       name: 'right',
       state: { ...right, hash: undefined },

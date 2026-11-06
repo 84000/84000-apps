@@ -144,13 +144,6 @@ export const waitForStableElement = (
 };
 
 /**
- * Whether the element is laid out. False inside a `display: none` ancestor,
- * such as the layout copy a breakpoint hides.
- */
-export const isRendered = (element: Element): boolean =>
-  element.getClientRects().length > 0;
-
-/**
  * Resolves once the finite animations running on the element's ancestors have
  * finished, such as a sheet sliding in, or after `timeout` ms. A scroll applied
  * inside a container that is still animating into place does not reliably hold

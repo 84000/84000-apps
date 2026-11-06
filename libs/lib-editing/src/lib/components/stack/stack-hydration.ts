@@ -257,7 +257,7 @@ export class StackHydration {
 
   /** Move the window back to the run's first passage, if it starts later. */
   revealStart = (): Promise<void> => {
-    // Shared, as reveals are: each layout copy answers the same hash.
+    // Shared, as reveals are, so a second caller waits on the same move.
     this.revealingStart ??= this.toStart().finally(() => {
       this.revealingStart = null;
     });

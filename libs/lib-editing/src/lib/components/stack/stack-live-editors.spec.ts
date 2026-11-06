@@ -73,8 +73,7 @@ describe('PassageStackController focused editor', () => {
     editor.destroy();
   });
 
-  // Regression: the mobile layout mounts a second stack on the same controller,
-  // so every buffered character was taken twice and typed twice.
+  // A keydown another listener already took is not buffered again.
   it('takes an event once however many stacks listen for it', async () => {
     const { controller } = await hydrated(3);
     controller.focusPassage('p1');
@@ -251,12 +250,10 @@ describe('PassageStackController focused editor', () => {
   });
 });
 
-// DEV-847: the layout mounts a stack twice over one controller (the desktop
-// and mobile trees), and each copy installs a scroll handler. With one slot,
-// the copy that installed last took every scroll, and one leaving cleared it
-// for the other.
+// Each view drawing a controller installs a scroll handler; one leaving must
+// not clear another's.
 describe('PassageStackController scroll handlers', () => {
-  it('scrolls through every copy that installed a handler', async () => {
+  it('scrolls through every view that installed a handler', async () => {
     const { controller } = await hydrated(3);
     const desktop = jest.fn();
     const mobile = jest.fn();
@@ -269,7 +266,7 @@ describe('PassageStackController scroll handlers', () => {
     expect(mobile).toHaveBeenCalledWith(1, undefined);
   });
 
-  it('keeps the other copy installed when one is removed', async () => {
+  it('keeps the other view installed when one is removed', async () => {
     const { controller } = await hydrated(3);
     const desktop = jest.fn();
     controller.addScrollHandler(desktop);

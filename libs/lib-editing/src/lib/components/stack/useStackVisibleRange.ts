@@ -6,7 +6,7 @@ import type { StackController } from './StackController';
 
 /**
  * Whether a stack's root is laid out, rather than inside a `display: none`
- * tab or the layout copy not in use. False until the first check.
+ * tab. False until the first check.
  */
 const useStackDrawn = (ref: RefObject<HTMLElement | null>) => {
   const [drawn, setDrawn] = useState(false);
@@ -32,8 +32,6 @@ const useStackDrawn = (ref: RefObject<HTMLElement | null>) => {
  * A panel's tabs share one scroller, so a hidden stack still reads the shown
  * tab's scroll offset. Following it would page and hydrate a tab nobody is
  * looking at, at whatever depth the other tab is scrolled to.
- *
- * @returns Whether the stack is drawn.
  */
 export const useStackVisibleRange = (
   controller: StackController,
@@ -46,6 +44,4 @@ export const useStackVisibleRange = (
     if (!count || !drawn) return;
     controller.setVisibleRange({ start, end });
   }, [controller, count, start, end, drawn]);
-
-  return drawn;
 };

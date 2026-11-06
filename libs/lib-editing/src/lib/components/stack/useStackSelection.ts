@@ -163,9 +163,6 @@ export const useStackSelection = (
 
       const step = event.shiftKey ? ARROW_STEP[event.key] : undefined;
       if (step) {
-        // The layout's hidden copy of the stack listens too, on the same
-        // controller: whichever copy goes first takes the step.
-        if (event.defaultPrevented) return;
         event.preventDefault();
         const focus = controller.getPassageSelection()?.focusUuid;
         if (focus) controller.extendPassageSelection(focus, step);

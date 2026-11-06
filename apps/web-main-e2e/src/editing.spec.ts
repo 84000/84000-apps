@@ -119,7 +119,6 @@ test.describe('Editing', () => {
   test('ED-EDT-06 Reading the work read-only', async ({ page }) => {
     const edited = await passageByLabel('1.11');
     const next = await passageByLabel('1.12');
-    // The actions bar is drawn twice, for narrow and wide layouts.
     const settings = page
       .getByRole('button', { name: 'Editor settings' })
       .filter({ visible: true });

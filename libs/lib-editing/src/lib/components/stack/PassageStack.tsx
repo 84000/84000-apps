@@ -150,10 +150,8 @@ export const PassageStack = ({
     [updatePanel, setToh],
   );
   const focusedEditor = controller.getFocusedEditor();
-  // A tab's stack can be mounted more than once (the layout keeps a hidden
-  // copy), and each copy shares the controller. Only the copy holding the
-  // editor draws its menus: two bubble menus would dismiss each other's
-  // clicks.
+  // Only the stack holding the focused editor draws its menus: two bubble
+  // menus on one controller would dismiss each other's clicks.
   const menuEditor =
     focusedEditor && parentRef.current?.contains(focusedEditor.view.dom)
       ? focusedEditor
@@ -218,7 +216,7 @@ export const PassageStack = ({
   const windowStart = items.length ? items[0].start - scrollMargin : 0;
   const firstIndex = items[0]?.index ?? 0;
   const lastIndex = items[items.length - 1]?.index ?? 0;
-  const drawn = useStackVisibleRange(controller, parentRef, {
+  useStackVisibleRange(controller, parentRef, {
     count: order.length,
     start: firstIndex,
     end: lastIndex + 1,
@@ -260,7 +258,7 @@ export const PassageStack = ({
 
   // A reader selects text natively, across rows, as the paginated reader does.
   useStackSelection(controller, !readOnly);
-  useStackDeepLink(controller, panel, drawn);
+  useStackDeepLink(controller, panel);
 
   useStackRowPointer({
     parentRef,

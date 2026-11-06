@@ -88,26 +88,6 @@ describe('useStackDeepLink panel', () => {
     await waitFor(() => expect(revealed).toEqual(['p-7']));
   });
 
-  // On mobile the hidden desktop copy sees the hash before the sheet mounts.
-  it('leaves the hash to the copy on show', async () => {
-    const { controller, revealed } = controllerFor('endnotes');
-    mockNavigation.panels = {
-      right: { open: true, tab: 'endnotes', hash: 'n-1' },
-    };
-
-    const { rerender } = renderHook(
-      ({ drawn }) => useStackDeepLink(controller, 'right', drawn),
-      { initialProps: { drawn: false } },
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(revealed).toEqual([]);
-    expect(mockNavigation.updatePanel).not.toHaveBeenCalled();
-
-    rerender({ drawn: true });
-    await waitFor(() => expect(revealed).toEqual(['n-1']));
-  });
-
   it('lets a host name the panel when it draws a tab somewhere else', async () => {
     const { controller, revealed } = controllerFor('endnotes');
     mockNavigation.panels = {
@@ -309,8 +289,7 @@ describe('useStackDeepLink to something that is not a passage', () => {
 });
 
 describe('useStackDeepLink highlight', () => {
-  // jsdom lays nothing out: count an element as drawn unless it sits in a
-  // hidden layout copy.
+  // jsdom lays nothing out: count an element as drawn unless it is hidden.
   const getClientRects = Element.prototype.getClientRects;
   beforeAll(() => {
     Element.prototype.getClientRects = function (this: Element) {
@@ -321,7 +300,7 @@ describe('useStackDeepLink highlight', () => {
     Element.prototype.getClientRects = getClientRects;
   });
 
-  // The layout is drawn twice, and the hidden copy can come first.
+  // A print copy carries the same ids, and may come first.
   it('paints into the copy of the row that is on show', async () => {
     const { controller } = controllerFor('translation');
     const copies = [true, false].map((hidden) => {

@@ -17,7 +17,6 @@ import {
   getWorkGlossaryTermsAround,
 } from '@eightyfourthousand/client-graphql';
 import {
-  isRendered,
   isUuid,
   scrollToElement,
   waitForAncestorAnimations,
@@ -108,10 +107,8 @@ export const GlossaryPaginationProvider = ({
     if (!navCursor || startIsLoading || endIsLoading) return;
     if (processedNavCursorRef.current === navCursor) return;
 
-    // The hash is consumed once, so a copy that is not on screen must leave it
-    // for the one that is — on mobile, the sheet mounts after this copy.
     const container = contentRef.current;
-    if (!container || !isRendered(container)) return;
+    if (!container) return;
     processedNavCursorRef.current = navCursor;
 
     (async () => {

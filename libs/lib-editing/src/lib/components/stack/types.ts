@@ -249,7 +249,7 @@ export type StackControllerOptions = PassageStackControllerOptions & {
 export type StackRows = 'passages' | 'bibliography';
 
 /**
- * Scrolls one drawn copy of a stack view to a row. `settle` holds the row in
+ * Scrolls one mounted view of a stack to a row. `settle` holds the row in
  * place while the rows around it load and take their real heights.
  */
 export type StackScrollHandler = (
