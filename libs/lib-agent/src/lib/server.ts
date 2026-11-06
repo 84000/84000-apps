@@ -23,7 +23,7 @@ function isInitialize(body: unknown): boolean {
 export function createMcpHandler(options: McpHandlerOptions) {
   const {
     name = '84000-mcp',
-    version = '2026.11.0',
+    version = '2026.11.1',
     description,
     instructions,
     tools,
