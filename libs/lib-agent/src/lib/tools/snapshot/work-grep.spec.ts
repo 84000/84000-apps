@@ -29,6 +29,20 @@ const fixtureFiles = (): Map<string, string> =>
     ['raw/passages.jsonl', '{"content":"Samantabhadra spoke."}\n'],
   ]);
 
+/**
+ * The CPU time `run` takes, in milliseconds, with its result. The budgets below
+ * guard against super-linear blow-ups, which take seconds or never finish, so
+ * they are measured in this process's CPU time: wall-clock time also counts the
+ * time a loaded machine spends running other processes, and failed these specs
+ * on a busy machine.
+ */
+const cpuTime = <T>(run: () => T): { result: T; ms: number } => {
+  const start = process.cpuUsage();
+  const result = run();
+  const { user, system } = process.cpuUsage(start);
+  return { result, ms: (user + system) / 1000 };
+};
+
 const grep = (pattern: string, options: Record<string, unknown> = {}) => {
   const result = grepSnapshot(fixtureFiles(), 'toh8', { pattern, ...options });
   if (!result.ok) throw new Error(result.error);
@@ -196,22 +210,24 @@ describe('work-grep', () => {
 
   it('tallies dense matches on a long folded line quickly', () => {
     const files = new Map([['a.md', `${'ā'.repeat(20_000)}\n`]]);
-    const started = Date.now();
-    const result = grepSnapshot(files, 'toh8', {
-      pattern: 'a',
-      mode: 'tally',
-    });
-    expect(Date.now() - started).toBeLessThan(2000);
+    const { result, ms } = cpuTime(() =>
+      grepSnapshot(files, 'toh8', {
+        pattern: 'a',
+        mode: 'tally',
+      }),
+    );
+    expect(ms).toBeLessThan(2000);
     expect(result.ok && result.text.split('\n')[0]).toBe('20000\tā');
   });
 
   it('matches globs in linear time', () => {
-    const started = Date.now();
-    const result = grepSnapshot(fixtureFiles(), 'toh8', {
-      pattern: 'x',
-      glob: `${'*?'.repeat(40)}Z`,
-    });
-    expect(Date.now() - started).toBeLessThan(1000);
+    const { result, ms } = cpuTime(() =>
+      grepSnapshot(fixtureFiles(), 'toh8', {
+        pattern: 'x',
+        glob: `${'*?'.repeat(40)}Z`,
+      }),
+    );
+    expect(ms).toBeLessThan(1000);
     expect(result).toEqual({
       ok: false,
       error: expect.stringContaining('No files'),
@@ -220,10 +236,11 @@ describe('work-grep', () => {
 
   it('runs a catastrophic-backtracking pattern in linear time', () => {
     const files = new Map([['a.md', `${'a'.repeat(50_000)}!\n`]]);
-    const started = Date.now();
-    const result = grepSnapshot(files, 'toh8', { pattern: '(a+)+$' });
+    const { result, ms } = cpuTime(() =>
+      grepSnapshot(files, 'toh8', { pattern: '(a+)+$' }),
+    );
     expect(result.ok).toBe(true);
-    expect(Date.now() - started).toBeLessThan(2000);
+    expect(ms).toBeLessThan(2000);
   });
 });
 

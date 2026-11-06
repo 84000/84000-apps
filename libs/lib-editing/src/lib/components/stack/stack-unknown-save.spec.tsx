@@ -201,6 +201,12 @@ describe('a stack save whose answer was lost', () => {
     }) as unknown as typeof window.matchMedia;
   });
 
+  // On fake timers, waitFor advances the clock itself, so its waits are
+  // counted in timer steps rather than against a wall-clock budget that a
+  // loaded machine can use up.
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
   beforeEach(() => {
     server = [
       { uuid: 'p0', label: '1.1', sort: 0 },

@@ -41,6 +41,13 @@ const selectFirstWord = (editor: Editor) =>
 const button = (name: string) => screen.getByRole('button', { name });
 
 describe('MarkdownToolbar', () => {
+  // The toolbar waits for the editor's create event, which tiptap emits from a
+  // timer. On fake timers, findBy* and waitFor advance that clock themselves,
+  // so their waits are counted in timer steps rather than against a wall-clock
+  // budget that a loaded machine can use up.
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
   it('shows only while the rich editor is editable', async () => {
     const { editor, rerender, onChange } = setup();
     await screen.findByRole('toolbar', { name: 'Formatting' });
