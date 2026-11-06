@@ -186,12 +186,19 @@ export const ThreeColumns = ({
     <div className="overflow-hidden size-full">
       <ResizablePanelGroup
         className={cn(
-          // A panel left open on desktop must not take width on mobile. `!`
-          // because the library sets `display: flex` inline on each panel.
-          'max-md:[&>[data-side-panel]]:hidden!',
+          // A panel left open on desktop must not take width on mobile. Keep
+          // it in the layout at zero width rather than hiding it: the library
+          // orders panels by their offsets, so a hidden panel is misplaced.
+          // `!` because the library sets the flex and touch styles inline.
+          'max-md:[&>[data-side-panel]]:basis-0! max-md:[&>[data-side-panel]]:grow-0! max-md:[&>[data-side-panel]]:overflow-hidden',
+          // Allow pinch zoom on mobile, as the page does.
+          'max-md:touch-auto!',
           className,
         )}
         orientation="horizontal"
+        // Nothing resizes below md. Toggling this also makes the library
+        // re-read the handles' positions once they are shown again.
+        disabled={isMobile}
       >
         {leftPanelEnabled && (
           <>
@@ -223,7 +230,7 @@ export const ThreeColumns = ({
           </>
         )}
         <ResizablePanel
-          className="flex flex-col rounded border bg-background"
+          className="flex flex-col rounded border bg-background max-md:touch-auto!"
           style={{ overflow: 'auto', overscrollBehaviorY: 'none' }}
           defaultSize={pct(MinPanelSizes.FULL)}
           minSize={pct(MinPanelSizes.MAIN_MIN)}
