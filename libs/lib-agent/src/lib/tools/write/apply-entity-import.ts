@@ -8,7 +8,7 @@ import {
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
 
-const annotationSchema = z.object({
+export const importAnnotationSchema = z.object({
   uuid: z
     .string()
     .optional()
@@ -36,6 +36,47 @@ const annotationSchema = z.object({
     ),
 });
 
+/** A title by slot, as an import writes it. */
+export const importTitleSchema = z.object({
+  content: z.string().describe('Title text.'),
+  type: z.string().describe('Title type: mainTitle, longTitle, or otherTitle.'),
+  language: z
+    .string()
+    .optional()
+    .describe('BCP-style language code, e.g. bo, Bo-Ltn, en, Sa-Ltn, zh.'),
+  uuid: z.string().optional().describe('Optional; generated when omitted.'),
+});
+
+/** A whole passage as an import writes it. */
+export const importPassageSchema = z.object({
+  label: z
+    .string()
+    .describe('Passage label, e.g. "s.", "i.", "1", "1.1", or "".'),
+  type: z
+    .string()
+    .describe(
+      'Passage type, e.g. summaryHeader, summary, translationHeader, translation, colophon.',
+    ),
+  content: z.string().describe('Plain text passage content.'),
+  sort: z
+    .number()
+    .int()
+    .optional()
+    .describe('Optional; assigned in source order when omitted.'),
+  uuid: z
+    .string()
+    .optional()
+    .describe(
+      'Optional; when omitted, derived from the work and xmlId, so re-running the same import updates the passages an earlier run saved.',
+    ),
+  xmlId: z
+    .string()
+    .optional()
+    .describe(
+      'Optional; leave unset. Defaults to docx-<sort>, which also keys the derived passage uuid.',
+    ),
+});
+
 const operationSchema = z.discriminatedUnion('kind', [
   z.object({
     kind: z.literal('update_work'),
@@ -47,17 +88,7 @@ const operationSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('upsert_title'),
-    title: z.object({
-      content: z.string().describe('Title text.'),
-      type: z
-        .string()
-        .describe('Title type: mainTitle, longTitle, or otherTitle.'),
-      language: z
-        .string()
-        .optional()
-        .describe('BCP-style language code, e.g. bo, Bo-Ltn, en, Sa-Ltn, zh.'),
-      uuid: z.string().optional().describe('Optional; generated when omitted.'),
-    }),
+    title: importTitleSchema,
   }),
   z.object({
     kind: z.literal('upsert_folio_annotation'),
@@ -69,36 +100,9 @@ const operationSchema = z.discriminatedUnion('kind', [
   }),
   z.object({
     kind: z.literal('upsert_passage'),
-    passage: z.object({
-      label: z
-        .string()
-        .describe('Passage label, e.g. "s.", "i.", "1", "1.1", or "".'),
-      type: z
-        .string()
-        .describe(
-          'Passage type, e.g. summaryHeader, summary, translationHeader, translation, colophon.',
-        ),
-      content: z.string().describe('Plain text passage content.'),
-      sort: z
-        .number()
-        .int()
-        .optional()
-        .describe('Optional; assigned in source order when omitted.'),
-      uuid: z
-        .string()
-        .optional()
-        .describe(
-          'Optional; when omitted, derived from the work and xmlId, so re-running the same import updates the passages an earlier run saved.',
-        ),
-      xmlId: z
-        .string()
-        .optional()
-        .describe(
-          'Optional; leave unset. Defaults to docx-<sort>, which also keys the derived passage uuid.',
-        ),
-    }),
+    passage: importPassageSchema,
     annotations: z
-      .array(annotationSchema)
+      .array(importAnnotationSchema)
       .optional()
       .describe('Annotations scoped to this passage.'),
   }),
@@ -126,7 +130,7 @@ export function createApplyImportTool(client: DataClient): McpToolDefinition {
   return {
     name: 'apply-entity-import',
     description:
-      'Persist work entities (titles, metadata, and passages with annotations) into a target work. Present the operations to the user for review before calling this. Requires editor permissions.',
+      'Deprecated alias of apply-work-edits, kept for installed plugins; use apply-work-edits for new work. Persist work entities (titles, metadata, and passages with annotations) into a target work. Present the operations to the user for review before calling this. Requires editor permissions.',
     inputSchema,
     annotations: {
       title: 'Apply Enity Import',

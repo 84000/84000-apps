@@ -7,7 +7,7 @@ import {
 import type { McpToolDefinition } from '../../types';
 import { jsonResult, errorResult } from '../read/util';
 
-const editSchema = z.discriminatedUnion('op', [
+export const passageEditSchema = z.discriminatedUnion('op', [
   z.object({
     op: z.literal('delete-text'),
     passageUuid: z.string().describe('Passage to edit.'),
@@ -88,7 +88,7 @@ const editSchema = z.discriminatedUnion('op', [
 const inputSchema = {
   workUuid: z.string().describe('UUID of the work being edited.'),
   edits: z
-    .array(editSchema)
+    .array(passageEditSchema)
     .describe(
       'Edits to apply. Offsets are read in the coordinates of the stored passage, before any edit in this list is applied.',
     ),
@@ -110,7 +110,7 @@ export function createApplyPassageEditsTool(
   return {
     name: 'apply-passage-edits',
     description:
-      'Edit passages of a work that already has content. Send what to change — delete a span of text, add or remove an annotation, insert a passage — and the offsets of every other annotation on those passages are re-mapped for you, with the ones you do not name carried through untouched. All offsets are read in the coordinates of the stored passage, so you never account for what your own edits moved. Every write is all-or-nothing. If the result says applied "unknown", re-read the passages before issuing anything again. Use apply-entity-import instead to fill an empty work. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
+      'Deprecated alias of apply-work-edits, kept for installed plugins; use apply-work-edits for new work. Edit passages of a work that already has content. Send what to change — delete a span of text, add or remove an annotation, insert a passage — and the offsets of every other annotation on those passages are re-mapped for you, with the ones you do not name carried through untouched. All offsets are read in the coordinates of the stored passage, so you never account for what your own edits moved. Every write is all-or-nothing. If the result says applied "unknown", re-read the passages before issuing anything again. Use apply-entity-import instead to fill an empty work. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
     inputSchema,
     annotations: {
       title: 'Apply Passage Edits',
