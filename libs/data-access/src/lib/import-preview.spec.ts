@@ -1,9 +1,9 @@
 import {
-  applyImportPreview,
   normalizeImportOperations,
   summarizeImportOperations,
 } from './import-preview';
-import { savePassagesWithDeletions } from './passage';
+import { applyImportPreview } from './work-edits';
+import { savePassagesWithDeletions } from './passage/save';
 import { importPassageUuid } from './passage/derived-uuids';
 import { validate as isUuid } from 'uuid';
 import {
@@ -14,7 +14,8 @@ import {
   type PassageInsertOperation,
 } from './types';
 
-jest.mock('./passage', () => ({
+jest.mock('./passage/save', () => ({
+  ...jest.requireActual('./passage/save'),
   savePassagesWithDeletions: jest.fn(),
 }));
 
@@ -62,7 +63,8 @@ function makeFakeClient(state: FakeState): DataClient {
       } = { table, eqs: [] };
       const builder = {
         select(_cols: string, _opts?: unknown) {
-          ctx.op = 'select';
+          // An update's `.select()` asks for the touched rows back.
+          ctx.op ??= 'select';
           return builder;
         },
         insert(rows: unknown[]) {
@@ -131,8 +133,14 @@ function makeFakeClient(state: FakeState): DataClient {
               patch: ctx.patch ?? {},
               eqs: ctx.eqs,
             });
-            result = { error: null };
+            result = { data: [{ uuid: 'title' }], error: null };
+          } else if (ctx.table === 'works' && ctx.op === 'select') {
+            result = { data: [{ uuid: 'work' }], error: null };
+          } else if (ctx.table === 'works' && ctx.op === 'update') {
+            result = { data: [{ uuid: 'work' }], error: null };
           } else if (ctx.table === 'folio_annotations' && ctx.op === 'select') {
+            result = { data: state.folioRows ?? [], error: null };
+          } else if (ctx.table === 'folio_annotations' && ctx.op === 'update') {
             result = { data: state.folioRows ?? [], error: null };
           } else {
             result = { data: [], error: null };
