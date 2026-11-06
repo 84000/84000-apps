@@ -41,7 +41,7 @@ const opSchema = z.discriminatedUnion('op', [
     patch: z
       .record(z.string(), z.unknown())
       .describe(
-        'Patch for the work-level folio annotations. Only { "source_description": "..." } may be set.',
+        'Patch for the work-level folio annotations. Only source_description is written; other keys are ignored with a warning. Updates existing rows only.',
       ),
     expect: expectSchema,
   }),
@@ -83,7 +83,7 @@ export function createApplyWorkEditsTool(
   return {
     name: 'apply-work-edits',
     description:
-      'Edit a work: its metadata (works row, titles, folio source description) and its passages, from one list of ops. Use it both to fill an empty work from an import and to edit a work that already has content. Ops fall into groups (work-metadata, then passages); every op is planned against stored state before anything is written, and a refused op writes nothing. Groups then commit in that order, each on its own, and the first that fails stops the call: earlier groups stay written, later ones are listed in notAttempted. The passages group is all-or-nothing; work-metadata is not. A group whose applied is "unknown" may be partly written: re-read before issuing anything again, and never retry blindly. Send expect, or text on passage edits, with values you read so a stale read is refused. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
+      'Edit a work: its metadata (works row, titles, folio source description) and its passages, from one list of ops. Use it both to fill an empty work from an import and to edit a work that already has content. Ops fall into groups (work-metadata, then passages); every op is planned against stored state before anything is written, and a refused op writes nothing. Groups then commit in that order, each on its own, and the first that fails stops the call: earlier groups stay written, later ones are listed in notAttempted. Passage edit ops are all-or-nothing; upsert-passage writes in chunks, and work-metadata table by table, so either can be partly written. A group whose applied is "unknown" may be partly written: re-read before issuing anything again, and never retry blindly. Send expect, or text on passage edits, with values you read so a stale read is refused. Run with dryRun first and show the editor the result before writing. Requires editor permissions.',
     inputSchema,
     annotations: {
       title: 'Apply Work Edits',
