@@ -23,6 +23,8 @@ const SEARCH_ENTITIES = gql`
       workUuid
       toh
       workTitle
+      passageType
+      passageToh
     }
   }
 `;
@@ -44,6 +46,10 @@ export type EntitySearchResult = {
   /** Tohoku number as catalogued; multi-catalogue works carry a list. */
   toh?: string | null;
   workTitle?: string | null;
+  /** For a passage hit, its section type (e.g. `endnotes`). */
+  passageType?: string | null;
+  /** For a passage hit scoped to one Toh, that Toh. */
+  passageToh?: string | null;
 };
 
 type SearchEntitiesResponse = {

@@ -12,6 +12,14 @@ import { mentionDropSelectionPlugin } from './MentionDropSelection';
 import { mentionSpacingPlugin } from './MentionSpacingPlugin';
 import { mentionSuggestion } from './MentionSuggestion';
 
+/** Where a passage mention's target sits, so a reader can open it in place. */
+export interface MentionTargetLocation {
+  /** The target passage's section type, e.g. `endnotes`. */
+  subtype?: string;
+  /** The target passage's Toh, when it is scoped to one. */
+  linkToh?: string;
+}
+
 /** Payload handed to the advanced mention picker overlay. */
 export interface MentionAdvancedPayload {
   /** Document position where the mention should be inserted. */
@@ -36,6 +44,7 @@ declare module '@tiptap/core' {
         linkType: string,
         displayText?: string,
         isSameWork?: boolean,
+        location?: MentionTargetLocation,
       ) => ReturnType;
     };
   }
@@ -215,6 +224,7 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
           linkType: string,
           displayText?: string,
           isSameWork?: boolean,
+          location?: MentionTargetLocation,
         ) =>
         ({ commands }) => {
           // `displayText` is a transient label for immediate in-session display
@@ -229,6 +239,8 @@ export const Mention = MentionSSR.extend<unknown, MentionStorage>({
                   entity,
                   linkType,
                   ...(isSameWork ? { isSameWork: true } : {}),
+                  ...(location?.subtype ? { subtype: location.subtype } : {}),
+                  ...(location?.linkToh ? { linkToh: location.linkToh } : {}),
                   ...(displayText ? { displayText } : {}),
                 },
               ],

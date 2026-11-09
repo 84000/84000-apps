@@ -94,3 +94,35 @@ describe('mentionSuggestion renderer', () => {
     expect(mockPopupDestroy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('mentionSuggestion command', () => {
+  it('inserts a passage with its section and Toh', () => {
+    const setMention = jest.fn();
+    const chain = {
+      focus: () => chain,
+      deleteRange: () => chain,
+      setMention: (...args: unknown[]) => {
+        setMention(...args);
+        return chain;
+      },
+      run: () => true,
+    };
+    mentionSuggestion.command?.({
+      editor: { chain: () => chain },
+      range: { from: 1, to: 3 },
+      props: {
+        entity: 'n-8',
+        linkType: 'passage',
+        label: 'n.8',
+        text: '',
+        subtype: 'endnotes',
+        linkToh: 'toh871',
+      },
+    } as never);
+
+    expect(setMention).toHaveBeenCalledWith('n-8', 'passage', 'n.8', true, {
+      subtype: 'endnotes',
+      linkToh: 'toh871',
+    });
+  });
+});

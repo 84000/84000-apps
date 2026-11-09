@@ -40,6 +40,18 @@ type EntitySearchResult {
   Title of that work.
   """
   workTitle: String
+
+  """
+  For a `passage` result, the passage's section type (e.g. "endnotes"); null
+  for other kinds.
+  """
+  passageType: String
+
+  """
+  For a `passage` result scoped to one Tohoku number, that number; null
+  otherwise.
+  """
+  passageToh: String
 }
 
 extend type Query {

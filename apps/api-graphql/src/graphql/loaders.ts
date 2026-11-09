@@ -44,6 +44,13 @@ export interface Loaders {
   >['passageLabelsByUuid'];
 
   /**
+   * Load each passage's section type and Toh scope by UUID.
+   */
+  passageLocationsByUuid: ReturnType<
+    typeof createPassageLoaders
+  >['passageLocationsByUuid'];
+
+  /**
    * Load passages that reference a given endnote passage UUID via end-note-link annotations.
    */
   passageReferencesByPassageUuid: ReturnType<

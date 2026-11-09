@@ -69,14 +69,14 @@ export const MentionSelector = ({ editor }: { editor: Editor }) => {
             editor.state.selection.to,
             ' ',
           )}
-          onSelect={({ entity, linkType, label, isSameWork }) => {
+          onSelect={({ entity, linkType, label, isSameWork, location }) => {
             // `setMention` inserts over the live selection, replacing it. The
             // label is passed for immediate display only; it is not persisted,
             // so the canonical value resolves on load.
             editor
               .chain()
               .focus()
-              .setMention(entity, linkType, label, isSameWork)
+              .setMention(entity, linkType, label, isSameWork, location)
               .run();
             setOpen(false);
           }}

@@ -47,7 +47,10 @@ import {
 import { tocResolver } from './schema/toc/toc.resolver';
 import { titlesResolver } from './schema/work/title.resolver';
 import { publishedVersionResolver } from './schema/work/published-version.resolver';
-import { searchResolver } from './schema/search/search.resolver';
+import {
+  entitySearchResultResolvers,
+  searchResolver,
+} from './schema/search/search.resolver';
 import {
   passageCommentsResolver,
   passageUnanchoredCommentsResolver,
@@ -91,6 +94,8 @@ export const resolvers = {
     replace: replaceMutation,
     savePassages: savePassagesMutation,
   },
+
+  EntitySearchResult: entitySearchResultResolvers,
 
   Work: {
     imprint: imprintResolver,

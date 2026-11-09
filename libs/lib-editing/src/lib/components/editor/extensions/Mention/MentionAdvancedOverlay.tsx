@@ -56,7 +56,7 @@ export const MentionAdvancedOverlay = ({ editor }: { editor: Editor }) => {
         {payload && (
           <MentionSearch
             initialQuery={payload.query}
-            onSelect={({ entity, linkType, label, isSameWork }) => {
+            onSelect={({ entity, linkType, label, isSameWork, location }) => {
               const { pos } = payload;
               close();
               setTimeout(() => {
@@ -64,7 +64,7 @@ export const MentionAdvancedOverlay = ({ editor }: { editor: Editor }) => {
                   .chain()
                   .focus()
                   .setTextSelection(pos)
-                  .setMention(entity, linkType, label, isSameWork)
+                  .setMention(entity, linkType, label, isSameWork, location)
                   .run();
               }, EDITOR_UPDATE_DELAY_MS);
             }}

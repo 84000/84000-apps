@@ -242,6 +242,16 @@ export type EntitySearchResult = {
    */
   label: Scalars['String']['output'];
   /**
+   * For a `passage` result scoped to one Tohoku number, that number; null
+   * otherwise.
+   */
+  passageToh?: Maybe<Scalars['String']['output']>;
+  /**
+   * For a `passage` result, the passage's section type (e.g. "endnotes"); null
+   * for other kinds.
+   */
+  passageType?: Maybe<Scalars['String']['output']>;
+  /**
    * Secondary descriptive text (work title, content excerpt, English glossary
    * term, or bibliography excerpt).
    */
