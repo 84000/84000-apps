@@ -5,6 +5,7 @@ import type {
 import { createAlignmentLoader } from '../alignment/alignment.loader';
 import { createAnnotationLoader } from '../annotation/annotation.loader';
 import { createPassageLabelLoader } from './passage-label.loader';
+import { createPassageLocationLoader } from './passage-location.loader';
 
 export function createPassageLoaders(
   supabase: DataClient,
@@ -17,5 +18,6 @@ export function createPassageLoaders(
     // same materialized view in both sources.
     alignmentsByPassageUuid: createAlignmentLoader(supabase),
     passageLabelsByUuid: createPassageLabelLoader(supabase, source),
+    passageLocationsByUuid: createPassageLocationLoader(supabase, source),
   };
 }

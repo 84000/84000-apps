@@ -45,6 +45,7 @@ export const mentionSuggestion: Omit<
         props.linkType,
         props.label,
         props.linkType !== 'work',
+        { subtype: props.subtype, linkToh: props.linkToh },
       )
       .run();
   },

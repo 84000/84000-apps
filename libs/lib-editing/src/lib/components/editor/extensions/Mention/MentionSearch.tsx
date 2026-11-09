@@ -4,6 +4,7 @@ import { Input } from '@eightyfourthousand/design-system';
 import { Loader2Icon } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigation } from '../../../shared';
+import type { MentionTargetLocation } from './Mention';
 import {
   MentionLinkType,
   groupMentionResults,
@@ -15,7 +16,7 @@ import {
  * GlossarySearch: a debounced search input over the entity search. Results are
  * grouped by entity type and scoped to a work (defaults to the current work,
  * re-targetable via the toh field). Selecting a result reports its entity UUID,
- * link type, and label.
+ * link type, label, and, for a passage, where it sits in its work.
  */
 export const MentionSearch = ({
   initialQuery = '',
@@ -29,6 +30,7 @@ export const MentionSearch = ({
     linkType: MentionLinkType;
     label: string;
     isSameWork: boolean;
+    location: MentionTargetLocation;
   }) => void;
 }) => {
   const { toh: navToh } = useNavigation();
@@ -81,6 +83,10 @@ export const MentionSearch = ({
                         label: item.label,
                         isSameWork:
                           item.linkType !== 'work' && searchingCurrentWork,
+                        location: {
+                          subtype: item.subtype,
+                          linkToh: item.linkToh,
+                        },
                       })
                     }
                   >

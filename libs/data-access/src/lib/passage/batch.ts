@@ -214,6 +214,52 @@ export const getPassageLabelsByUuids = async ({
   return labelsByUuid;
 };
 
+/** Where a passage sits in its work: its section type and Toh scope. */
+export interface PassageLocation {
+  type: string;
+  toh?: string;
+}
+
+/**
+ * Batch-read each passage's section type and Toh scope, keyed by uuid. A
+ * passage that is not found is left out.
+ */
+export const getPassageLocationsByUuids = async ({
+  client,
+  passageUuids,
+  source = DEFAULT_CONTENT_SOURCE,
+}: {
+  client: DataClient;
+  passageUuids: readonly string[];
+  source?: ContentSource;
+}): Promise<Map<string, PassageLocation>> => {
+  const locationsByUuid = new Map<string, PassageLocation>();
+
+  if (passageUuids.length === 0) {
+    return locationsByUuid;
+  }
+
+  const { data, error } = await client
+    .from(relationFor('passages', source))
+    .select('uuid, type, toh')
+    .in('uuid', passageUuids as string[]);
+
+  if (error) {
+    console.error('Error batch loading passage locations:', error);
+    return locationsByUuid;
+  }
+
+  for (const passage of data ?? []) {
+    if (!passage.type) continue;
+    locationsByUuid.set(passage.uuid, {
+      type: passage.type,
+      ...(passage.toh ? { toh: passage.toh } : {}),
+    });
+  }
+
+  return locationsByUuid;
+};
+
 export const getPassageReferencesByTargetUuids = async ({
   client,
   passageUuids,

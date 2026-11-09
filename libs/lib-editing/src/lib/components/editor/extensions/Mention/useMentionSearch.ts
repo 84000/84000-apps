@@ -24,6 +24,10 @@ export interface MentionSearchResult {
   label: string;
   /** Secondary descriptive text shown beneath the label. */
   text: string;
+  /** For a passage, its section type (e.g. `endnotes`). */
+  subtype?: string;
+  /** For a passage scoped to one Toh, that Toh. */
+  linkToh?: string;
 }
 
 /** Display order and section headings for grouped mention results. */
@@ -111,6 +115,8 @@ export const useMentionSearch = (query: string, toh?: string) => {
           linkType: m.type,
           label: m.label,
           text: m.text,
+          ...(m.passageType ? { subtype: m.passageType } : {}),
+          ...(m.passageToh ? { linkToh: m.passageToh } : {}),
         })),
       );
       setLoading(false);

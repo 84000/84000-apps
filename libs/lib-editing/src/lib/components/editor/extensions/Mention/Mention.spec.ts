@@ -78,3 +78,52 @@ describe('Mention same-work passage links', () => {
     expect(params.get(panel)).toBe(`open:${tab}:p-1`);
   });
 });
+
+describe('setMention', () => {
+  const insert = (
+    location?: Parameters<Editor['commands']['setMention']>[4],
+  ) => {
+    editor = new Editor({
+      element: document.createElement('div'),
+      extensions: [Doc, Paragraph, TextNode, Mention],
+      content: '<p></p>',
+    });
+    editor.commands.setMention('n-8', 'passage', 'n.8', true, location);
+    let items: MentionItem[] = [];
+    editor.state.doc.descendants((node) => {
+      if (node.type.name === 'mention') items = node.attrs.items;
+    });
+    return items;
+  };
+
+  it("stores the target passage's section and Toh", () => {
+    const [item] = insert({ subtype: 'endnotes', linkToh: 'toh871' });
+    expect(item).toMatchObject({
+      entity: 'n-8',
+      linkType: 'passage',
+      isSameWork: true,
+      subtype: 'endnotes',
+      linkToh: 'toh871',
+    });
+  });
+
+  it('leaves both out when the location is unknown', () => {
+    const [item] = insert();
+    expect(item).not.toHaveProperty('subtype');
+    expect(item).not.toHaveProperty('linkToh');
+  });
+});
+
+describe('a mention inserted from search', () => {
+  // The stored subtype is what the readers route on; without it an endnote
+  // link opened the translation tab instead of the note.
+  it('opens an endnote in the right panel on its Toh', () => {
+    editor = createEditor({ subtype: 'endnotes', linkToh: 'toh871' });
+    editor.view.dom.querySelector<HTMLAnchorElement>('a.mention-link')?.click();
+
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('right')).toBe('open:endnotes:p-1');
+    expect(params.get('toh')).toBe('toh871');
+    expect(params.get('main')).toBeNull();
+  });
+});

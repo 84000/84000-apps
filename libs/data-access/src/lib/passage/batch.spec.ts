@@ -1,6 +1,7 @@
 import {
   getAlignmentsByPassageUuids,
   getAnnotationsByPassageUuids,
+  getPassageLocationsByUuids,
 } from './batch';
 import type { AlignmentDTO, AnnotationDTO } from '../types';
 
@@ -247,5 +248,78 @@ describe('getAlignmentsByPassageUuids', () => {
     ]);
     expect(result.get('p-1')).toHaveLength(1000);
     expect(result.get('p-2')).toHaveLength(1);
+  });
+});
+
+describe('getPassageLocationsByUuids', () => {
+  const clientReturning = (
+    result: { data: FakeRow[] | null; error: { message: string } | null },
+    seen: { relation?: string; columns?: string; uuids?: string[] } = {},
+  ) =>
+    ({
+      from: (relation: string) => {
+        seen.relation = relation;
+        const builder = {
+          select: (columns: string) => {
+            seen.columns = columns;
+            return builder;
+          },
+          in: (_column: string, uuids: string[]) => {
+            seen.uuids = uuids;
+            return Promise.resolve(result);
+          },
+        };
+        return builder;
+      },
+    }) as never;
+
+  it('maps each passage to its type and Toh scope', async () => {
+    const seen: { relation?: string; columns?: string; uuids?: string[] } = {};
+    const result = await getPassageLocationsByUuids({
+      client: clientReturning(
+        {
+          data: [
+            { uuid: 'n-4', type: 'endnotes', toh: 'toh871' },
+            { uuid: 'i-2', type: 'introduction', toh: null },
+          ],
+          error: null,
+        },
+        seen,
+      ),
+      passageUuids: ['n-4', 'i-2', 'missing'],
+    });
+
+    expect(seen.columns).toBe('uuid, type, toh');
+    expect(seen.uuids).toEqual(['n-4', 'i-2', 'missing']);
+    expect(result.get('n-4')).toEqual({ type: 'endnotes', toh: 'toh871' });
+    expect(result.get('i-2')).toEqual({ type: 'introduction' });
+    expect(result.has('missing')).toBe(false);
+  });
+
+  it('reads the published relation for the published source', async () => {
+    const seen: { relation?: string } = {};
+    await getPassageLocationsByUuids({
+      client: clientReturning({ data: [], error: null }, seen),
+      passageUuids: ['n-4'],
+      source: 'published',
+    });
+    expect(seen.relation).toBe('published_passages_live');
+  });
+
+  it('returns an empty map on error and without querying for no uuids', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const failed = await getPassageLocationsByUuids({
+      client: clientReturning({ data: null, error: { message: 'boom' } }),
+      passageUuids: ['n-4'],
+    });
+    expect(failed.size).toBe(0);
+
+    const from = jest.fn();
+    const empty = await getPassageLocationsByUuids({
+      client: { from } as never,
+      passageUuids: [],
+    });
+    expect(empty.size).toBe(0);
+    expect(from).not.toHaveBeenCalled();
   });
 });
