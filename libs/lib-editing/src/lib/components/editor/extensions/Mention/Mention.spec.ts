@@ -115,10 +115,26 @@ describe('setMention', () => {
 });
 
 describe('a mention inserted from search', () => {
-  // The stored subtype is what the readers route on; without it an endnote
-  // link opened the translation tab instead of the note.
+  // The readers route on the stored subtype; without it an endnote link
+  // opened the translation tab instead of the note.
   it('opens an endnote in the right panel on its Toh', () => {
-    editor = createEditor({ subtype: 'endnotes', linkToh: 'toh871' });
+    const author = new Editor({
+      element: document.createElement('div'),
+      extensions: [Doc, Paragraph, TextNode, Mention],
+      content: '<p></p>',
+    });
+    author.commands.setMention('p-1', 'passage', 'n.1', true, {
+      subtype: 'endnotes',
+      linkToh: 'toh871',
+    });
+    let stored: MentionItem | undefined;
+    author.state.doc.descendants((node) => {
+      if (node.type.name === 'mention') [stored] = node.attrs.items;
+    });
+    author.destroy();
+    if (!stored) throw new Error('mention was not inserted');
+
+    editor = createEditor(stored);
     editor.view.dom.querySelector<HTMLAnchorElement>('a.mention-link')?.click();
 
     const params = new URLSearchParams(window.location.search);
