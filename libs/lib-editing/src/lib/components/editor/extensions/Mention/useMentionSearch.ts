@@ -115,8 +115,12 @@ export const useMentionSearch = (query: string, toh?: string) => {
           linkType: m.type,
           label: m.label,
           text: m.text,
-          ...(m.passageType ? { subtype: m.passageType } : {}),
-          ...(m.passageToh ? { linkToh: m.passageToh } : {}),
+          ...(m.type === 'passage' && m.passageType
+            ? { subtype: m.passageType }
+            : {}),
+          ...(m.type === 'passage' && m.passageToh
+            ? { linkToh: m.passageToh }
+            : {}),
         })),
       );
       setLoading(false);
