@@ -145,7 +145,6 @@ export function annotationFromGraphQL(
       return {
         ...base,
         type: 'glossaryInstance',
-        authority: (metadata.authority as string) ?? '',
         glossary: (metadata.glossary as string) ?? '',
       };
 

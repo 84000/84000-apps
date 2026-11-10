@@ -264,6 +264,45 @@ describe('applyEditsToPassages', () => {
     expect(result.passages[0].content.slice(19, 23)).toBe('this');
   });
 
+  it('skips a glossary-only add that resends a stored legacy instance', () => {
+    // a-glossary is stored as [{ uuid: 'g1', authority: 'au1' }].
+    const result = run([
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 9,
+        end: 13,
+        text: 'lord',
+        data: { glossary: 'g1' },
+      },
+    ]);
+    expect(result.error).toBeUndefined();
+    expect(result.warnings.map((w) => w.message)).toContainEqual(
+      expect.stringContaining('Skipped add-annotation'),
+    );
+    expect(
+      result.rawAnnotations.p1.filter((r) => r.type === 'glossary-instance'),
+    ).toHaveLength(1);
+  });
+
+  it('stores an added glossary instance as its entry uuid alone', () => {
+    const result = run([
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 28,
+        end: 32,
+        text: 'this',
+        data: { glossary: 'g2', authority: 'au2' },
+      },
+    ]);
+    expect(result.error).toBeUndefined();
+    const added = result.rawAnnotations.p1.find((r) => r.start === 28);
+    expect(added?.content).toEqual([{ uuid: 'g2' }]);
+  });
+
   it('cannot tell a repeated cut from a new one when the text repeats', () => {
     // Cutting one "x" from "xx" leaves an "x" at the same offsets.
     const once = applyEditsToPassages({

@@ -46,7 +46,7 @@ Inline markup applied to passage content. Annotations use character offsets (`st
 - **Formatting**: span (with text-style, language), mantra, quote, code
 - **Media**: image, audio, link
 
-Every annotation has a `uuid`, `start`/`end` offsets, and a `type`. Type-specific fields carry additional data (e.g., `GlossaryInstanceAnnotation` has `authority` and `glossary` fields).
+Every annotation has a `uuid`, `start`/`end` offsets, and a `type`. Type-specific fields carry additional data (e.g., `GlossaryInstanceAnnotation` has a `glossary` field, the entry's uuid; its authority is read from the entry).
 
 - Types: `libs/data-access/src/lib/types/annotation/` (34 files covering all annotation types and transformers)
 - DTO ↔ domain mapping handles the conversion between `kebab-case` database types and `camelCase` application types

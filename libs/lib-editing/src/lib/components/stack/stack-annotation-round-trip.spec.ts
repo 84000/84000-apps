@@ -150,7 +150,8 @@ const inline = passage('p-inline', (b) => {
     [
       'gloss-1',
       'glossary-instance',
-      [{ uuid: 'e-gloss' }, { authority: 'e-authority' }],
+      // A stored `authority` is legacy and not modelled (DEV-907).
+      [{ uuid: 'e-gloss' }],
       'toh1-1',
     ],
     ...SPAN_STYLES.map((style): [string, AnnotationDTOType, Content] => [

@@ -94,13 +94,7 @@ export const GlossaryInstance = ({
   }, [withEditor, uuid, close]);
 
   const updateGlossary = useCallback(
-    ({
-      glossary: newGlossary,
-      authority: newAuthority,
-    }: {
-      glossary: string;
-      authority: string;
-    }) => {
+    ({ glossary: newGlossary }: { glossary: string }) => {
       close();
 
       withEditor((editor) => {
@@ -123,13 +117,11 @@ export const GlossaryInstance = ({
           mark.type.create({
             ...mark.attrs,
             glossary: newGlossary,
-            authority: newAuthority,
           }),
         );
         editor.view.dispatch(tr);
 
         anchor.setAttribute('glossary', newGlossary);
-        anchor.setAttribute('authority', newAuthority);
       });
     },
     [withEditor, uuid, anchor, close],

@@ -28,7 +28,7 @@ output in `84000/scratch/<toh>/glossary-instances/`, the report in
 The `add-annotation` edit for one use:
 
 ```json
-{ "op": "add-annotation", "passageUuid": "<passage uuid>", "kind": "glossary-instance", "start": 107, "end": 120, "text": "Samantabhadra", "data": { "glossary": "<term uuid>", "authority": "<authority uuid>" } }
+{ "op": "add-annotation", "passageUuid": "<passage uuid>", "kind": "glossary-instance", "start": 107, "end": 120, "text": "Samantabhadra", "data": { "glossary": "<term uuid>" } }
 ```
 
 `start` and `end` index the passage content **as stored**, `text` is exactly

@@ -1,5 +1,11 @@
 import type { JSONContent, Extensions } from '@tiptap/core';
 import type { ReactElement } from 'react';
+import {
+  annotationsFromDTO,
+  passageFromDTO,
+  type PassageDTO,
+} from '@eightyfourthousand/data-access';
+import { blockFromPassage } from '@eightyfourthousand/lib-doc-model';
 import { TranslationSSRContent } from './TranslationSSRContent';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
 import { extractPlainText } from './ssr-text-fallback';
@@ -122,6 +128,7 @@ describe('TranslationSSRContent', () => {
                     {
                       type: 'glossaryInstance',
                       attrs: {
+                        // Legacy: not a mark attribute, so not rendered (DEV-907).
                         authority: 'auth-1',
                         glossary: 'gloss-1',
                         uuid: 'gi-1',
@@ -218,7 +225,7 @@ describe('TranslationSSRContent', () => {
     expect(html).not.toContain('"null"');
     expect(html).not.toContain('[object Object]');
     expect(html).toMatchInlineSnapshot(
-      `"<div label="1.1" sort="0" class="flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20"><div class="w-full"><div class="relative scroll-m-20 w-full self-start"><div class="absolute labeled -left-16 w-16 text-end hover:cursor-pointer select-none" contenteditable="false" data-passage-label="">1.1</div><div class="passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end" contenteditable="false"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></div><div class="passage is-editable pl-6 @c/sidebar:pl-4"><h1 class="font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2" type="heading">Head</h1><p class="no-indent paragraph" type="paragraph"><span class="glossary-instance" type="glossaryInstance" authority="auth-1" glossary="gloss-1" uuid="gi-1">gi</span><a class="text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer" type="internalLink" entity="ent-1" entity-type="work" uuid="il-1" data-href="/reader/x" href="/entity/work/ent-1">il</a><a href="https://example.com" target="_blank" rel="noreferrer noopener" type="link">ln</a><span uuid="f-1" type="span" textStyle="foreign" data-text-style="foreign">fo</span><span uuid="m-1" type="mantra" lang="Sa-Ltn">ma</span><sm class="uppercase">sc</sm><sub>sub</sub><sup>sup</sup><em>me</em></p><ul data-spacing="horizontal" class="ml-4 list-none" data-item-style="none"><li><p class="no-indent paragraph" type="paragraph">item</p></li></ul><p class="no-indent paragraph" type="paragraph"><span class="mention-container" data-type="mention"><a class="mention-link" type="mention" uuid="mi-1" entity="me-1" entity-type="work" href="/entity/work/me-1" target="_blank" rel="noreferrer noopener">Mentioned</a></span></p></div></div></div><div class="passage-compare-source w-full hidden md:mt-1" contenteditable="false" data-compare-source=""><div class="passage pl-6 @c/sidebar:pl-4"><div class="passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2"></div></div></div></div>"`,
+      `"<div label="1.1" sort="0" class="flex md:flex-row flex-col w-full md:gap-10 gap-2 scroll-mt-20"><div class="w-full"><div class="relative scroll-m-20 w-full self-start"><div class="absolute labeled -left-16 w-16 text-end hover:cursor-pointer select-none" contenteditable="false" data-passage-label="">1.1</div><div class="passage-bookmark hidden absolute -left-15.75 top-6 w-16 flex justify-end" contenteditable="false"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent size-3"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></div><div class="passage is-editable pl-6 @c/sidebar:pl-4"><h1 class="font-serif mt-6 scroll-m-20 pb-4 text-4xl @c/sidebar:pb-2" type="heading">Head</h1><p class="no-indent paragraph" type="paragraph"><span class="glossary-instance" type="glossaryInstance" glossary="gloss-1" uuid="gi-1">gi</span><a class="text-primary underline decoration-primary underline-offset-[3px] transition-colors cursor-pointer" type="internalLink" entity="ent-1" entity-type="work" uuid="il-1" data-href="/reader/x" href="/entity/work/ent-1">il</a><a href="https://example.com" target="_blank" rel="noreferrer noopener" type="link">ln</a><span uuid="f-1" type="span" textStyle="foreign" data-text-style="foreign">fo</span><span uuid="m-1" type="mantra" lang="Sa-Ltn">ma</span><sm class="uppercase">sc</sm><sub>sub</sub><sup>sup</sup><em>me</em></p><ul data-spacing="horizontal" class="ml-4 list-none" data-item-style="none"><li><p class="no-indent paragraph" type="paragraph">item</p></li></ul><p class="no-indent paragraph" type="paragraph"><span class="mention-container" data-type="mention"><a class="mention-link" type="mention" uuid="mi-1" entity="me-1" entity-type="work" href="/entity/work/me-1" target="_blank" rel="noreferrer noopener">Mentioned</a></span></p></div></div></div><div class="passage-compare-source w-full hidden md:mt-1" contenteditable="false" data-compare-source=""><div class="passage pl-6 @c/sidebar:pl-4"><div class="passage-compare-text leading-7 font-tibetan text-lg whitespace-normal mt-1.5 pb-4 md:pb-2"></div></div></div></div>"`,
     );
   });
 
@@ -685,7 +692,7 @@ describe('TranslationSSRContent', () => {
   });
 
   it.each([
-    ['glossaryInstance', { glossary: 'g-1', authority: 'a-1', uuid: 'gi-1' }],
+    ['glossaryInstance', { glossary: 'g-1', uuid: 'gi-1' }],
     ['internalLink', { entity: 'e-1', type: 'work', href: '#x', uuid: 'il-1' }],
   ])('sets data-toh on a toh-scoped %s mark (DEV-757)', (markType, attrs) => {
     // These two marks read `mark.attrs.toh` in renderHTML but never declared
@@ -774,6 +781,97 @@ describe('TranslationSSRContent', () => {
   it('exposes the default SSR extension set including passage and bold', () => {
     const names = translationSSRExtensions.map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['passage', 'bold']));
+  });
+});
+
+describe('TranslationSSRContent glossary instances from stored rows', () => {
+  const GLOSSARY = 'a1a1a1a1-0000-4000-8000-000000000001';
+  const AUTHORITY = 'b2b2b2b2-0000-4000-8000-000000000002';
+  const CONTENT = 'The Buddha taught.';
+
+  /** Load a stored row through the editor model, as the reader does. */
+  const htmlFromStoredRow = (
+    content: NonNullable<PassageDTO['annotations']>[number]['content'],
+  ): string => {
+    const dto: PassageDTO = {
+      sort: 1,
+      type: 'translation',
+      uuid: 'p-1',
+      label: '1.1',
+      xmlId: 'x-1',
+      parent: 'parent',
+      content: CONTENT,
+      work_uuid: 'w-1',
+      annotations: [
+        {
+          uuid: 'gi-1',
+          passage_uuid: 'p-1',
+          type: 'glossary-instance',
+          start: 4,
+          end: 10,
+          content,
+        },
+      ],
+    };
+    const block = JSON.parse(
+      JSON.stringify(
+        blockFromPassage(
+          passageFromDTO(
+            dto,
+            annotationsFromDTO(dto.annotations ?? [], CONTENT.length),
+          ),
+        ),
+      ),
+    );
+    return renderedHtml(
+      TranslationSSRContent({
+        content: {
+          type: 'doc',
+          content: [
+            {
+              type: 'passage',
+              attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+              content: block.content,
+            },
+          ],
+        },
+      }) as ReactElement<DangerousProps>,
+    );
+  };
+
+  it.each([
+    ['no authority', [{ uuid: GLOSSARY }]],
+    [
+      'authority in the same element',
+      [{ uuid: GLOSSARY, authority: AUTHORITY }],
+    ],
+    [
+      'authority in a separate element',
+      [{ uuid: GLOSSARY }, { authority: AUTHORITY }],
+    ],
+  ])(
+    'renders a stored instance with %s as an instance of its entry',
+    (_, content) => {
+      const html = htmlFromStoredRow(content);
+
+      expect(html).toMatch(
+        /<span[^>]*class="glossary-instance"[^>]*>Buddha<\/span>/,
+      );
+      expect(html).toContain(`glossary="${GLOSSARY}"`);
+      expect(html).toContain('uuid="gi-1"');
+      expect(html).not.toContain('authority=');
+    },
+  );
+
+  it('renders the same output whether or not the stored row carries an authority', () => {
+    const without = htmlFromStoredRow([{ uuid: GLOSSARY }]);
+
+    expect(htmlFromStoredRow([{ uuid: GLOSSARY, authority: AUTHORITY }])).toBe(
+      without,
+    );
+    expect(
+      htmlFromStoredRow([{ uuid: GLOSSARY }, { authority: AUTHORITY }]),
+    ).toBe(without);
   });
 });
 

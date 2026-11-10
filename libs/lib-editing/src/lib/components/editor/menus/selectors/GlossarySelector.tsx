@@ -52,12 +52,12 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
             editor.state.selection.to,
             ' ',
           )}
-          onSelect={({ glossary, authority }) => {
+          onSelect={({ glossary }) => {
             const { to } = editor.state.selection;
             editor
               .chain()
               .focus()
-              .setGlossaryInstance({ glossary, authority })
+              .setGlossaryInstance({ glossary })
               .setTextSelection(to)
               .run();
             setOpen(false);

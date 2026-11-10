@@ -8,11 +8,10 @@ export const glossaryInstance: Exporter<GlossaryInstanceAnnotation> = ({
   passageUuid,
 }): GlossaryInstanceAnnotation | undefined => {
   const textContent = node.textContent;
-  const authority = mark?.attrs.authority;
   const glossary = mark?.attrs.glossary;
   const uuid = mark?.attrs.uuid;
 
-  if (!textContent || !glossary || !authority || !uuid) {
+  if (!textContent || !glossary || !uuid) {
     console.warn(
       `Glossary instance ${uuid} on pasage ${passageUuid} is incomplete`,
     );
@@ -25,7 +24,6 @@ export const glossaryInstance: Exporter<GlossaryInstanceAnnotation> = ({
     passageUuid,
     start,
     end: start + textContent.length,
-    authority,
     glossary,
   };
 };

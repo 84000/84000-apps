@@ -6,10 +6,7 @@ import { GlossaryInstanceNodeSSR } from './GlossaryInstanceNode.ssr';
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     glossaryInstance: {
-      setGlossaryInstance: (args: {
-        glossary: string;
-        authority: string;
-      }) => ReturnType;
+      setGlossaryInstance: (args: { glossary: string }) => ReturnType;
       unsetGlossaryInstance: () => ReturnType;
     };
   }
@@ -32,9 +29,6 @@ export const GlossaryInstanceNode = GlossaryInstanceNodeSSR.extend({
       // Set attributes for HoverCardProvider identification
       if (props.mark.attrs.uuid) {
         dom.setAttribute('uuid', props.mark.attrs.uuid);
-      }
-      if (props.mark.attrs.authority) {
-        dom.setAttribute('authority', props.mark.attrs.authority);
       }
       if (props.mark.attrs.glossary) {
         dom.setAttribute('glossary', props.mark.attrs.glossary);
@@ -68,13 +62,12 @@ export const GlossaryInstanceNode = GlossaryInstanceNodeSSR.extend({
   addCommands() {
     return {
       setGlossaryInstance:
-        ({ glossary, authority }) =>
+        ({ glossary }) =>
         ({ chain }) => {
           return chain()
             .setMark(this.name)
             .updateAttributes(this.name, {
               glossary,
-              authority,
               uuid: uuidv4(),
             })
             .run();
@@ -86,7 +79,6 @@ export const GlossaryInstanceNode = GlossaryInstanceNodeSSR.extend({
           return chain()
             .unsetMark(this.name)
             .resetAttributes(this.name, 'glossary')
-            .resetAttributes(this.name, 'authority')
             .run();
         },
     };

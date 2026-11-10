@@ -213,7 +213,7 @@ const MARK_CASES: Record<string, JSONContent> = {
     text('hello', [
       {
         type: 'glossaryInstance',
-        attrs: { uuid: 'm-1', glossary: 'glossary-1', authority: 'auth-1' },
+        attrs: { uuid: 'm-1', glossary: 'glossary-1' },
       },
     ]),
   ),

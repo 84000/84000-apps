@@ -233,7 +233,7 @@ const ops = (out, chunk) => {
       start: c.start,
       end: c.end,
       text: c.text,
-      data: { glossary: t.uuid, authority: t.authority },
+      data: { glossary: t.uuid },
     });
   }
   // Keep a passage's edits in one file: each call is all-or-nothing.

@@ -54,7 +54,7 @@ reason to emit them:
 | kind | `data` | what it marks |
 |---|---|---|
 | `mention` | `entity`, `linkType`, and see below | a link to another entity |
-| `glossary-instance` | `glossary`, `authority` | an attested glossary term |
+| `glossary-instance` | `glossary` | an attested glossary term |
 | `end-note-link` | `endNote`, `label` | an end-note marker |
 | `inline-title` | `lang` | a title inside running text |
 | `mantra` | `lang` | a mantra |
@@ -76,10 +76,10 @@ from the annotation's own `toh`, which scopes visibility; do not conflate them.
 
 A mention is zero-length: `start` and `end` are equal, at the position it marks.
 
-`glossary-instance` needs both `glossary` and `authority` — one alone cannot be
-resolved. `end-note-link` needs `endNote`; its `label` is optional.
-`inline-title` needs `lang`. A kind missing what it requires is dropped like any
-other unrepresentable annotation.
+`glossary-instance` needs `glossary`, the entry's uuid; its authority is read
+from the entry, so an `authority` sent here is ignored. `end-note-link` needs
+`endNote`; its `label` is optional. `inline-title` needs `lang`. A kind missing
+what it requires is dropped like any other unrepresentable annotation.
 
 ## Preserving an existing annotation
 
