@@ -90,7 +90,7 @@ const docFromStoredRow = (content: Record<string, unknown>[]): JSONContent => {
       blockFromPassage(
         passageFromDTO(
           dto,
-          annotationsFromDTO(dto.annotations, CONTENT.length),
+          annotationsFromDTO(dto.annotations ?? [], CONTENT.length),
         ),
       ),
     ),

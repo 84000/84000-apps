@@ -63,7 +63,7 @@ const blockOf = (dto: PassageDTO) =>
       blockFromPassage(
         passageFromDTO(
           dto,
-          annotationsFromDTO(dto.annotations, CONTENT.length),
+          annotationsFromDTO(dto.annotations ?? [], CONTENT.length),
         ),
       ),
     ),
