@@ -129,7 +129,7 @@ export const GlossaryInstance = ({
   );
 
   return (
-    <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
+    <div className="flex justify-between gap-2 p-2 w-fit max-w-96">
       <BookOpenIcon className="text-primary my-auto size-5 [&_svg]:size-4" />
       {termNumber !== null && (
         <span className="text-accent text-xs my-auto shrink-0">
