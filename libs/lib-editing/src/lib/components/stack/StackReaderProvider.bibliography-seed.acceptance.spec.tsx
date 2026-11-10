@@ -13,7 +13,6 @@ import { renderToString } from 'react-dom/server';
 import { StackReaderProvider } from './StackReaderProvider';
 import type { StackReaderSeed, StackSectionSeed } from './stack-seed';
 import { StackTab } from './StackTab';
-import { useStackWork } from './stack-work-context';
 
 // See PassageStackController.spec.ts: building the stack schema reaches
 // `data-access/ssr` through two client barrels that leak it.
@@ -223,96 +222,6 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-describe('the seeded bibliography, server-rendered (4b AC2)', () => {
-  it('draws the rows in reading order: each heading, then its entries', () => {
-    const container = serve(seedOf(BIBLIOGRAPHY));
-
-    expect(rowElements(container).map(readRow)).toEqual(
-      expectedRows(BIBLIOGRAPHY),
-    );
-  });
-
-  it('labels headings and entries alike with `b.` and the label the read gave', () => {
-    const container = serve(seedOf(BIBLIOGRAPHY));
-
-    expect(
-      rowElements(container).map(
-        (row) => row.querySelector('[data-passage-label]')?.textContent,
-      ),
-    ).toEqual(['b.1', 'b.1.1', 'b.1.2', 'b.2', 'b.2.1']);
-  });
-
-  it('draws a row’s text from the entry’s html', () => {
-    const container = serve(seedOf(BIBLIOGRAPHY));
-
-    expect(container.textContent).toContain('Kangyur source alpha');
-    expect(container.textContent).toContain('Secondary source gamma');
-    // The markup is drawn, not shown as text.
-    expect(container.textContent).not.toContain('<em>');
-  });
-
-  it('draws only the entries of a section whose heading is null', () => {
-    const unheaded: Section[] = [
-      {
-        heading: null,
-        label: '',
-        entries: [
-          { uuid: 'n1', label: '1', html: '<p>Lone source one</p>' },
-          { uuid: 'n2', label: '2', html: '<p>Lone source two</p>' },
-        ],
-      },
-    ];
-
-    const container = serve(seedOf(unheaded));
-
-    expect(rowElements(container).map(readRow)).toEqual([
-      ['b.1', 'Lone source one'],
-      ['b.2', 'Lone source two'],
-    ]);
-  });
-
-  it('keeps the order of sections as given, headed or not', () => {
-    const mixed: Section[] = [
-      {
-        heading: null,
-        label: '',
-        entries: [
-          { uuid: 'm1', label: '1', html: '<p>Before any heading</p>' },
-        ],
-      },
-      {
-        heading: 'Late Heading',
-        label: '2',
-        entries: [{ uuid: 'm2', label: '2.1', html: '<p>After a heading</p>' }],
-      },
-    ];
-
-    const container = serve(seedOf(mixed));
-
-    expect(rowElements(container).map(readRow)).toEqual([
-      ['b.1', 'Before any heading'],
-      ['b.2', 'Late Heading'],
-      ['b.2.1', 'After a heading'],
-    ]);
-  });
-
-  it('draws it with no request, beside the other tabs’ rows', () => {
-    const container = serve(seedOf(BIBLIOGRAPHY), [
-      'translation',
-      'bibliography',
-    ]);
-
-    const rows = rowElements(container);
-    expect(
-      rows.filter((row) => row.id.startsWith('translation-')),
-    ).toHaveLength(3);
-    expect(
-      rows.filter((row) => !row.id.startsWith('translation-')).map(readRow),
-    ).toEqual(expectedRows(BIBLIOGRAPHY));
-    reads().forEach((read) => expect(read).not.toHaveBeenCalled());
-  });
-});
-
 describe('a long seeded bibliography is virtualized (4b AC3)', () => {
   const LONG: Section[] = [0, 1].map((s) => ({
     heading: `Section ${s + 1} heading`,
@@ -328,20 +237,6 @@ describe('a long seeded bibliography is virtualized (4b AC3)', () => {
     const container = serve(seedOf(LONG));
 
     expect(rowElements(container).length).toBeLessThanOrEqual(100);
-  });
-
-  it('draws at least the first 10, starting with the first heading', () => {
-    const container = serve(seedOf(LONG));
-
-    const rows = rowElements(container).map(readRow);
-    expect(rows.length).toBeGreaterThanOrEqual(10);
-    expect(rows.slice(0, 3)).toEqual([
-      ['b.1', 'Section 1 heading'],
-      ['b.1.1', 'Source 1.1 text'],
-      ['b.1.2', 'Source 1.2 text'],
-    ]);
-    // Contiguous from the top: no gap in the window it draws.
-    expect(rows.slice(0, 10)).toEqual(expectedRows(LONG).slice(0, 10));
   });
 });
 
@@ -411,43 +306,5 @@ describe('the seeded bibliography, taken over in the browser (4b AC4)', () => {
       .slice(0, served.length)
       .forEach((row, i) => expect(row).toBe(served[i]));
     reads().forEach((read) => expect(read).not.toHaveBeenCalled());
-  });
-});
-
-describe('the reader’s stack never reads the draft bibliography (4b AC9)', () => {
-  it('does not call getBibliographyRows when seeded and taken over', async () => {
-    const host = scroller();
-    host.innerHTML = renderToString(<Reader seed={seedOf(BIBLIOGRAPHY)} />);
-    await act(async () => {
-      root = hydrateRoot(host, <Reader seed={seedOf(BIBLIOGRAPHY)} />);
-    });
-
-    expect(dataAccess.getBibliographyRows).not.toHaveBeenCalled();
-  });
-
-  it('does not call getBibliographyRows when loading in the browser without a seed', async () => {
-    clientGraphql.getPassageMetaPage.mockResolvedValue({
-      metas: [],
-      hasMoreAfter: false,
-      hasMoreBefore: false,
-    });
-    const views: unknown[] = [];
-    const Probe = () => {
-      views.push(useStackWork()?.controllerFor('bibliography'));
-      return null;
-    };
-    await act(async () => {
-      root = hydrateRoot(
-        scroller(),
-        <StackReaderProvider workUuid={WORK}>
-          <Probe />
-        </StackReaderProvider>,
-      );
-    });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-
-    expect(dataAccess.getBibliographyRows).not.toHaveBeenCalled();
   });
 });

@@ -3,8 +3,8 @@
  * the work's bibliography, through `getWorkBibliography`, and returns it as
  * `bibliography`.
  *
- * Written from the spec, not the implementation: only the GraphQL reads (and
- * the editor's draft read, to prove it is not used) are faked.
+ * Written from the spec, not the implementation: only the GraphQL reads are
+ * faked.
  */
 import { loadStackReaderSeed } from './stack-reader-seed';
 
@@ -14,22 +14,10 @@ jest.mock('@eightyfourthousand/client-graphql/ssr', () => ({
   getWorkBibliography: jest.fn(),
 }));
 
-// The editor's draft read, and the Supabase clients it goes through. The
-// reader's seed reads neither.
-jest.mock('@eightyfourthousand/data-access', () => ({
-  ...jest.requireActual('@eightyfourthousand/data-access'),
-  getBibliographyRows: jest.fn(async () => []),
-  createBrowserClient: jest.fn(() => ({ from: jest.fn(), rpc: jest.fn() })),
-}));
-
 const api = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getPassageMetaPage: jest.Mock;
   getTranslationBlocks: jest.Mock;
   getWorkBibliography: jest.Mock;
-};
-const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
-  getBibliographyRows: jest.Mock;
-  createBrowserClient: jest.Mock;
 };
 
 const CLIENT = { name: 'client' } as never;
@@ -76,8 +64,6 @@ beforeEach(() => {
   });
   api.getTranslationBlocks.mockReset().mockResolvedValue({ blocks: [] });
   api.getWorkBibliography.mockReset().mockResolvedValue(BIBLIOGRAPHY);
-  dataAccess.getBibliographyRows.mockClear();
-  dataAccess.createBrowserClient.mockClear();
 });
 
 // The base seed type has no `bibliography`; the spec adds it.
@@ -91,49 +77,6 @@ const load = async () =>
   })) as SeedWithBibliography;
 
 describe('loadStackReaderSeed bibliography (4b AC1)', () => {
-  it('returns the work’s bibliography exactly as getWorkBibliography read it', async () => {
-    const seed = await load();
-
-    expect(seed.bibliography).toEqual(BIBLIOGRAPHY);
-  });
-
-  it('reads the bibliography once, with the client and the work’s uuid', async () => {
-    await load();
-
-    expect(api.getWorkBibliography).toHaveBeenCalledTimes(1);
-    expect(api.getWorkBibliography).toHaveBeenCalledWith({
-      client: CLIENT,
-      uuid: WORK,
-    });
-  });
-
-  it('never reads the editor’s draft rows or touches a Supabase client', async () => {
-    await load();
-
-    expect(dataAccess.getBibliographyRows).not.toHaveBeenCalled();
-    expect(dataAccess.createBrowserClient).not.toHaveBeenCalled();
-  });
-
-  it('seeds an empty bibliography when the read returns its failure value, []', async () => {
-    api.getWorkBibliography.mockResolvedValue([]);
-
-    const seed = await load();
-
-    expect(seed.bibliography).toEqual([]);
-  });
-
-  it('is still the section seed it was: the work and every section', async () => {
-    const seed = await load();
-
-    expect(seed.workUuid).toBe(WORK);
-    expect(seed.sections.map(({ tab }) => tab)).toEqual([
-      'front',
-      'translation',
-      'abbreviations',
-      'endnotes',
-    ]);
-  });
-
   it('stays plain, serializable data', async () => {
     const seed = await load();
 

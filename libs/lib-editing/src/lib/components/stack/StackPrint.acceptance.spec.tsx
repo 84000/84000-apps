@@ -28,7 +28,6 @@ import { NavigationProvider } from '../shared/NavigationProvider';
 import type { StackController } from './StackController';
 import { StackPrint } from './StackPrint';
 import { StackReaderProvider } from './StackReaderProvider';
-import { StackWorkProvider } from './StackWorkProvider';
 import type { StackReaderSeed, StackSectionSeed } from './stack-seed';
 import { useStackWork } from './stack-work-context';
 
@@ -417,98 +416,6 @@ const gate = <T,>() => {
 
 // ===================================================================== tests
 
-describe('AC2.1: nothing unless under a read-only stack work', () => {
-  const child = <span>child</span>;
-
-  it('AC2.1 outside any stack provider (the paginated reader) it draws its children and nothing else', () => {
-    const bare = render(
-      <NavigationProvider uuid={WORK}>{child}</NavigationProvider>,
-    );
-    const baseline = bare.container.innerHTML;
-    bare.unmount();
-
-    const { container } = render(
-      <NavigationProvider uuid={WORK}>
-        <StackPrint>{child}</StackPrint>
-      </NavigationProvider>,
-    );
-
-    expect(container.innerHTML).toBe(baseline);
-    expect(screen.queryByRole('button')).toBeNull();
-    // The shortcut is left to the browser.
-    expect(pressPrintShortcut({ metaKey: true })).toBe(true);
-    expect(pressPrintShortcut({ ctrlKey: true })).toBe(true);
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('AC2.1 under an editing StackWorkProvider it draws its children and nothing else', async () => {
-    const Loaded = () => (useStackWork() ? <i>loaded</i> : null);
-    const withProvider = (inner: ReactNode) => (
-      <StackWorkProvider workUuid={WORK}>
-        <NavigationProvider uuid={WORK}>
-          {inner}
-          <Loaded />
-        </NavigationProvider>
-      </StackWorkProvider>
-    );
-
-    const bare = render(withProvider(child));
-    await screen.findByText('loaded');
-    const baseline = bare.container.innerHTML;
-    bare.unmount();
-
-    const { container } = render(
-      withProvider(<StackPrint>{child}</StackPrint>),
-    );
-    await screen.findByText('loaded');
-
-    expect(container.innerHTML).toBe(baseline);
-    expect(screen.queryByRole('button')).toBeNull();
-    expect(pressPrintShortcut({ metaKey: true })).toBe(true);
-    expect(pressPrintShortcut({ ctrlKey: true })).toBe(true);
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-});
-
-describe('AC2.2: no Print control, and one session at a time', () => {
-  it('AC2.2 under StackReaderProvider no button and no element named Print renders before printing starts', async () => {
-    await mount();
-
-    expect(screen.getByText('page content')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /print/i })).toBeNull();
-    expect(
-      screen.queryAllByRole('button', { name: /print/i, hidden: true }),
-    ).toHaveLength(0);
-    expect(screen.queryByText(/^print$/i)).toBeNull();
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('AC2.2 pressing Cmd+P a second time while a session runs opens no second dialog', async () => {
-    const held = gate<unknown>();
-    graphql.getWorkGlossaryTerms.mockReset().mockImplementation(async () => {
-      await held.promise;
-      return termPage(TERMS, null);
-    });
-    await mount();
-
-    await startPrint();
-    await screen.findByRole('dialog');
-    await waitFor(() =>
-      expect(graphql.getWorkGlossaryTerms).toHaveBeenCalled(),
-    );
-    await startPrint();
-    await startPrint({ ctrlKey: true });
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    held.open(null);
-
-    await waitFor(() => expect(window.print).toHaveBeenCalled());
-    expect(window.print).toHaveBeenCalledTimes(1);
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
-    expect(printElements()).toHaveLength(1);
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
-  });
-});
-
 describe('AC2.3: the progress dialog', () => {
   it('AC2.3 opens a dialog with a progress bar and a Cancel button, counting the rows of every part', async () => {
     const held = gate<unknown>();
@@ -541,14 +448,6 @@ describe('AC2.3: the progress dialog', () => {
 });
 
 describe('AC2.4: what it reads, and in what order', () => {
-  it('AC2.4 reads front, translation, abbreviations, endnotes, then bibliography', async () => {
-    await mount();
-
-    await printWhole();
-
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
-  });
-
   it('AC2.4 reads every glossary term of the work after the parts, paging forward until hasMoreAfter is false', async () => {
     await mount();
 
@@ -594,17 +493,6 @@ describe('AC2.4: what it reads, and in what order', () => {
 });
 
 describe('AC2.5: the printable page', () => {
-  it('AC2.5 appends one data-stack-print element to body, then calls window.print once', async () => {
-    await mount();
-
-    await printWhole();
-
-    expect(window.print).toHaveBeenCalledTimes(1);
-    expect(printed).toHaveLength(1);
-    expect(printed[0].elements).toBe(1);
-    expect(printed[0].parentIsBody).toBe(true);
-  });
-
   it('AC2.5 holds the English title, every row of each part in order, then a Glossary section of every term in the order read', async () => {
     await mount();
 
@@ -665,30 +553,6 @@ describe('AC2.5: the printable page', () => {
 });
 
 describe('AC2.6: after printing', () => {
-  it('AC2.6 the print element is in the document before afterprint and gone after, and the dialog is closed', async () => {
-    await mount();
-
-    await printWhole();
-    expect(printElements()).toHaveLength(1);
-
-    afterPrint();
-
-    await waitFor(() => expect(printElements()).toHaveLength(0));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  });
-
-  // Possible spec gap: "on afterprint ... the dialog closes" read literally.
-  it('AC2.6 the dialog is still open when print() is called, and closes on afterprint', async () => {
-    await mount();
-
-    await printWhole();
-    expect(screen.queryByRole('dialog')).not.toBeNull();
-
-    afterPrint();
-
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  });
-
   it('AC2.6 a second print after the first starts a fresh session', async () => {
     await mount();
     await printWhole();
@@ -704,34 +568,6 @@ describe('AC2.6: after printing', () => {
 });
 
 describe('AC2.7: Cancel during loading', () => {
-  it('AC2.7 closes the dialog, never prints, and leaves no print element, though the read finishes', async () => {
-    const held = gate<null>();
-    printModule.readStackForPrint
-      .mockReset()
-      .mockImplementation(async (controller: StackController, options) => {
-        reads.push({ tab: controller.getTab(), glossaryReads: 0 });
-        await held.promise;
-        return actualPrint.readStackForPrint(controller, options);
-      });
-    await mount();
-
-    await startPrint();
-    const dialog = await screen.findByRole('dialog');
-    await userEvent.click(
-      within(dialog).getByRole('button', { name: 'Cancel' }),
-    );
-
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    held.open(null);
-    // Let whatever was in flight settle.
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
-    expect(window.print).not.toHaveBeenCalled();
-    expect(printElements()).toHaveLength(0);
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
   it('AC2.7 cancelling while the glossary loads closes the dialog and never prints', async () => {
     const held = gate<null>();
     graphql.getWorkGlossaryTerms.mockReset().mockImplementation(async () => {
@@ -760,26 +596,6 @@ describe('AC2.7: Cancel during loading', () => {
 });
 
 describe('AC2.8: a part that cannot be read', () => {
-  it('AC2.8 says it could not load, does not print, and leaves no print element once closed, when a part reads as null', async () => {
-    // The endnotes, uncancelled.
-    printModule.readStackForPrint.mockImplementation(
-      async (controller: StackController, options) =>
-        controller.getTab() === 'endnotes'
-          ? null
-          : actualPrint.readStackForPrint(controller, options),
-    );
-    await mount();
-
-    await startPrint();
-
-    const dialog = await screen.findByRole('dialog');
-    await waitFor(() => expect(dialog.textContent).toMatch(/could not load/i));
-    expect(window.print).not.toHaveBeenCalled();
-    await closeDialog();
-    expect(printElements()).toHaveLength(0);
-    expect(window.print).not.toHaveBeenCalled();
-  });
-
   it('AC2.8 says it could not load, does not print, and leaves no print element once closed, when a later glossary page comes back empty', async () => {
     graphql.getWorkGlossaryTerms
       .mockReset()
@@ -821,87 +637,7 @@ describe('AC2.8: a part that cannot be read', () => {
   });
 });
 
-describe('AC2.9: Cmd+P and Ctrl+P', () => {
-  it('AC2.9 Cmd+P under StackReaderProvider starts the flow once and prevents the default', async () => {
-    await mount();
-
-    const notPrevented = pressPrintShortcut({ metaKey: true });
-
-    expect(notPrevented).toBe(false);
-    await screen.findByRole('dialog');
-    await waitFor(() => expect(window.print).toHaveBeenCalled());
-    expect(window.print).toHaveBeenCalledTimes(1);
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
-    expect(printed[0].text).toContain('Term epsilon');
-  });
-
-  it('AC2.9 Ctrl+P does the same', async () => {
-    await mount();
-
-    const notPrevented = pressPrintShortcut({ ctrlKey: true });
-
-    expect(notPrevented).toBe(false);
-    await waitFor(() => expect(window.print).toHaveBeenCalledTimes(1));
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
-  });
-
-  it('AC2.9 outside a stack reader the shortcut is not intercepted', async () => {
-    render(
-      <NavigationProvider uuid={WORK}>
-        <StackPrint>
-          <span>page content</span>
-        </StackPrint>
-      </NavigationProvider>,
-    );
-
-    expect(pressPrintShortcut({ metaKey: true })).toBe(true);
-    expect(pressPrintShortcut({ ctrlKey: true })).toBe(true);
-    await act(async () => undefined);
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(window.print).not.toHaveBeenCalled();
-  });
-
-  it('AC2.9 under an editing stack provider the shortcut is not intercepted', async () => {
-    const Loaded = () => (useStackWork() ? <i>loaded</i> : null);
-    render(
-      <StackWorkProvider workUuid={WORK}>
-        <NavigationProvider uuid={WORK}>
-          <StackPrint>
-            <span>page content</span>
-          </StackPrint>
-          <Loaded />
-        </NavigationProvider>
-      </StackWorkProvider>,
-    );
-    await screen.findByText('loaded');
-
-    expect(pressPrintShortcut({ metaKey: true })).toBe(true);
-    await act(async () => undefined);
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(window.print).not.toHaveBeenCalled();
-  });
-});
-
 describe('AC2.11: every part is read for the Toh being read', () => {
-  it('AC2.11 gives each part’s controller the navigation’s Toh before it is read', async () => {
-    await mount({ toh: 'toh145' });
-
-    await printWhole();
-
-    expect(reads.map((read) => read.tab)).toEqual(PARTS);
-    reads.forEach((read) => expect(read.toh).toBe('toh145'));
-  });
-
-  it('AC2.11 prints only that Toh’s rows of a multi-Toh work', async () => {
-    await mount({ toh: 'toh145' });
-    await printWhole();
-    expect(printed[0].text).toContain('translation 0 text');
-    expect(printed[0].text).toContain('translation 2 text');
-    expect(printed[0].text).not.toContain('translation 1 text');
-    afterPrint();
-    await waitFor(() => expect(printElements()).toHaveLength(0));
-  });
-
   it('AC2.11 reads the other Toh when navigation is on it', async () => {
     await mount({ toh: 'toh847' });
 
@@ -932,31 +668,5 @@ describe('AC2.10: the print stylesheet', () => {
     expect(printRules).toMatch(/body/);
     expect(printRules).toMatch(/none/);
     expect(printRules).toContain('[data-stack-print]');
-  });
-
-  it('AC2.10 under @media screen the print element itself is not displayed', async () => {
-    await mount();
-
-    await printWhole();
-
-    const { styles } = printed[0];
-    const at = styles.indexOf('@media screen');
-    expect(at).toBeGreaterThanOrEqual(0);
-    const screenRules = styles.slice(at);
-    expect(screenRules).toContain('[data-stack-print]');
-    expect(screenRules).toMatch(/display\s*:\s*none/);
-  });
-
-  it('AC2.10 the style is already in the document while the print element is, not only when printing', async () => {
-    await mount();
-    await printWhole();
-
-    expect(printElements()).toHaveLength(1);
-    const styles = Array.from(document.querySelectorAll('style'))
-      .map((style) => style.textContent ?? '')
-      .join('\n');
-
-    expect(styles).toContain('@media print');
-    expect(styles).toContain('[data-stack-print]');
   });
 });

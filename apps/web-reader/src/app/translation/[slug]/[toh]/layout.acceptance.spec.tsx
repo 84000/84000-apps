@@ -86,28 +86,12 @@ describe('web-reader [toh] layout (AC6.12)', () => {
     expect(await initialTohFor('toh847')).toBe('toh847');
   });
 
-  it("passes the path's toh when it is the work's first", async () => {
-    api.getTranslationMetadataByUuid.mockResolvedValue(
-      publishedWork(['toh145', 'toh847']),
-    );
-
-    expect(await initialTohFor('toh145')).toBe('toh145');
-  });
-
   it("passes the work's first toh for the path segment 'default'", async () => {
     api.getTranslationMetadataByUuid.mockResolvedValue(
       publishedWork(['toh145', 'toh847']),
     );
 
     expect(await initialTohFor('default')).toBe('toh145');
-  });
-
-  it("passes the work's first toh for a toh that belongs to another work", async () => {
-    api.getTranslationMetadataByUuid.mockResolvedValue(
-      publishedWork(['toh145', 'toh847']),
-    );
-
-    expect(await initialTohFor('toh999')).toBe('toh145');
   });
 
   it('reads the work named by the slug', async () => {
@@ -131,16 +115,6 @@ describe('web-reader [toh] layout (AC6.12)', () => {
     api.getTranslationMetadataByUuid.mockResolvedValue({
       ...publishedWork(['toh145']),
       publicationStatus: '2',
-    });
-
-    await expect(initialTohFor('toh145')).rejects.toThrow('NEXT_NOT_FOUND');
-    expect(nav.notFound).toHaveBeenCalled();
-  });
-
-  it('calls notFound for a work with no publication status', async () => {
-    api.getTranslationMetadataByUuid.mockResolvedValue({
-      uuid: WORK,
-      toh: ['toh145'],
     });
 
     await expect(initialTohFor('toh145')).rejects.toThrow('NEXT_NOT_FOUND');

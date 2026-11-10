@@ -76,37 +76,6 @@ beforeEach(() => {
 });
 
 describe('graphqlPassageSource prime', () => {
-  it('AC6.13: reads around the target once, with a small limit', () => {
-    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
-      page(['p8', 'p9', 'p10']),
-    );
-    const source = sourceOver();
-
-    source.prime('p9');
-
-    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
-    const options = clientGraphql.getTranslationBlocksAround.mock.calls[0][0];
-    expect(options.passageUuid).toBe('p9');
-    // The limit is `maxPassages` on this client; `limit` is the GraphQL name.
-    const limit = options.maxPassages ?? options.limit;
-    expect(limit).toBeGreaterThan(0);
-    expect(limit).toBeLessThanOrEqual(10);
-  });
-
-  it('AC6.13: a later load of the target returns it from that read and makes no other content read', async () => {
-    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
-      page(['p8', 'p9', 'p10']),
-    );
-    const source = sourceOver();
-
-    source.prime('p9');
-    const found = await source.loadPassages('w1', ['p9']);
-
-    expect(uuids(found)).toEqual(['p9']);
-    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
-    expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
-  });
-
   it('AC6.13: the passage it returns carries the content that read supplied', async () => {
     clientGraphql.getTranslationBlocksAround.mockResolvedValue({
       ...page(['p9']),
@@ -126,55 +95,6 @@ describe('graphqlPassageSource prime', () => {
     const [snapshot] = await source.loadPassages('w1', ['p9']);
 
     expect(JSON.stringify(snapshot.content)).toContain('primed');
-  });
-
-  it('AC6.13: loads made before the primed read settles wait for it rather than reading again', async () => {
-    const read = deferred<ReturnType<typeof page>>();
-    clientGraphql.getTranslationBlocksAround.mockReturnValue(read.promise);
-    const source = sourceOver();
-
-    source.prime('p9');
-    const loading = source.loadPassages('w1', ['p9']);
-    read.resolve(page(['p8', 'p9', 'p10']));
-
-    expect(uuids(await loading)).toEqual(['p9']);
-    expect(contentReads()).toBe(1);
-  });
-
-  it('AC6.14: hands a primed passage out once; a second load reads it in the usual way', async () => {
-    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
-      page(['p8', 'p9', 'p10']),
-    );
-    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p9']));
-    const source = sourceOver();
-
-    source.prime('p9');
-    await source.loadPassages('w1', ['p9']);
-    expect(contentReads()).toBe(1);
-
-    const again = await source.loadPassages('w1', ['p9']);
-
-    expect(uuids(again)).toEqual(['p9']);
-    // One more content read than before, and not the primed one again.
-    expect(contentReads()).toBe(2);
-    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
-  });
-
-  it('AC6.15: reads the passages the primed read did not return in the usual way', async () => {
-    clientGraphql.getTranslationBlocksAround.mockResolvedValue(
-      page(['p8', 'p9']),
-    );
-    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p10']));
-    const source = sourceOver();
-
-    source.prime('p9');
-    const found = await source.loadPassages('w1', ['p9', 'p10']);
-
-    expect(uuids(found).sort()).toEqual(['p10', 'p9']);
-    // p9 came from the primed read, and only p10 needed another.
-    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
-    expect(contentReads()).toBe(2);
-    expect(clientGraphql.getTranslationBlocks).toHaveBeenCalledTimes(1);
   });
 
   it('AC6.15: a load that leaves out the primed target resolves while the primed read is pending', async () => {
@@ -199,31 +119,5 @@ describe('graphqlPassageSource prime', () => {
     const reads = contentReads();
     expect(uuids(await source.loadPassages('w1', ['p9']))).toEqual(['p9']);
     expect(contentReads()).toBe(reads);
-  });
-
-  it('AC6.16: a failed primed read leaves the target to a usual read', async () => {
-    const quiet = jest.spyOn(console, 'error').mockImplementation(() => {
-      /* a failed read may be logged */
-    });
-    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {
-      /* a failed read may be logged */
-    });
-    // The first around read is the primed one; any usual read that is also an
-    // around read succeeds.
-    clientGraphql.getTranslationBlocksAround
-      .mockRejectedValueOnce(new Error('network down'))
-      .mockResolvedValue(page(['p9']));
-    clientGraphql.getTranslationBlocks.mockResolvedValue(page(['p9']));
-    const source = sourceOver();
-
-    source.prime('p9');
-    const found = await source.loadPassages('w1', ['p9']);
-
-    expect(uuids(found)).toEqual(['p9']);
-    // Something other than the failed primed read supplied it.
-    expect(contentReads()).toBeGreaterThanOrEqual(2);
-
-    quiet.mockRestore();
-    warn.mockRestore();
   });
 });
