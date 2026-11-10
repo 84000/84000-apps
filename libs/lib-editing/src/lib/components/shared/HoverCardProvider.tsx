@@ -22,6 +22,7 @@ import { MentionHoverContent } from '../editor/extensions/Mention/MentionHoverCo
 import { Editor } from '@tiptap/core';
 import { getEditorForElement } from '../editor/util';
 import { useNavigation } from './NavigationContext';
+import { GlossaryPassagesProvider } from './glossary/GlossaryPassagesDialog';
 
 export type HoverCardType =
   | 'glossaryInstance'
@@ -416,7 +417,7 @@ export const HoverCardProvider = ({
     (editable || cardType !== 'internalLink');
 
   return (
-    <>
+    <GlossaryPassagesProvider>
       <div className="size-full" ref={containerRef}>
         {children}
       </div>
@@ -425,6 +426,6 @@ export const HoverCardProvider = ({
           {renderCard(uuid, cardType, anchor)}
         </TranslationHoverCard>
       )}
-    </>
+    </GlossaryPassagesProvider>
   );
 };

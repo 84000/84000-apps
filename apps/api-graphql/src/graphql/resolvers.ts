@@ -14,6 +14,7 @@ import {
   searchWorkGlossaryTermsResolver,
   glossaryTermPassagesResolver,
   glossaryTermPassagesPageResolver,
+  glossaryTermExcerptsResolver,
 } from './schema/glossary/glossary.resolver';
 import { healthQueries } from './schema/health/health.query';
 import { lookupQueries } from './schema/lookup/lookup.query';
@@ -79,6 +80,7 @@ export const resolvers = {
     ...workQueries,
     glossaryInstance: glossaryInstanceResolver,
     glossaryTermPassages: glossaryTermPassagesPageResolver,
+    glossaryTermExcerpts: glossaryTermExcerptsResolver,
     bibliographyEntry: bibliographyEntryResolver,
     comment: commentQueryResolver,
     taggedComments: taggedCommentsQueryResolver,

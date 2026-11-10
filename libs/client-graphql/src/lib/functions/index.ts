@@ -36,9 +36,10 @@ export {
   type EntitySearchResultType,
 } from './search-entities';
 export {
-  getTermPassages,
-  type GlossaryPassagesPage,
-} from './get-term-passages';
+  getGlossaryTermExcerpts,
+  type GlossaryExcerptsPage,
+  type GlossaryPassageExcerpt,
+} from './get-glossary-term-excerpts';
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';

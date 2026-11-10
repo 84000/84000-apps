@@ -117,6 +117,7 @@ const RPCS = {
     workGlossarySearch: 'search_work_glossary_terms',
     sectionGlossarySearch: 'search_glossary_terms_by_section',
     glossaryTermPassages: 'get_glossary_term_passages',
+    glossaryTermExcerpts: 'get_glossary_term_excerpts',
     entitySearch: 'search_entities',
   },
   published: {
@@ -128,6 +129,7 @@ const RPCS = {
     workGlossarySearch: 'search_work_glossary_terms_published',
     sectionGlossarySearch: 'search_glossary_terms_by_section_published',
     glossaryTermPassages: 'get_glossary_term_passages_published',
+    glossaryTermExcerpts: 'get_glossary_term_excerpts_published',
     entitySearch: 'search_entities_published',
   },
 } as const satisfies Record<ContentSource, Record<string, string>>;

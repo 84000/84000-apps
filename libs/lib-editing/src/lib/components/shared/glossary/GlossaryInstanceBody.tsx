@@ -1,28 +1,11 @@
 'use client';
 
-import type {
-  GlossaryTermInstance,
-  Passage,
-  TohokuCatalogEntry,
-} from '@eightyfourthousand/data-access';
-import { Button, Li, Ul } from '@eightyfourthousand/design-system';
+import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
+import { Li, Ul } from '@eightyfourthousand/design-system';
 import { GatedFeature } from '@eightyfourthousand/lib-instr';
 import { cn } from '@eightyfourthousand/lib-utils';
-import { useCallback, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
-import { useNavigation } from '../NavigationProvider';
-import { locationForPassageType } from '../types';
-import {
-  createGraphQLClient,
-  getTermPassages,
-} from '@eightyfourthousand/client-graphql';
-
-type PassageItem = Partial<Passage> & {
-  uuid: string;
-  type: string;
-  label: string;
-  toh?: TohokuCatalogEntry;
-};
 
 export const GlossaryInstanceBody = ({
   instance,
@@ -35,44 +18,6 @@ export const GlossaryInstanceBody = ({
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
-  const { updatePanel, toh } = useNavigation();
-
-  const initialPage = instance.passages;
-  const [passages, setPassages] = useState<PassageItem[]>(
-    (initialPage?.items as PassageItem[]) ?? [],
-  );
-  const [nextCursor, setNextCursor] = useState<string | null>(
-    initialPage?.nextCursor ?? null,
-  );
-  const [hasMore, setHasMore] = useState(initialPage?.hasMore ?? false);
-  const [loading, setLoading] = useState(false);
-
-  const loadMore = useCallback(() => {
-    if (!nextCursor || loading) return;
-    setLoading(true);
-    getTermPassages({
-      client: createGraphQLClient(),
-      uuid: instance.uuid,
-      first: 10,
-      after: nextCursor,
-    }).then((page) => {
-      setPassages((prev) => [...prev, ...page.items]);
-      setNextCursor(page.nextCursor);
-      setHasMore(page.hasMore);
-      setLoading(false);
-    });
-  }, [instance.uuid, nextCursor, loading]);
-
-  const handlePassageClick = useCallback(
-    (passage: PassageItem) => {
-      const { panel, tab } = locationForPassageType(passage.type);
-      updatePanel({
-        name: panel,
-        state: { open: true, tab, hash: passage.uuid },
-      });
-    },
-    [updatePanel],
-  );
 
   return (
     <div className={cn('p-2 flex gap-1 flex-col', className)}>
@@ -111,37 +56,6 @@ export const GlossaryInstanceBody = ({
           className="glossary-instance-definition"
           dangerouslySetInnerHTML={{ __html: instance.definition }}
         />
-      )}
-      {passages.length > 0 && (
-        <div>
-          {passages
-            .filter((p) => !p.toh || p.toh === toh)
-            .map((passage) => (
-              <span key={passage.uuid}>
-                <Button
-                  variant="link"
-                  className="p-0 pe-2 h-6 font-normal hover:cursor-pointer"
-                  onClick={() => handlePassageClick(passage)}
-                >
-                  {passage.label || passage.uuid.slice(0, 6)}
-                </Button>
-              </span>
-            ))}
-          {hasMore && !loading && (
-            <span>
-              <Button
-                variant="link"
-                className="p-0 h-6 font-normal hover:cursor-pointer"
-                onClick={loadMore}
-              >
-                more &rsaquo;
-              </Button>
-            </span>
-          )}
-          {loading && (
-            <span className="text-muted-foreground text-sm">{', …'}</span>
-          )}
-        </div>
       )}
       <GatedFeature flag="authority-pages">
         <div className="text-sm text-mut my-2">
