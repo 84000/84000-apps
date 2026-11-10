@@ -511,6 +511,15 @@ describe('AC2.5: the printable page', () => {
     expect(headings).toContain('Glossary');
   });
 
+  it('AC2.5 prints the glossary without a "Passages ›" link', async () => {
+    await mount();
+
+    await printWhole();
+
+    expect(printed[0].text).toContain(TERMS[0]);
+    expect(printed[0].text).not.toContain('Passages');
+  });
+
   it('AC2.5 holds each row’s static HTML, as the view gives it', async () => {
     await mount();
 
