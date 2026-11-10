@@ -71,11 +71,8 @@ test.describe('Navigation', () => {
   test('ED-NAV-01 Hover cards', async ({ page }) => {
     test.setTimeout(180_000);
     const targets = [
-      [
-        '2.5',
-        '[type="glossaryInstance"]',
-        /^g\.\d+\s*great compassion\s*Passages ›$/,
-      ],
+      // The glossary card has no "Passages ›" link: that lives in the tab.
+      ['2.5', '[type="glossaryInstance"]', /^g\.\d+\s*great compassion$/],
       ['1.20', '[type="endNoteLink"]', /^n\.6$/],
       ['1.12', '[type="mention"]', /^passage\s*2\.1$/],
       // Internal links are legacy: their card shows the target's uuid.

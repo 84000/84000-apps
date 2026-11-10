@@ -9,7 +9,6 @@ import {
   isPassagesRequest,
   MAX_EXCERPT,
   PAGE_SIZE,
-  removeAnnotation,
   TERMS,
   unusedEntry,
 } from './support/glossary';
@@ -23,11 +22,18 @@ import { TEST_WORK } from './support/local-stack';
 /** The open hover card. */
 const hoverCard = (page: Page) => page.locator('div.z-100 > div.bg-popover');
 
-/** The hover card's link to the entry's passages. */
-const passagesLink = (page: Page) =>
-  hoverCard(page)
-    .locator('button, a')
-    .filter({ hasText: /^\s*Passages\s*›\s*$/ });
+const PASSAGES_LINK = /^\s*Passages\s*›\s*$/;
+
+/** "Passages ›" links inside `scope`. */
+const passagesLinks = (scope: Locator) =>
+  scope.locator('button, a').filter({ hasText: PASSAGES_LINK });
+
+/** The side panel. */
+const rightPanel = (page: Page) => page.locator('[data-panel="right"]');
+
+/** A glossary entry in the side panel's glossary tab, by its uuid. */
+const entry = (page: Page, uuid: string) =>
+  rightPanel(page).locator(`[id="${uuid}"]`).filter({ visible: true });
 
 const dialog = (page: Page) => page.getByRole('dialog');
 
@@ -61,7 +67,7 @@ const instanceIn = (page: Page, uuid: string, text: string | RegExp) =>
     .locator('[type="glossaryInstance"]')
     .filter({ hasText: text });
 
-/** Hovers an instance until its card is up, then expects the passages link. */
+/** Hovers an instance until its card is up. */
 const hoverForCard = async (page: Page, instance: Locator) => {
   await settled(instance);
   await expect(async () => {
@@ -69,13 +75,25 @@ const hoverForCard = async (page: Page, instance: Locator) => {
     await instance.hover();
     await expect(hoverCard(page)).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
-  await expect(passagesLink(page)).toBeVisible();
 };
 
-/** Opens the dialog from an instance's hover card. */
-const openDialog = async (page: Page, instance: Locator) => {
-  await hoverForCard(page, instance);
-  await passagesLink(page).click();
+/**
+ * Opens the editor with the glossary tab on an entry, and that entry's
+ * dialog from its "Passages ›" link. The main panel opens at `at`.
+ */
+const openDialog = async (
+  page: Page,
+  termUuid: string,
+  { at, toh = TEST_WORK.toh }: { at?: string; toh?: string } = {},
+) => {
+  await openEditor(page, {
+    main: { tab: 'translation', hash: at },
+    right: { tab: 'glossary', hash: termUuid },
+    toh,
+  });
+  const link = passagesLinks(entry(page, termUuid));
+  await expect(link).toHaveCount(1, { timeout: 60_000 });
+  await link.click();
   await expect(dialog(page)).toBeVisible();
 };
 
@@ -86,24 +104,22 @@ const greatCompassion = () =>
     toh: TEST_WORK.toh,
   });
 
-/** Opens the editor at 2.5 and the dialog of its great compassion instance. */
+/** Opens the editor at 2.5 and the dialog of great compassion. */
 const openGreatCompassion = async (page: Page) => {
   const p25 = await passageByLabel('2.5');
-  await openEditor(page, { main: { tab: 'translation', hash: p25.uuid } });
-  await openDialog(page, instanceIn(page, p25.uuid, /great compassion/i));
+  await openDialog(page, TERMS.greatCompassion, { at: p25.uuid });
 };
 
 test.describe('Glossary passages dialog (DEV-885)', () => {
-  test('DEV-885 Glossary tab: no passage links and no passages request', async ({
+  test("DEV-885 Glossary tab: each entry has a 'Passages ›' link, and no passages request", async ({
     page,
   }) => {
     const requests = recordPassagesRequests(page);
     await openEditor(page, { right: { tab: 'glossary' } });
-    const panel = page.locator('[data-panel="right"]');
-    // The probe below can see the list: a term in it is on screen.
-    await expect(
-      panel.getByText('great compassion', { exact: true }).first(),
-    ).toBeVisible({ timeout: 60_000 });
+    const panel = rightPanel(page);
+    // Entries carry their number, g.N; the section's own "g." label does not.
+    const numbers = panel.getByText(/^\s*g\.\d+\s*$/).filter({ visible: true });
+    await expect(numbers.first()).toBeVisible({ timeout: 60_000 });
 
     const box = await panel.boundingBox();
     if (!box) throw new Error('the glossary panel has no box');
@@ -118,6 +134,16 @@ test.describe('Glossary passages dialog (DEV-885)', () => {
       requests.map((r) => r.postData()),
       'no passages request',
     ).toEqual([]);
+    // One link per entry drawn, where the passage links used to be.
+    await expect
+      .poll(async () => {
+        const entries = await numbers.count();
+        const links = await passagesLinks(panel)
+          .filter({ visible: true })
+          .count();
+        return entries > 0 && links === entries;
+      })
+      .toBe(true);
     await expect(
       panel
         .locator('button, a')
@@ -129,25 +155,27 @@ test.describe('Glossary passages dialog (DEV-885)', () => {
     await expect(
       panel.locator('button').filter({ hasText: /^\s*more\s*›\s*$/ }),
     ).toHaveCount(0);
+
+    // The probe sees the request once a link asks for passages.
+    await passagesLinks(panel).filter({ visible: true }).first().click();
+    await expect(dialog(page)).toBeVisible();
+    await expect.poll(() => requests.length).toBeGreaterThan(0);
   });
 
-  test("DEV-885 Hover card: a 'Passages ›' link, and no passages request", async ({
+  test("DEV-885 Hover card: no 'Passages ›' link, and no passages request", async ({
     page,
   }) => {
     const requests = recordPassagesRequests(page);
     const p25 = await passageByLabel('2.5');
     await openEditor(page, { main: { tab: 'translation', hash: p25.uuid } });
     await hoverForCard(page, instanceIn(page, p25.uuid, /great compassion/i));
+    await expect(hoverCard(page)).toContainText('great compassion');
+    await expect(passagesLinks(hoverCard(page))).toHaveCount(0);
     await page.waitForTimeout(2_000);
     expect(
       requests.map((r) => r.postData()),
       'no passages request',
     ).toEqual([]);
-
-    // The probe sees the request once the dialog asks for passages.
-    await passagesLink(page).click();
-    await expect(dialog(page)).toBeVisible();
-    await expect.poll(() => requests.length).toBeGreaterThan(0);
   });
 
   test('DEV-885 Opens on click, One excerpt per passage, Excerpts, Reader and editor content: the first page of great compassion', async ({
@@ -246,12 +274,7 @@ test.describe('Glossary passages dialog (DEV-885)', () => {
   test('DEV-885 Current Toh only, Opens on click: Dharma in toh90001 has 1 passage', async ({
     page,
   }) => {
-    const p2124 = await passageByLabel('2.124');
-    await openEditor(page, {
-      main: { tab: 'translation', hash: p2124.uuid },
-      toh: TEST_WORK.toh,
-    });
-    await openDialog(page, instanceIn(page, p2124.uuid, 'Dharma'));
+    await openDialog(page, TERMS.dharma, { toh: TEST_WORK.toh });
     const title = dialog(page).getByRole('heading').first();
     await expect(title).toContainText('Dharma');
     await expect(title).toContainText(/(^|\D)1 passage(?!s)/);
@@ -263,27 +286,10 @@ test.describe('Glossary passages dialog (DEV-885)', () => {
   test("DEV-885 No passages: the dialog says the entry isn't linked", async ({
     page,
   }) => {
-    // An instance of an unused entry, there only long enough to hover it.
-    const entry = await unusedEntry(TEST_WORK.uuid);
-    const p25 = await passageByLabel('2.5');
-    const at = indexOfText(p25.content, 'perfection of wisdom');
-    const annotation = await addInstance({
-      passageUuid: p25.uuid,
-      glossaryUuid: entry.uuid,
-      start: at,
-      end: at + 'perfection of wisdom'.length,
-    });
-    await openEditor(page, { main: { tab: 'translation', hash: p25.uuid } });
-    await hoverForCard(
-      page,
-      instanceIn(page, p25.uuid, 'perfection of wisdom'),
-    );
-    await removeAnnotation(p25.uuid, annotation);
-
-    await passagesLink(page).click();
-    await expect(dialog(page)).toBeVisible();
+    const unused = await unusedEntry(TEST_WORK.uuid);
+    await openDialog(page, unused.uuid);
     await expect(dialog(page).getByRole('heading').first()).toContainText(
-      entry.english,
+      unused.english,
     );
     await expect(dialog(page)).toContainText(/isn['’]t linked in any passage/);
     await expect(excerpts(page)).toHaveCount(0);
