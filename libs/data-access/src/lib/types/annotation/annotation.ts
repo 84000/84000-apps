@@ -59,8 +59,8 @@ export type EndNoteLinkAnnotation = AnnotationBase & {
 
 export type GlossaryInstanceAnnotation = AnnotationBase & {
   type: 'glossaryInstance';
+  /** The root `glossaries` uuid of the entry; its authority comes from the entry. */
   glossary: string;
-  authority: string;
 };
 
 export type HasAbbreviationAnnotation = AnnotationBase & {

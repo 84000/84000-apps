@@ -5,6 +5,7 @@ import {
   CommentAnnotation,
   PassageDTO,
   passageFromDTO,
+  passageToDTO,
 } from '@eightyfourthousand/data-access';
 import { blockFromPassage } from './block';
 import { annotationExportsFromNode } from './exporters/annotation';
@@ -269,5 +270,53 @@ describe('passageFromNode annotationsIncomplete flag', () => {
     expect(passage.annotationsIncomplete).toBe(true);
     consoleWarn.mockRestore();
     consoleError.mockRestore();
+  });
+});
+
+describe('glossary instance authority', () => {
+  const glossaryRow = (
+    content: NonNullable<PassageDTO['annotations']>[number]['content'],
+  ) => ({
+    uuid: 'glossary-1',
+    passage_uuid: 'passage-uuid-1',
+    type: 'glossary-instance' as const,
+    start: 20,
+    end: 25,
+    content,
+  });
+
+  const save = (content: Parameters<typeof glossaryRow>[0]) => {
+    const passageDto = { ...dto, annotations: [glossaryRow(content)] };
+    const passage = passageFromDTO(
+      passageDto,
+      annotationsFromDTO(passageDto.annotations, passageDto.content.length),
+    );
+    const block = JSON.parse(
+      JSON.stringify(blockFromPassage(passage)),
+    ) as TranslationEditorContentItem;
+    dedupeMarkUuids(block);
+    return passageToDTO(
+      passageFromEditorNode(toFakeNode(block) as never, 'work-uuid-1'),
+    );
+  };
+
+  it.each([
+    ['has no authority', [{ uuid: 'glossary-entry-uuid-1' }]],
+    [
+      'still carries a stored authority',
+      [{ uuid: 'glossary-entry-uuid-1' }, { authority: 'authority-uuid-1' }],
+    ],
+  ])('saves an instance that %s as the entry uuid alone', (_, content) => {
+    const saved = save(content);
+
+    expect(saved.annotations).toEqual([
+      expect.objectContaining({
+        uuid: 'glossary-1',
+        type: 'glossary-instance',
+        start: 20,
+        end: 25,
+        content: [{ uuid: 'glossary-entry-uuid-1' }],
+      }),
+    ]);
   });
 });

@@ -18,32 +18,26 @@ export const transformer: AnnotationTransformer = (
     if (content.uuid) {
       glossaryInstance.glossary = content.uuid as string;
     }
-
-    if (content.authority) {
-      glossaryInstance.authority = content.authority as string;
-    }
+    // A stored `authority` is a legacy copy of the entry's; it is ignored.
+    // The authority is read from the entry the uuid names.
   });
   return glossaryInstance;
 };
 
 export const exporter: AnnotationExporter = (annotation): AnnotationDTO => {
-  const { glossary: uuid, authority } =
-    annotation as GlossaryInstanceAnnotation;
+  const { glossary: uuid } = annotation as GlossaryInstanceAnnotation;
   const dto = baseAnnotationToDto(annotation);
-  dto.content.push({
-    uuid,
-    authority,
-  });
+  dto.content.push({ uuid });
   return dto;
 };
 
 export const importer: AnnotationImporter = (
   input,
 ): GlossaryInstanceAnnotation | null => {
+  // The entry's uuid alone identifies the term. A caller's `authority` is
+  // ignored: the authority is read from the entry.
   const glossary = input.data?.glossary;
-  const authority = input.data?.authority;
-  if (typeof glossary !== 'string' || typeof authority !== 'string') {
-    // Both halves identify the term; one alone cannot be resolved.
+  if (typeof glossary !== 'string' || !glossary) {
     return null;
   }
   const instance = baseAnnotationFromImport(
@@ -51,6 +45,5 @@ export const importer: AnnotationImporter = (
     'glossaryInstance',
   ) as GlossaryInstanceAnnotation;
   instance.glossary = glossary;
-  instance.authority = authority;
   return instance;
 };

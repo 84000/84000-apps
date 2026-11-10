@@ -1,5 +1,6 @@
 import { validate as isUuid } from 'uuid';
 import { annotationFromImport } from './import';
+import { annotationToDTO } from './transform';
 import type {
   EndNoteLinkAnnotation,
   GlossaryInstanceAnnotation,
@@ -163,23 +164,38 @@ describe('annotationFromImport', () => {
     ).toBeNull();
   });
 
-  it('builds a glossary instance from both of its identifiers', () => {
+  it('builds a glossary instance from the entry uuid alone', () => {
     const instance = annotationFromImport('glossary-instance', {
       ...base,
-      data: { glossary: 'g1', authority: 'a1' },
+      data: { glossary: 'g1' },
     }) as GlossaryInstanceAnnotation;
     expect(instance).toMatchObject({
       type: 'glossaryInstance',
       glossary: 'g1',
-      authority: 'a1',
     });
+    expect(annotationToDTO(instance)?.content).toEqual([{ uuid: 'g1' }]);
   });
 
-  it('drops a glossary instance missing either identifier', () => {
+  it('ignores an authority a caller sends with a glossary instance', () => {
+    const instance = annotationFromImport('glossary-instance', {
+      ...base,
+      data: { glossary: 'g1', authority: 'a1' },
+    }) as GlossaryInstanceAnnotation;
+    expect(instance).not.toHaveProperty('authority');
+    expect(annotationToDTO(instance)?.content).toEqual([{ uuid: 'g1' }]);
+  });
+
+  it('drops a glossary instance with no entry uuid', () => {
     expect(
       annotationFromImport('glossary-instance', {
         ...base,
-        data: { glossary: 'g1' },
+        data: { authority: 'a1' },
+      }),
+    ).toBeNull();
+    expect(
+      annotationFromImport('glossary-instance', {
+        ...base,
+        data: { glossary: '' },
       }),
     ).toBeNull();
   });

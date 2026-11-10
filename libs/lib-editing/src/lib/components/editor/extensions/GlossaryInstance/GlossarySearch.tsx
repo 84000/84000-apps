@@ -12,7 +12,6 @@ import { useNavigation } from '../../../shared';
 export interface GlossarySearchResult {
   glossary: string;
   label: string;
-  authority: string;
   english: string | null;
 }
 
@@ -54,7 +53,6 @@ export const GlossarySearch = ({
       setResults(
         nodes.map((n) => ({
           glossary: n.uuid,
-          authority: n.authority,
           english: n.names.english,
           label: `g.${n.termNumber}`,
         })),
