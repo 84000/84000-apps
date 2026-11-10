@@ -11,7 +11,7 @@ import { db } from './db';
 import { GRAPHQL_PORT, localStack, TEST_USER_EMAIL } from './local-stack';
 
 /**
- * Glossary-entry passages: what the dialog and the
+ * Glossary-entry passages: what the passages dialog and the
  * `glossaryTermExcerpts` query should return, worked out from the local
  * database, and how to ask the API for it.
  */
@@ -184,14 +184,6 @@ const fail = (what: string, error: { message: string } | null) => {
   if (error) throw new Error(`${what}: ${error.message}`);
 };
 
-/**
- * The glossary rows that count as the entry: its root row only. An instance
- * that cites one of its child rows is not the entry's.
- */
-export const entryRows = async (termUuid: string): Promise<string[]> => [
-  termUuid,
-];
-
 type InstanceRow = {
   uuid: string;
   passage_uuid: string;
@@ -209,7 +201,7 @@ type InstanceRow = {
 };
 
 /**
- * The passages of a work that use the entry in a Toh, in passage order, from
+ * The passages of a work that cite the entry in a Toh, in passage order, from
  * the draft tables: an instance counts when it and its passage are either
  * shared by every Toh or belong to this one.
  */
@@ -222,28 +214,25 @@ export const expectedPassages = async ({
   termUuid: string;
   toh: string;
 }): Promise<ExpectedPassage[]> => {
-  const instances = new Map<string, InstanceRow>();
-  for (const row of await entryRows(termUuid)) {
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await db()
-        .from('passage_annotations')
-        .select(
-          'uuid, passage_uuid, start, end, toh, passages!inner(uuid, label, type, sort, toh, content, work_uuid)',
-        )
-        .eq('type', 'glossary-instance')
-        .eq('passages.work_uuid', workUuid)
-        .contains('content', JSON.stringify([{ uuid: row }]))
-        .order('uuid')
-        .range(from, from + 999);
-      fail('read glossary instances', error);
-      for (const a of (data ?? []) as unknown as InstanceRow[]) {
-        instances.set(a.uuid, a);
-      }
-      if ((data ?? []).length < 1000) break;
-    }
+  // Only instances that cite the entry's own row count, not its child rows.
+  const instances: InstanceRow[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db()
+      .from('passage_annotations')
+      .select(
+        'uuid, passage_uuid, start, end, toh, passages!inner(uuid, label, type, sort, toh, content, work_uuid)',
+      )
+      .eq('type', 'glossary-instance')
+      .eq('passages.work_uuid', workUuid)
+      .contains('content', JSON.stringify([{ uuid: termUuid }]))
+      .order('uuid')
+      .range(from, from + 999);
+    fail('read glossary instances', error);
+    instances.push(...((data ?? []) as unknown as InstanceRow[]));
+    if ((data ?? []).length < 1000) break;
   }
   const byPassage = new Map<string, ExpectedPassage>();
-  for (const a of instances.values()) {
+  for (const a of instances) {
     const p = a.passages;
     if (a.toh && a.toh !== toh) continue;
     if (p.toh && p.toh !== toh) continue;
@@ -337,49 +326,6 @@ export const addInstance = async ({
   } as unknown as AnnotationDTO;
   await saveAnnotations(passage, [...rows, row]);
   return uuid;
-};
-
-/** Removes an annotation added by `addInstance`. */
-export const removeAnnotation = async (
-  passageUuid: string,
-  uuid: string,
-): Promise<void> => {
-  const { passage, rows } = await readPassage(passageUuid);
-  if (!rows.some((r) => r.uuid === uuid)) {
-    throw new Error(`annotation ${uuid} is not on passage ${passageUuid}`);
-  }
-  await saveAnnotations(
-    passage,
-    rows.filter((r) => r.uuid !== uuid),
-  );
-};
-
-/** An entry of the work that no passage links to. */
-export const unusedEntry = async (
-  workUuid: string,
-): Promise<{ uuid: string; english: string }> => {
-  const { data: terms, error } = await db()
-    .from('glossary_term_index')
-    .select('glossary_uuid, english')
-    .eq('work_uuid', workUuid)
-    .order('english');
-  fail('read glossary terms', error);
-  for (const term of terms ?? []) {
-    let linked = false;
-    for (const row of await entryRows(term.glossary_uuid as string)) {
-      const { count, error: countError } = await db()
-        .from('passage_annotations')
-        .select('uuid', { count: 'exact', head: true })
-        .eq('type', 'glossary-instance')
-        .contains('content', JSON.stringify([{ uuid: row }]));
-      fail('count glossary instances', countError);
-      if (count) linked = true;
-    }
-    if (!linked && term.english) {
-      return { uuid: term.glossary_uuid as string, english: term.english };
-    }
-  }
-  throw new Error('every entry of the work is linked');
 };
 
 /** Where `text` occurs in `content`, case-insensitively, after `from`. */
