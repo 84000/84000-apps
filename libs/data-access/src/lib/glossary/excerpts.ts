@@ -164,10 +164,9 @@ function parseOffsetCursor(after?: string | null) {
 }
 
 /**
- * A page of the passages citing one glossary entry (or its child rows), one
- * item per passage in passage order, with an excerpt around the first instance.
- * With `toh`, only that Toh's passages and the shared ones are listed and
- * counted.
+ * A page of the passages that cite one glossary entry, one item per passage in
+ * passage order, with an excerpt around the first instance. With `toh`, only
+ * that Toh's passages and instances and the shared ones are listed and counted.
  *
  * Returns null when the read fails, so a caller can tell a failure from an
  * entry with no passages.

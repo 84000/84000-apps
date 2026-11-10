@@ -1008,8 +1008,7 @@ export type Query = {
   glossaryInstance?: Maybe<GlossaryTermInstance>;
   /**
    * The passages that cite a glossary term, one per passage in passage order, each
-   * with an excerpt around the term's first instance. Instances citing one of the
-   * term's child rows count as the term's. Null when the read fails.
+   * with an excerpt around the term's first instance. Null when the read fails.
    */
   glossaryTermExcerpts?: Maybe<GlossaryExcerptsPage>;
   /**
