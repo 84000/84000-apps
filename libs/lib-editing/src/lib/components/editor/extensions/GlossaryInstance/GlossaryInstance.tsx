@@ -10,7 +10,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { GlossarySearch } from './GlossarySearch';
 import { findMarkByUuid } from '../../util';
 import { useNavigation } from '../../../shared';
-import { GlossaryPassagesLink } from '../../../shared/glossary/GlossaryPassagesLink';
 import { useHoverCardEditor, type EditorRequest } from '../useHoverCardEditor';
 
 export const GlossaryInstance = ({
@@ -129,7 +128,7 @@ export const GlossaryInstance = ({
   );
 
   return (
-    <div className="flex justify-between gap-2 p-2 w-fit max-w-96">
+    <div className="flex justify-between gap-2 p-2 w-fit max-w-80">
       <BookOpenIcon className="text-primary my-auto size-5 [&_svg]:size-4" />
       {termNumber !== null && (
         <span className="text-accent text-xs my-auto shrink-0">
@@ -140,7 +139,6 @@ export const GlossaryInstance = ({
         {english ?? markText}
       </span>
       <span className="flex-grow" />
-      <GlossaryPassagesLink glossary={glossary} close={close} />
       {editable && (
         <>
           <Popover open={isEditing} onOpenChange={(next) => setIsEditing(next)}>

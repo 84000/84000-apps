@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
 
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
+import { GlossaryPassagesProvider } from './GlossaryPassagesDialog';
 
 const mockGetGlossaryTermExcerpts = jest.fn();
 let mockFlags: Record<string, boolean> = {};
@@ -14,6 +15,9 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
   getGlossaryTermExcerpts: (...args: unknown[]) =>
     mockGetGlossaryTermExcerpts(...args),
+}));
+jest.mock('../NavigationContext', () => ({
+  useNavigation: () => ({ toh: 'toh8', updatePanel: jest.fn() }),
 }));
 jest.mock('@eightyfourthousand/lib-instr', () => ({
   GatedFeature: ({ flag, children }: { flag: string; children: ReactNode }) =>
@@ -32,12 +36,27 @@ beforeEach(() => {
 });
 
 describe('GlossaryInstanceBody', () => {
-  it('shows the entry without passage links or a passages read', () => {
-    render(<GlossaryInstanceBody instance={instance} />);
+  it('shows the entry without a passages read', () => {
+    render(
+      <GlossaryPassagesProvider>
+        <GlossaryInstanceBody instance={instance} />
+      </GlossaryPassagesProvider>,
+    );
 
     expect(screen.getByText('term')).toBeTruthy();
     expect(screen.getByText('tshig')).toBeTruthy();
     expect(screen.queryByRole('button')).toBeNull();
+    expect(mockGetGlossaryTermExcerpts).not.toHaveBeenCalled();
+  });
+
+  it('adds the passages link only when asked, still without a read', () => {
+    render(
+      <GlossaryPassagesProvider>
+        <GlossaryInstanceBody instance={instance} showPassages />
+      </GlossaryPassagesProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Passages ›' })).toBeTruthy();
     expect(mockGetGlossaryTermExcerpts).not.toHaveBeenCalled();
   });
 });

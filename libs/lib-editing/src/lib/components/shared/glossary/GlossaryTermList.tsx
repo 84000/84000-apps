@@ -54,6 +54,7 @@ export const GlossaryTermList = ({
             <GlossaryInstanceBody
               instance={instance}
               isEditor={isEditor}
+              showPassages
               className="p-0 @c/sidebar:-mt-0.5"
             />
           </LabeledElement>

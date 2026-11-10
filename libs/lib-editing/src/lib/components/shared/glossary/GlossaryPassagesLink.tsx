@@ -1,46 +1,30 @@
 'use client';
 
 import { Button } from '@eightyfourthousand/design-system';
-import { useCallback } from 'react';
-import { useNavigation } from '../NavigationContext';
 import { useGlossaryPassages } from './GlossaryPassagesDialog';
 
 /**
- * "Passages ›" in a glossary instance's hover card: opens the dialog listing
- * every passage that cites the entry, and closes the card.
+ * "Passages ›" under a glossary entry: opens the dialog listing every passage
+ * that cites the entry. Draws nothing outside a `GlossaryPassagesProvider`.
  */
 export const GlossaryPassagesLink = ({
-  glossary,
-  close,
+  uuid,
+  english,
 }: {
-  /** The glossary uuid the instance cites. */
-  glossary: string;
-  close: () => void;
+  /** The glossary entry's uuid. */
+  uuid?: string;
+  /** The entry's English name, for the dialog title. */
+  english?: string | null;
 }) => {
   const passages = useGlossaryPassages();
-  const { fetchGlossaryTerm } = useNavigation();
 
-  // The card has already read the entry, so this is normally a cache hit.
-  const open = useCallback(async () => {
-    const term = await fetchGlossaryTerm(glossary);
-    close();
-    if (!term) {
-      console.error(`Glossary entry not found for ${glossary}`);
-      return;
-    }
-    passages?.openGlossaryPassages({
-      uuid: term.uuid,
-      english: term.names.english,
-    });
-  }, [glossary, fetchGlossaryTerm, close, passages]);
-
-  if (!passages || !glossary) return null;
+  if (!passages || !uuid) return null;
 
   return (
     <Button
       variant="link"
-      className="h-6 px-1 my-auto shrink-0 text-xs font-normal hover:cursor-pointer"
-      onClick={open}
+      className="h-auto p-0 self-start text-sm font-normal hover:cursor-pointer"
+      onClick={() => passages.openGlossaryPassages({ uuid, english })}
     >
       Passages ›
     </Button>

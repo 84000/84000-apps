@@ -198,17 +198,12 @@ describe('GlossaryPassagesDialog', () => {
 });
 
 describe('GlossaryPassagesLink', () => {
-  it('opens the dialog for the entry the instance cites and closes the card', async () => {
-    mockFetchGlossaryTerm.mockResolvedValue({
-      uuid: 'term-1',
-      names: { english: 'virtue' },
-    });
+  it('opens the dialog for its entry without another read', async () => {
     mockGetGlossaryTermExcerpts.mockResolvedValue(page([item(1)], 1));
-    const close = jest.fn();
 
     render(
       <GlossaryPassagesProvider>
-        <GlossaryPassagesLink glossary="child-1" close={close} />
+        <GlossaryPassagesLink uuid="term-1" english="virtue" />
       </GlossaryPassagesProvider>,
     );
     expect(mockGetGlossaryTermExcerpts).not.toHaveBeenCalled();
@@ -216,16 +211,16 @@ describe('GlossaryPassagesLink', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Passages ›' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(close).toHaveBeenCalled();
-    expect(mockFetchGlossaryTerm).toHaveBeenCalledWith('child-1');
     await within(dialog).findByText(/1 passage$/);
+    expect(within(dialog).getByRole('heading').textContent).toContain('virtue');
+    expect(mockFetchGlossaryTerm).not.toHaveBeenCalled();
     expect(mockGetGlossaryTermExcerpts).toHaveBeenCalledWith(
       expect.objectContaining({ uuid: 'term-1' }),
     );
   });
 
   it('draws nothing outside a provider', () => {
-    render(<GlossaryPassagesLink glossary="g" close={jest.fn()} />);
+    render(<GlossaryPassagesLink uuid="g" english="virtue" />);
 
     expect(screen.queryByRole('button')).toBeNull();
   });

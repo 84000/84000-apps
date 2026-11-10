@@ -6,15 +6,19 @@ import { GatedFeature } from '@eightyfourthousand/lib-instr';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { useRef } from 'react';
 import { useGlossaryInstanceListener } from '../hooks/useGlossaryInstanceListener';
+import { GlossaryPassagesLink } from './GlossaryPassagesLink';
 
 export const GlossaryInstanceBody = ({
   instance,
   className,
   isEditor = false,
+  showPassages = false,
 }: {
   instance: GlossaryTermInstance;
   className?: string;
   isEditor?: boolean;
+  /** Show the "Passages ›" link that opens the entry's passages dialog. */
+  showPassages?: boolean;
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   useGlossaryInstanceListener({ ref });
@@ -55,6 +59,12 @@ export const GlossaryInstanceBody = ({
           ref={ref}
           className="glossary-instance-definition"
           dangerouslySetInnerHTML={{ __html: instance.definition }}
+        />
+      )}
+      {showPassages && (
+        <GlossaryPassagesLink
+          uuid={instance.uuid}
+          english={instance.names.english}
         />
       )}
       <GatedFeature flag="authority-pages">

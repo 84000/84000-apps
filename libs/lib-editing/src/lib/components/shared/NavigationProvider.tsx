@@ -28,6 +28,7 @@ import {
   PanelState,
   TabName,
 } from './types';
+import { GlossaryPassagesProvider } from './glossary/GlossaryPassagesDialog';
 import { HoverCardProvider } from './HoverCardProvider';
 import { useFeatureFlagEnabled } from '@eightyfourthousand/lib-instr';
 import { isStaticFeatureEnabled } from '@eightyfourthousand/lib-instr/static';
@@ -453,9 +454,11 @@ export const NavigationProvider = ({
 
   return (
     <NavigationContext.Provider value={contextValue}>
-      <HoverCardProvider enabled={hasHoverCards && hoverCards}>
-        {children}
-      </HoverCardProvider>
+      <GlossaryPassagesProvider>
+        <HoverCardProvider enabled={hasHoverCards && hoverCards}>
+          {children}
+        </HoverCardProvider>
+      </GlossaryPassagesProvider>
       {/* After the children, so the URL wins over a default they set on mount. */}
       <Suspense fallback={null}>
         <QueryListener onChange={syncFromUrl} />
