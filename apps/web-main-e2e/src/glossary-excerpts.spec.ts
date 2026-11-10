@@ -308,7 +308,7 @@ test.describe('Glossary passages: excerpts query (DEV-885)', () => {
     }
   });
 
-  test('DEV-885 Instances on child rows: an instance of a child row counts as the entry', async ({
+  test("DEV-885 Only the entry's own instances: an instance of a child row is not listed or counted", async ({
     request,
   }) => {
     const { data: child } = await db()
@@ -327,7 +327,7 @@ test.describe('Glossary passages: excerpts query (DEV-885)', () => {
     });
     const listed = new Set(before?.items.map((i) => i.uuid));
 
-    // 1.12 says "bodhisattva" but does not link it.
+    // 1.12 says "bodhisattva" but has no instance of the entry itself.
     const p112 = await passageByLabel('1.12');
     expect(listed.has(p112.uuid)).toBe(false);
     const at = indexOfText(p112.content, 'bodhisattva');
@@ -337,7 +337,7 @@ test.describe('Glossary passages: excerpts query (DEV-885)', () => {
       start: at,
       end: at + 'bodhisattva'.length,
     });
-    // A passage already listed gets a second instance, through the child row.
+    // A passage already listed gets an instance of the child row too.
     const already = must(before?.items[0], 'listed bodhisattva passage');
     const passage = must(await passageByUuid(already.uuid), already.uuid);
     await addInstance({
@@ -356,17 +356,13 @@ test.describe('Glossary passages: excerpts query (DEV-885)', () => {
       uuid: TERMS.bodhisattva,
       toh: TEST_WORK.toh,
     });
-    expect(after.pages[0].totalCount).toBe((before?.totalCount ?? 0) + 1);
+    expect(after.pages[0].totalCount).toBe(before?.totalCount);
     expect(after.pages[0].totalCount).toBe(expected.length);
     checkAll(after.items, expected);
-    const added = after.items.find((i) => i.uuid === p112.uuid);
-    expect(added?.instanceCount).toBe(1);
-    expect(
-      added?.highlights.map((h) => added.text.slice(h.start, h.end)),
-    ).toEqual(['bodhisattva']);
+    expect(after.items.some((i) => i.uuid === p112.uuid)).toBe(false);
     expect(
       after.items.find((i) => i.uuid === already.uuid)?.instanceCount,
-    ).toBe(already.instanceCount + 1);
+    ).toBe(already.instanceCount);
   });
 
   test('DEV-885 No passages: an entry with no instances has none', async ({

@@ -185,19 +185,12 @@ const fail = (what: string, error: { message: string } | null) => {
 };
 
 /**
- * The glossary rows that count as the entry: the entry itself and its child
- * rows (glossary_edges), as the publishing snapshot's glossaryTermOf maps them.
+ * The glossary rows that count as the entry: its root row only. An instance
+ * that cites one of its child rows is not the entry's.
  */
-export const entryRows = async (termUuid: string): Promise<string[]> => {
-  const { data, error } = await db()
-    .from('glossary_edges')
-    .select('child_uuid')
-    .eq('parent_uuid', termUuid);
-  fail('read glossary edges', error);
-  return [
-    ...new Set([termUuid, ...(data ?? []).map((e) => e.child_uuid as string)]),
-  ];
-};
+export const entryRows = async (termUuid: string): Promise<string[]> => [
+  termUuid,
+];
 
 type InstanceRow = {
   uuid: string;
@@ -361,7 +354,7 @@ export const removeAnnotation = async (
   );
 };
 
-/** An entry of the work that no passage links to, by itself or a child row. */
+/** An entry of the work that no passage links to. */
 export const unusedEntry = async (
   workUuid: string,
 ): Promise<{ uuid: string; english: string }> => {
