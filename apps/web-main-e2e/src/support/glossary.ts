@@ -1,5 +1,12 @@
 import type { APIRequestContext, Request } from '@playwright/test';
+import {
+  type AnnotationDTO,
+  passageFromDTO,
+  type PassageDTO,
+  savePassagesWithDeletions,
+} from '@eightyfourthousand/data-access';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'node:crypto';
 import { db } from './db';
 import { GRAPHQL_PORT, localStack, TEST_USER_EMAIL } from './local-stack';
 
@@ -222,25 +229,28 @@ export const expectedPassages = async ({
   termUuid: string;
   toh: string;
 }): Promise<ExpectedPassage[]> => {
-  const rows = await entryRows(termUuid);
-  const instances: InstanceRow[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await db()
-      .from('passage_annotations')
-      .select(
-        'uuid, passage_uuid, start, end, toh, passages!inner(uuid, label, type, sort, toh, content, work_uuid)',
-      )
-      .eq('type', 'glossary-instance')
-      .eq('passages.work_uuid', workUuid)
-      .in('content->0->>uuid', rows)
-      .order('uuid')
-      .range(from, from + 999);
-    fail('read glossary instances', error);
-    instances.push(...((data ?? []) as unknown as InstanceRow[]));
-    if ((data ?? []).length < 1000) break;
+  const instances = new Map<string, InstanceRow>();
+  for (const row of await entryRows(termUuid)) {
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await db()
+        .from('passage_annotations')
+        .select(
+          'uuid, passage_uuid, start, end, toh, passages!inner(uuid, label, type, sort, toh, content, work_uuid)',
+        )
+        .eq('type', 'glossary-instance')
+        .eq('passages.work_uuid', workUuid)
+        .contains('content', JSON.stringify([{ uuid: row }]))
+        .order('uuid')
+        .range(from, from + 999);
+      fail('read glossary instances', error);
+      for (const a of (data ?? []) as unknown as InstanceRow[]) {
+        instances.set(a.uuid, a);
+      }
+      if ((data ?? []).length < 1000) break;
+    }
   }
   const byPassage = new Map<string, ExpectedPassage>();
-  for (const a of instances) {
+  for (const a of instances.values()) {
     const p = a.passages;
     if (a.toh && a.toh !== toh) continue;
     if (p.toh && p.toh !== toh) continue;
@@ -259,6 +269,41 @@ export const expectedPassages = async ({
   const out = [...byPassage.values()];
   out.forEach((p) => p.instances.sort((x, y) => x.start - y.start));
   return out.sort((x, y) => x.sort - y.sort || x.uuid.localeCompare(y.uuid));
+};
+
+/** A passage and its stored annotation rows. */
+const readPassage = async (passageUuid: string) => {
+  const { data: passage, error } = await db()
+    .from('passages')
+    .select('*')
+    .eq('uuid', passageUuid)
+    .single();
+  fail(`read passage ${passageUuid}`, error);
+  const { data: rows, error: rowsError } = await db()
+    .from('passage_annotations')
+    .select('*')
+    .eq('passage_uuid', passageUuid)
+    .order('uuid');
+  fail(`read annotations of ${passageUuid}`, rowsError);
+  return {
+    passage: passage as PassageDTO,
+    rows: (rows ?? []) as AnnotationDTO[],
+  };
+};
+
+/**
+ * Writes a passage's full annotation state through the editor's save, the
+ * one write path for passages.
+ */
+const saveAnnotations = async (passage: PassageDTO, rows: AnnotationDTO[]) => {
+  const result = await savePassagesWithDeletions({
+    client: db(),
+    passages: [passageFromDTO(passage)],
+    rawAnnotations: { [passage.uuid]: rows },
+  });
+  if (!result.success) {
+    throw new Error(`save ${passage.uuid}: ${result.error}`);
+  }
 };
 
 /**
@@ -284,31 +329,36 @@ export const addInstance = async ({
     .eq('uuid', glossaryUuid)
     .single();
   fail(`read glossary ${glossaryUuid}`, gError);
-  const { data, error } = await db()
-    .from('passage_annotations')
-    .insert({
-      passage_uuid: passageUuid,
-      type: 'glossary-instance',
-      start,
-      end,
-      toh,
-      content: [
-        { uuid: glossaryUuid, authority: glossary?.authority_uuid as string },
-      ],
-    })
-    .select('uuid')
-    .single();
-  fail('add glossary instance', error);
-  return data?.uuid as string;
+  const { passage, rows } = await readPassage(passageUuid);
+  const uuid = randomUUID();
+  const row = {
+    uuid,
+    passage_uuid: passageUuid,
+    type: 'glossary-instance',
+    start,
+    end,
+    toh,
+    content: [
+      { uuid: glossaryUuid, authority: glossary?.authority_uuid as string },
+    ],
+  } as unknown as AnnotationDTO;
+  await saveAnnotations(passage, [...rows, row]);
+  return uuid;
 };
 
 /** Removes an annotation added by `addInstance`. */
-export const removeAnnotation = async (uuid: string): Promise<void> => {
-  const { error } = await db()
-    .from('passage_annotations')
-    .delete()
-    .eq('uuid', uuid);
-  fail(`delete annotation ${uuid}`, error);
+export const removeAnnotation = async (
+  passageUuid: string,
+  uuid: string,
+): Promise<void> => {
+  const { passage, rows } = await readPassage(passageUuid);
+  if (!rows.some((r) => r.uuid === uuid)) {
+    throw new Error(`annotation ${uuid} is not on passage ${passageUuid}`);
+  }
+  await saveAnnotations(
+    passage,
+    rows.filter((r) => r.uuid !== uuid),
+  );
 };
 
 /** An entry of the work that no passage links to, by itself or a child row. */
@@ -322,14 +372,17 @@ export const unusedEntry = async (
     .order('english');
   fail('read glossary terms', error);
   for (const term of terms ?? []) {
-    const rows = await entryRows(term.glossary_uuid as string);
-    const { count, error: countError } = await db()
-      .from('passage_annotations')
-      .select('uuid', { count: 'exact', head: true })
-      .eq('type', 'glossary-instance')
-      .in('content->0->>uuid', rows);
-    fail('count glossary instances', countError);
-    if (count === 0 && term.english) {
+    let linked = false;
+    for (const row of await entryRows(term.glossary_uuid as string)) {
+      const { count, error: countError } = await db()
+        .from('passage_annotations')
+        .select('uuid', { count: 'exact', head: true })
+        .eq('type', 'glossary-instance')
+        .contains('content', JSON.stringify([{ uuid: row }]));
+      fail('count glossary instances', countError);
+      if (count) linked = true;
+    }
+    if (!linked && term.english) {
       return { uuid: term.glossary_uuid as string, english: term.english };
     }
   }

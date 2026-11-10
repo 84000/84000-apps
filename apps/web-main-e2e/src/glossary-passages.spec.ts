@@ -121,7 +121,8 @@ test.describe('Glossary passages dialog (DEV-885)', () => {
     await expect(
       panel
         .locator('button, a')
-        .filter({ hasText: /^\s*([a-z]+|\d+)(\.\d+)+\s*$/ })
+        // Passage labels, not the tab's own entry numbers (g.1, g.2 …).
+        .filter({ hasText: /^\s*(?!g\.)([a-z]+|\d+)(\.\d+)+\s*$/ })
         .filter({ visible: true }),
       'no passage links',
     ).toHaveCount(0);
@@ -277,7 +278,7 @@ test.describe('Glossary passages dialog (DEV-885)', () => {
       page,
       instanceIn(page, p25.uuid, 'perfection of wisdom'),
     );
-    await removeAnnotation(annotation);
+    await removeAnnotation(p25.uuid, annotation);
 
     await passagesLink(page).click();
     await expect(dialog(page)).toBeVisible();
