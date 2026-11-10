@@ -306,6 +306,10 @@ describe('glossary instance authority', () => {
       'still carries a stored authority',
       [{ uuid: 'glossary-entry-uuid-1' }, { authority: 'authority-uuid-1' }],
     ],
+    [
+      'carries a stored authority in the same element',
+      [{ uuid: 'glossary-entry-uuid-1', authority: 'authority-uuid-1' }],
+    ],
   ])('saves an instance that %s as the entry uuid alone', (_, content) => {
     const saved = save(content);
 

@@ -198,6 +198,7 @@ describe('annotationFromImport', () => {
         data: { glossary: '' },
       }),
     ).toBeNull();
+    expect(annotationFromImport('glossary-instance', base)).toBeNull();
   });
 
   it('builds an end note link with its label', () => {

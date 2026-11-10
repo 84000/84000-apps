@@ -1,5 +1,11 @@
 import type { JSONContent, Extensions } from '@tiptap/core';
 import type { ReactElement } from 'react';
+import {
+  annotationsFromDTO,
+  passageFromDTO,
+  type PassageDTO,
+} from '@eightyfourthousand/data-access';
+import { blockFromPassage } from '@eightyfourthousand/lib-doc-model';
 import { TranslationSSRContent } from './TranslationSSRContent';
 import { translationSSRExtensions } from '../editor/extensions/translationSSRExtensions';
 import { extractPlainText } from './ssr-text-fallback';
@@ -775,6 +781,97 @@ describe('TranslationSSRContent', () => {
   it('exposes the default SSR extension set including passage and bold', () => {
     const names = translationSSRExtensions.map((e) => e.name);
     expect(names).toEqual(expect.arrayContaining(['passage', 'bold']));
+  });
+});
+
+describe('TranslationSSRContent glossary instances from stored rows', () => {
+  const GLOSSARY = 'a1a1a1a1-0000-4000-8000-000000000001';
+  const AUTHORITY = 'b2b2b2b2-0000-4000-8000-000000000002';
+  const CONTENT = 'The Buddha taught.';
+
+  /** Load a stored row through the editor model, as the reader does. */
+  const htmlFromStoredRow = (
+    content: NonNullable<PassageDTO['annotations']>[number]['content'],
+  ): string => {
+    const dto: PassageDTO = {
+      sort: 1,
+      type: 'translation',
+      uuid: 'p-1',
+      label: '1.1',
+      xmlId: 'x-1',
+      parent: 'parent',
+      content: CONTENT,
+      work_uuid: 'w-1',
+      annotations: [
+        {
+          uuid: 'gi-1',
+          passage_uuid: 'p-1',
+          type: 'glossary-instance',
+          start: 4,
+          end: 10,
+          content,
+        },
+      ],
+    };
+    const block = JSON.parse(
+      JSON.stringify(
+        blockFromPassage(
+          passageFromDTO(
+            dto,
+            annotationsFromDTO(dto.annotations ?? [], CONTENT.length),
+          ),
+        ),
+      ),
+    );
+    return renderedHtml(
+      TranslationSSRContent({
+        content: {
+          type: 'doc',
+          content: [
+            {
+              type: 'passage',
+              attrs: { uuid: 'p-1', label: '1.1', sort: 0 },
+              content: block.content,
+            },
+          ],
+        },
+      }) as ReactElement<DangerousProps>,
+    );
+  };
+
+  it.each([
+    ['no authority', [{ uuid: GLOSSARY }]],
+    [
+      'authority in the same element',
+      [{ uuid: GLOSSARY, authority: AUTHORITY }],
+    ],
+    [
+      'authority in a separate element',
+      [{ uuid: GLOSSARY }, { authority: AUTHORITY }],
+    ],
+  ])(
+    'renders a stored instance with %s as an instance of its entry',
+    (_, content) => {
+      const html = htmlFromStoredRow(content);
+
+      expect(html).toMatch(
+        /<span[^>]*class="glossary-instance"[^>]*>Buddha<\/span>/,
+      );
+      expect(html).toContain(`glossary="${GLOSSARY}"`);
+      expect(html).toContain('uuid="gi-1"');
+      expect(html).not.toContain('authority=');
+    },
+  );
+
+  it('renders the same output whether or not the stored row carries an authority', () => {
+    const without = htmlFromStoredRow([{ uuid: GLOSSARY }]);
+
+    expect(htmlFromStoredRow([{ uuid: GLOSSARY, authority: AUTHORITY }])).toBe(
+      without,
+    );
+    expect(
+      htmlFromStoredRow([{ uuid: GLOSSARY }, { authority: AUTHORITY }]),
+    ).toBe(without);
   });
 });
 
