@@ -17,9 +17,16 @@ jest.mock('../shared/NavigationContext', () => ({
 jest.mock('../shared/glossary/GlossaryInstanceBody', () => ({
   GlossaryInstanceBody: ({
     instance,
+    showPassages,
   }: {
     instance: { names: { english: string } };
-  }) => <span>{instance.names.english}</span>,
+    showPassages?: boolean;
+  }) => (
+    <span>
+      {instance.names.english}
+      {showPassages && <button>Passages ›</button>}
+    </span>
+  ),
 }));
 jest.mock('./stack-work-context', () => ({ useStackWork: jest.fn() }));
 jest.mock('./stack-print', () => ({ readStackForPrint: jest.fn() }));
@@ -187,6 +194,23 @@ describe('StackPrint', () => {
     });
     expect(document.querySelector('[data-stack-print]')).toBeNull();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('prints the glossary without a Passages link', async () => {
+    useStackWork.mockReturnValue(
+      reader({ translation: view('translation', 'body') }),
+    );
+    let printed = '';
+    print.mockImplementation(() => {
+      printed = document.querySelector('[data-stack-print]')?.textContent ?? '';
+    });
+    mount();
+
+    await pressPrint();
+
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(printed).toContain('karma');
+    expect(printed).not.toContain('Passages');
   });
 
   it('keeps a session cancelled and started again cancellable', async () => {

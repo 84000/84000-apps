@@ -31,15 +31,6 @@ const GET_WORK_GLOSSARY_TERMS_AROUND = gql`
             wylie
             alternatives
           }
-          passages(first: 10) {
-            items {
-              uuid
-              type
-              label
-            }
-            nextCursor
-            hasMore
-          }
         }
         pageInfo {
           nextCursor

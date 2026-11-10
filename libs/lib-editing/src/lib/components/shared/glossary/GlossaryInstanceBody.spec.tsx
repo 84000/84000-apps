@@ -1,62 +1,63 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import type { GlossaryTermInstance } from '@eightyfourthousand/data-access';
 
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
+import { GlossaryPassagesProvider } from './GlossaryPassagesDialog';
 
-const mockUpdatePanel = jest.fn();
+const mockGetGlossaryTermExcerpts = jest.fn();
 let mockFlags: Record<string, boolean> = {};
 
-jest.mock('../NavigationProvider', () => ({
-  useNavigation: () => ({ updatePanel: mockUpdatePanel, toh: undefined }),
-}));
 jest.mock('../hooks/useGlossaryInstanceListener', () => ({
   useGlossaryInstanceListener: jest.fn(),
 }));
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
-  getTermPassages: jest.fn(),
+  getGlossaryTermExcerpts: (...args: unknown[]) =>
+    mockGetGlossaryTermExcerpts(...args),
+}));
+jest.mock('../NavigationContext', () => ({
+  useNavigation: () => ({ toh: 'toh8', updatePanel: jest.fn() }),
 }));
 jest.mock('@eightyfourthousand/lib-instr', () => ({
   GatedFeature: ({ flag, children }: { flag: string; children: ReactNode }) =>
     mockFlags[flag] ? <>{children}</> : null,
 }));
 
-/** An instance attested in one passage of the given type. */
-const instanceIn = (type: string) =>
-  ({
-    uuid: 'g-1',
-    authority: 'a-1',
-    names: { english: 'term' },
-    passages: {
-      items: [{ uuid: 'p-1', type, label: 'attested' }],
-      nextCursor: null,
-      hasMore: false,
-    },
-  }) as unknown as GlossaryTermInstance;
+const instance = {
+  uuid: 'g-1',
+  authority: 'a-1',
+  names: { english: 'term', wylie: 'tshig' },
+  definition: '<p>A word.</p>',
+} as unknown as GlossaryTermInstance;
 
 beforeEach(() => {
-  mockUpdatePanel.mockClear();
   mockFlags = {};
 });
 
-describe('GlossaryInstanceBody passage links', () => {
-  // A section's heading row is typed `<section>Header`, and it lives in the
-  // same tab as the section body, not in the translation fallback.
-  it.each([
-    ['summaryHeader', 'main', 'front'],
-    ['abbreviationsHeader', 'right', 'abbreviations'],
-    ['translation', 'main', 'translation'],
-  ])('opens a %s passage in %s/%s', async (type, panel, tab) => {
-    render(<GlossaryInstanceBody instance={instanceIn(type)} />);
+describe('GlossaryInstanceBody', () => {
+  it('shows the entry without a passages read', () => {
+    render(
+      <GlossaryPassagesProvider>
+        <GlossaryInstanceBody instance={instance} />
+      </GlossaryPassagesProvider>,
+    );
 
-    await userEvent.click(screen.getByText('attested'));
+    expect(screen.getByText('term')).toBeTruthy();
+    expect(screen.getByText('tshig')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(mockGetGlossaryTermExcerpts).not.toHaveBeenCalled();
+  });
 
-    expect(mockUpdatePanel).toHaveBeenCalledWith({
-      name: panel,
-      state: { open: true, tab, hash: 'p-1' },
-    });
+  it('adds the passages link only when asked, still without a read', () => {
+    render(
+      <GlossaryPassagesProvider>
+        <GlossaryInstanceBody instance={instance} showPassages />
+      </GlossaryPassagesProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Passages ›' })).toBeTruthy();
+    expect(mockGetGlossaryTermExcerpts).not.toHaveBeenCalled();
   });
 });
 

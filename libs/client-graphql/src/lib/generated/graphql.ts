@@ -365,6 +365,44 @@ export type FoliosAround = {
   startIndex: Scalars['Int']['output'];
 };
 
+/** A page of the passages that cite a glossary term */
+export type GlossaryExcerptsPage = {
+  __typename?: 'GlossaryExcerptsPage';
+  /** Whether more passages follow this page */
+  hasMore: Scalars['Boolean']['output'];
+  /** Passages in this page */
+  items: Array<GlossaryPassageExcerpt>;
+  /** Cursor for the next page, null if there is none */
+  nextCursor?: Maybe<Scalars['String']['output']>;
+  /** Number of passages listed for the term across every page */
+  totalCount: Scalars['Int']['output'];
+};
+
+/** A passage that cites a glossary term, with an excerpt around its first instance */
+export type GlossaryPassageExcerpt = {
+  __typename?: 'GlossaryPassageExcerpt';
+  /** Where the term's instances fall within text, sorted and not overlapping */
+  highlights: Array<TextRange>;
+  /** Number of instances of the term in the whole passage */
+  instanceCount: Scalars['Int']['output'];
+  /** Passage label */
+  label?: Maybe<Scalars['String']['output']>;
+  /** Passage sort order within the work */
+  sort: Scalars['Int']['output'];
+  /** The excerpt: at most 300 characters of the passage, counting an ellipsis at each cut end */
+  text: Scalars['String']['output'];
+  /** The Toh the passage belongs to, or null when every Toh shares it */
+  toh?: Maybe<Scalars['String']['output']>;
+  /** Whether passage text after the excerpt was left out */
+  truncatedEnd: Scalars['Boolean']['output'];
+  /** Whether passage text before the excerpt was left out */
+  truncatedStart: Scalars['Boolean']['output'];
+  /** Passage type */
+  type: Scalars['String']['output'];
+  /** Passage UUID */
+  uuid: Scalars['ID']['output'];
+};
+
 /** Paginated passage references for a glossary term */
 export type GlossaryPassagesPage = {
   __typename?: 'GlossaryPassagesPage';
@@ -396,7 +434,10 @@ export type GlossaryTermInstance = {
   definition?: Maybe<Scalars['String']['output']>;
   /** Names in different languages */
   names: GlossaryTermNames;
-  /** Paginated passage references where this term appears */
+  /**
+   * Paginated passage references where this term appears
+   * @deprecated Use Query.glossaryTermExcerpts, one term at a time
+   */
   passages: GlossaryPassagesPage;
   /** Absolute position of this term in the work's glossary (1-based) */
   termNumber: Scalars['Int']['output'];
@@ -965,7 +1006,15 @@ export type Query = {
   findingLocations: Array<FindingLocation>;
   /** Get a single glossary instance by UUID */
   glossaryInstance?: Maybe<GlossaryTermInstance>;
-  /** Get paginated passage references for a glossary term (per-term, on-demand) */
+  /**
+   * The passages that cite a glossary term, one per passage in passage order, each
+   * with an excerpt around the term's first instance. Null when the read fails.
+   */
+  glossaryTermExcerpts?: Maybe<GlossaryExcerptsPage>;
+  /**
+   * Get paginated passage references for a glossary term (per-term, on-demand)
+   * @deprecated Use glossaryTermExcerpts
+   */
   glossaryTermPassages: GlossaryPassagesPage;
   /**
    * Check if the current user has a specific permission.
@@ -1090,6 +1139,15 @@ export type QueryFindingLocationsArgs = {
 
 /** Root Query type - extend this in other schema files */
 export type QueryGlossaryInstanceArgs = {
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryGlossaryTermExcerptsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  toh?: InputMaybe<Scalars['String']['input']>;
   uuid: Scalars['ID']['input'];
 };
 
@@ -1423,6 +1481,13 @@ export type TaggedCommentWork = {
   /** When the newest of them was written. */
   latestAt: Scalars['String']['output'];
   workUuid: Scalars['ID']['output'];
+};
+
+/** A range of a string, from start up to but not including end, in UTF-16 code units */
+export type TextRange = {
+  __typename?: 'TextRange';
+  end: Scalars['Int']['output'];
+  start: Scalars['Int']['output'];
 };
 
 /** A title of a work in a specific language */

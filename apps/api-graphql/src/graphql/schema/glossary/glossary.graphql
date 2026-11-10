@@ -81,6 +81,7 @@ type GlossaryTermInstance {
     """
     after: String
   ): GlossaryPassagesPage!
+    @deprecated(reason: "Use Query.glossaryTermExcerpts, one term at a time")
 }
 
 """
@@ -132,7 +133,121 @@ extend type Query {
     Cursor from previous page's nextCursor (offset-based)
     """
     after: String
-  ): GlossaryPassagesPage!
+  ): GlossaryPassagesPage! @deprecated(reason: "Use glossaryTermExcerpts")
+
+  """
+  The passages that cite a glossary term, one per passage in passage order, each
+  with an excerpt around the term's first instance. Null when the read fails.
+  """
+  glossaryTermExcerpts(
+    """
+    The glossary term UUID
+    """
+    uuid: ID!
+
+    """
+    List only the passages of this Toh and the ones shared by every Toh
+    """
+    toh: String
+
+    """
+    Number of passages per page (default: 20, max: 50)
+    """
+    first: Int
+
+    """
+    Cursor from the previous page's nextCursor
+    """
+    after: String
+  ): GlossaryExcerptsPage
+}
+
+"""
+A range of a string, from start up to but not including end, in UTF-16 code units
+"""
+type TextRange {
+  start: Int!
+  end: Int!
+}
+
+"""
+A passage that cites a glossary term, with an excerpt around its first instance
+"""
+type GlossaryPassageExcerpt {
+  """
+  Passage UUID
+  """
+  uuid: ID!
+
+  """
+  Passage label
+  """
+  label: String
+
+  """
+  Passage type
+  """
+  type: String!
+
+  """
+  Passage sort order within the work
+  """
+  sort: Int!
+
+  """
+  The Toh the passage belongs to, or null when every Toh shares it
+  """
+  toh: String
+
+  """
+  Number of instances of the term in the whole passage
+  """
+  instanceCount: Int!
+
+  """
+  The excerpt: at most 300 characters of the passage, counting an ellipsis at each cut end
+  """
+  text: String!
+
+  """
+  Whether passage text before the excerpt was left out
+  """
+  truncatedStart: Boolean!
+
+  """
+  Whether passage text after the excerpt was left out
+  """
+  truncatedEnd: Boolean!
+
+  """
+  Where the term's instances fall within text, sorted and not overlapping
+  """
+  highlights: [TextRange!]!
+}
+
+"""
+A page of the passages that cite a glossary term
+"""
+type GlossaryExcerptsPage {
+  """
+  Passages in this page
+  """
+  items: [GlossaryPassageExcerpt!]!
+
+  """
+  Number of passages listed for the term across every page
+  """
+  totalCount: Int!
+
+  """
+  Cursor for the next page, null if there is none
+  """
+  nextCursor: String
+
+  """
+  Whether more passages follow this page
+  """
+  hasMore: Boolean!
 }
 
 """

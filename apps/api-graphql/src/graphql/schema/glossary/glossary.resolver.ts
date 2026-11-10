@@ -3,6 +3,7 @@ import type { WorkParent } from '../work/work.types';
 import {
   getGlossaryInstance,
   getGlossaryInstances,
+  getGlossaryTermExcerpts,
   getWorkGlossaryTermsPage,
   searchWorkGlossaryTerms,
 } from '@eightyfourthousand/data-access';
@@ -47,6 +48,27 @@ export const glossaryTermPassagesPageResolver = async (
     first: args.first,
     after: args.after,
   });
+};
+
+export const glossaryTermExcerptsResolver = async (
+  _parent: unknown,
+  args: { uuid: string; toh?: string; first?: number; after?: string },
+  ctx: GraphQLContext,
+) => {
+  const page = await getGlossaryTermExcerpts({
+    client: ctx.supabase,
+    uuid: args.uuid,
+    toh: args.toh,
+    first: args.first,
+    after: args.after,
+    source: ctx.source,
+  });
+  if (!page) return null;
+
+  return {
+    ...page,
+    items: page.items.map(({ excerpt, ...item }) => ({ ...item, ...excerpt })),
+  };
 };
 
 export const workGlossaryResolver = async (
