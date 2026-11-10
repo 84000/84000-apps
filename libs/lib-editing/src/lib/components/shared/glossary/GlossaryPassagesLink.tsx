@@ -25,12 +25,14 @@ export const GlossaryPassagesLink = ({
   const open = useCallback(async () => {
     const term = await fetchGlossaryTerm(glossary);
     close();
-    if (term) {
-      passages?.openGlossaryPassages({
-        uuid: term.uuid,
-        english: term.names.english,
-      });
+    if (!term) {
+      console.error(`Glossary entry not found for ${glossary}`);
+      return;
     }
+    passages?.openGlossaryPassages({
+      uuid: term.uuid,
+      english: term.names.english,
+    });
   }, [glossary, fetchGlossaryTerm, close, passages]);
 
   if (!passages || !glossary) return null;

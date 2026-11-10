@@ -2,34 +2,21 @@ import type { GraphQLClient, RequestOptions } from 'graphql-request';
 import gql from 'graphql-tag';
 export type Maybe<T> = T | null;
 export type InputMaybe<T> = Maybe<T>;
-export type Exact<T extends { [key: string]: unknown }> = {
-  [K in keyof T]: T[K];
-};
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & {
-  [SubKey in K]?: Maybe<T[SubKey]>;
-};
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & {
-  [SubKey in K]: Maybe<T[SubKey]>;
-};
-export type MakeEmpty<
-  T extends { [key: string]: unknown },
-  K extends keyof T,
-> = { [_ in K]?: never };
-export type Incremental<T> =
-  | T
-  | {
-      [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never;
-    };
+export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
+export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 type GraphQLClientRequestHeaders = RequestOptions['requestHeaders'];
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: { input: string; output: string };
-  String: { input: string; output: string };
-  Boolean: { input: boolean; output: boolean };
-  Int: { input: number; output: number };
-  Float: { input: number; output: number };
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
   /** JSON scalar for arbitrary JSON data */
-  JSON: { input: any; output: any };
+  JSON: { input: any; output: any; }
 };
 
 /** An alignment linking a passage to Tibetan source text */
@@ -284,7 +271,9 @@ export type EntitySearchResult = {
   workUuid?: Maybe<Scalars['ID']['output']>;
 };
 
-export type EtextsDataset = 'CATALOG' | 'TEXT';
+export type EtextsDataset =
+  | 'CATALOG'
+  | 'TEXT';
 
 /**
  * The canon's eText witnesses, from the published build: a catalog archive, and one
@@ -308,7 +297,9 @@ export type EtextsSnapshot = {
 
 export type EtextsSnapshotStatus =
   /** Storage could not be read or signed; worth retrying. */
-  'ERROR' | 'NOT_FOUND' | 'READY';
+  | 'ERROR'
+  | 'NOT_FOUND'
+  | 'READY';
 
 /**
  * Where a validation finding's subject sits, so a view can link to it.
@@ -355,7 +346,11 @@ export type Folio = {
 };
 
 /** Folio side (recto/verso) */
-export type FolioSide = 'a' | 'b' | 'xa' | 'xb';
+export type FolioSide =
+  | 'a'
+  | 'b'
+  | 'xa'
+  | 'xb';
 
 /** A window of folios centered on a target folio, with flags for further loading */
 export type FoliosAround = {
@@ -450,6 +445,7 @@ export type GlossaryTermInstance = {
   uuid: Scalars['ID']['output'];
 };
 
+
 /** A glossary term instance within a specific work */
 export type GlossaryTermInstancePassagesArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
@@ -526,7 +522,11 @@ export type License = {
   name?: Maybe<Scalars['String']['output']>;
 };
 
-export type LookupEntityType = 'bibliography' | 'glossary' | 'passage' | 'work';
+export type LookupEntityType =
+  | 'bibliography'
+  | 'glossary'
+  | 'passage'
+  | 'work';
 
 export type LookupResult = {
   __typename?: 'LookupResult';
@@ -619,25 +619,30 @@ export type Mutation = {
   updateComment: CommentResult;
 };
 
+
 /** Root Mutation type - extend this in other schema files */
 export type MutationAdvancePublishJobArgs = {
   uuid: Scalars['ID']['input'];
 };
+
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationCreateCommentArgs = {
   input: CreateCommentInput;
 };
 
+
 /** Root Mutation type - extend this in other schema files */
 export type MutationDeleteCommentArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Mutation type - extend this in other schema files */
 export type MutationEnsureWorkSnapshotArgs = {
   work: Scalars['String']['input'];
 };
+
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationPublishWorkArgs = {
@@ -645,6 +650,7 @@ export type MutationPublishWorkArgs = {
   version?: InputMaybe<Scalars['String']['input']>;
   work: Scalars['String']['input'];
 };
+
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationReplaceArgs = {
@@ -658,11 +664,13 @@ export type MutationReplaceArgs = {
   useRegex?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+
 /** Root Mutation type - extend this in other schema files */
 export type MutationReplyToCommentArgs = {
   content: Scalars['String']['input'];
   parentUuid: Scalars['ID']['input'];
 };
+
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationResolveCommentArgs = {
@@ -670,11 +678,13 @@ export type MutationResolveCommentArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Mutation type - extend this in other schema files */
 export type MutationSavePassagesArgs = {
   deletedUuids?: InputMaybe<Array<Scalars['ID']['input']>>;
   passages: Array<PassageInput>;
 };
+
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationSetCommentTagsArgs = {
@@ -682,10 +692,12 @@ export type MutationSetCommentTagsArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Mutation type - extend this in other schema files */
 export type MutationSnapshotBundleArgs = {
   input: SnapshotBundleInput;
 };
+
 
 /** Root Mutation type - extend this in other schema files */
 export type MutationUpdateCommentArgs = {
@@ -943,7 +955,11 @@ export type PublishJob = {
   workUuid: Scalars['ID']['output'];
 };
 
-export type PublishJobStatus = 'FAILED' | 'QUEUED' | 'RUNNING' | 'SUCCEEDED';
+export type PublishJobStatus =
+  | 'FAILED'
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED';
 
 export type PublishPhase =
   | 'ARTIFACT'
@@ -1094,10 +1110,12 @@ export type Query = {
   works: WorkConnection;
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryBibliographyEntryArgs = {
   uuid: Scalars['ID']['input'];
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryCommentArgs = {
@@ -1105,11 +1123,13 @@ export type QueryCommentArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryEtextsSnapshotArgs = {
   collection?: InputMaybe<Scalars['String']['input']>;
   dataset: EtextsDataset;
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryFindingLocationsArgs = {
@@ -1117,10 +1137,12 @@ export type QueryFindingLocationsArgs = {
   work: Scalars['String']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryGlossaryInstanceArgs = {
   uuid: Scalars['ID']['input'];
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryGlossaryTermExcerptsArgs = {
@@ -1130,6 +1152,7 @@ export type QueryGlossaryTermExcerptsArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryGlossaryTermPassagesArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
@@ -1137,10 +1160,12 @@ export type QueryGlossaryTermPassagesArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryHasPermissionArgs = {
   permission: Permission;
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryLookupArgs = {
@@ -1150,31 +1175,37 @@ export type QueryLookupArgs = {
   xmlId?: InputMaybe<Scalars['String']['input']>;
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryPassageArgs = {
   uuid?: InputMaybe<Scalars['ID']['input']>;
   xmlId?: InputMaybe<Scalars['String']['input']>;
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryPublishHistoryArgs = {
   work: Scalars['String']['input'];
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryPublishJobArgs = {
   uuid: Scalars['ID']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryPublishReadinessArgs = {
   work: Scalars['String']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryPublishStatusArgs = {
   work: Scalars['String']['input'];
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QuerySearchArgs = {
@@ -1185,10 +1216,12 @@ export type QuerySearchArgs = {
   workUuid?: InputMaybe<Scalars['ID']['input']>;
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryTaggedCommentWorksArgs = {
   tag: Scalars['String']['input'];
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryTaggedCommentsArgs = {
@@ -1196,11 +1229,13 @@ export type QueryTaggedCommentsArgs = {
   workUuid: Scalars['ID']['input'];
 };
 
+
 /** Root Query type - extend this in other schema files */
 export type QueryWorkArgs = {
   toh?: InputMaybe<Scalars['String']['input']>;
   uuid?: InputMaybe<Scalars['ID']['input']>;
 };
+
 
 /** Root Query type - extend this in other schema files */
 export type QueryWorksArgs = {
@@ -1240,7 +1275,8 @@ export type ReplaceResult = {
 };
 
 /** Supported target types for search-and-replace operations */
-export type ReplaceType = 'PASSAGE';
+export type ReplaceType =
+  | 'PASSAGE';
 
 /** Result of saving passages */
 export type SavePassagesResult = {
@@ -1571,7 +1607,12 @@ export type UserInfo = {
 };
 
 /** User role levels */
-export type UserRole = 'ADMIN' | 'EDITOR' | 'READER' | 'SCHOLAR' | 'TRANSLATOR';
+export type UserRole =
+  | 'ADMIN'
+  | 'EDITOR'
+  | 'READER'
+  | 'SCHOLAR'
+  | 'TRANSLATOR';
 
 /** One validation finding. Rules live in SQL so this and the publish gate cannot disagree. */
 export type ValidationFinding = {
@@ -1660,6 +1701,7 @@ export type Work = {
   uuid: Scalars['ID']['output'];
 };
 
+
 /** A published translation work from the 84000 canon */
 export type WorkFoliosArgs = {
   offset?: InputMaybe<Scalars['Int']['input']>;
@@ -1667,6 +1709,7 @@ export type WorkFoliosArgs = {
   size?: InputMaybe<Scalars['Int']['input']>;
   toh: Scalars['String']['input'];
 };
+
 
 /** A published translation work from the 84000 canon */
 export type WorkFoliosAroundArgs = {
@@ -1676,10 +1719,12 @@ export type WorkFoliosAroundArgs = {
   toh: Scalars['String']['input'];
 };
 
+
 /** A published translation work from the 84000 canon */
 export type WorkGlossaryArgs = {
   withAttestations?: InputMaybe<Scalars['Boolean']['input']>;
 };
+
 
 /** A published translation work from the 84000 canon */
 export type WorkGlossaryTermsArgs = {
@@ -1689,6 +1734,7 @@ export type WorkGlossaryTermsArgs = {
   withAttestations?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+
 /** A published translation work from the 84000 canon */
 export type WorkPassagesArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>;
@@ -1696,6 +1742,7 @@ export type WorkPassagesArgs = {
   filter?: InputMaybe<PassageFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
+
 
 /** A published translation work from the 84000 canon */
 export type WorkSearchGlossaryTermsArgs = {
@@ -1831,198 +1878,105 @@ export type WorkVersion = {
   warnings?: Maybe<Array<ValidationFinding>>;
 };
 
-export type AlignmentFieldsFragment = {
-  __typename?: 'Alignment';
-  folioUuid: string;
-  toh: string;
-  tibetan: string;
-  folioNumber: number;
-  volumeNumber: number;
-};
+export type AlignmentFieldsFragment = { __typename?: 'Alignment', folioUuid: string, toh: string, tibetan: string, folioNumber: number, volumeNumber: number };
 
-export type AnnotationFieldsFragment = {
-  __typename?: 'Annotation';
-  uuid: string;
-  type: string;
-  start: number;
-  end: number;
-  metadata?: any | null;
-};
+export type AnnotationFieldsFragment = { __typename?: 'Annotation', uuid: string, type: string, start: number, end: number, metadata?: any | null };
 
-export type CommentFieldsFragment = {
-  __typename?: 'Comment';
-  uuid: string;
-  content: string;
-  createdAt: string;
-  updatedAt?: string | null;
-  resolvedAt?: string | null;
-  tags: Array<string>;
-  replyCount: number;
-  author: { __typename?: 'UserInfo' } & UserInfoFieldsFragment;
-  resolvedBy?: ({ __typename?: 'UserInfo' } & UserInfoFieldsFragment) | null;
-};
+export type CommentFieldsFragment = { __typename?: 'Comment', uuid: string, content: string, createdAt: string, updatedAt?: string | null, resolvedAt?: string | null, tags: Array<string>, replyCount: number, author: (
+    { __typename?: 'UserInfo' }
+    & UserInfoFieldsFragment
+  ), resolvedBy?: (
+    { __typename?: 'UserInfo' }
+    & UserInfoFieldsFragment
+  ) | null };
 
-export type CommentThreadFieldsFragment = {
-  __typename?: 'Comment';
-  replies: Array<
-    {
-      __typename?: 'Comment';
-      replies: Array<{ __typename?: 'Comment' } & CommentFieldsFragment>;
-    } & CommentFieldsFragment
-  >;
-} & CommentFieldsFragment;
+export type CommentThreadFieldsFragment = (
+  { __typename?: 'Comment', replies: Array<(
+    { __typename?: 'Comment', replies: Array<(
+      { __typename?: 'Comment' }
+      & CommentFieldsFragment
+    )> }
+    & CommentFieldsFragment
+  )> }
+  & CommentFieldsFragment
+);
 
-export type LicenseFieldsFragment = {
-  __typename?: 'License';
-  name?: string | null;
-  link?: string | null;
-  description?: string | null;
-};
+export type LicenseFieldsFragment = { __typename?: 'License', name?: string | null, link?: string | null, description?: string | null };
 
-export type TitlesByLanguageFieldsFragment = {
-  __typename?: 'TitlesByLanguage';
-  tibetan?: string | null;
-  english?: string | null;
-  wylie?: string | null;
-  sanskrit?: string | null;
-};
+export type TitlesByLanguageFieldsFragment = { __typename?: 'TitlesByLanguage', tibetan?: string | null, english?: string | null, wylie?: string | null, sanskrit?: string | null };
 
-export type ImprintFieldsFragment = {
-  __typename?: 'Imprint';
-  toh: string;
-  section?: string | null;
-  version?: string | null;
-  restriction?: boolean | null;
-  publishYear?: string | null;
-  tibetanAuthors?: Array<string> | null;
-  isAuthorContested: boolean;
-  sourceDescription?: string | null;
-  publisherStatement?: string | null;
-  tibetanTranslators?: string | null;
-  license: { __typename?: 'License' } & LicenseFieldsFragment;
-  mainTitles?:
-    | ({ __typename?: 'TitlesByLanguage' } & TitlesByLanguageFieldsFragment)
-    | null;
-  longTitles?:
-    | ({ __typename?: 'TitlesByLanguage' } & TitlesByLanguageFieldsFragment)
-    | null;
-};
+export type ImprintFieldsFragment = { __typename?: 'Imprint', toh: string, section?: string | null, version?: string | null, restriction?: boolean | null, publishYear?: string | null, tibetanAuthors?: Array<string> | null, isAuthorContested: boolean, sourceDescription?: string | null, publisherStatement?: string | null, tibetanTranslators?: string | null, license: (
+    { __typename?: 'License' }
+    & LicenseFieldsFragment
+  ), mainTitles?: (
+    { __typename?: 'TitlesByLanguage' }
+    & TitlesByLanguageFieldsFragment
+  ) | null, longTitles?: (
+    { __typename?: 'TitlesByLanguage' }
+    & TitlesByLanguageFieldsFragment
+  ) | null };
 
-export type PassageFieldsFragment = {
-  __typename?: 'Passage';
-  uuid: string;
-  workUuid: string;
-  content: string;
-  label?: string | null;
-  sort: number;
-  type: string;
-  xmlId?: string | null;
-};
+export type PassageFieldsFragment = { __typename?: 'Passage', uuid: string, workUuid: string, content: string, label?: string | null, sort: number, type: string, xmlId?: string | null };
 
-export type PassageWithAnnotationsFragment = {
-  __typename?: 'Passage';
-  annotations: Array<{ __typename?: 'Annotation' } & AnnotationFieldsFragment>;
-  alignments: Array<{ __typename?: 'Alignment' } & AlignmentFieldsFragment>;
-} & PassageFieldsFragment;
+export type PassageWithAnnotationsFragment = (
+  { __typename?: 'Passage', annotations: Array<(
+    { __typename?: 'Annotation' }
+    & AnnotationFieldsFragment
+  )>, alignments: Array<(
+    { __typename?: 'Alignment' }
+    & AlignmentFieldsFragment
+  )> }
+  & PassageFieldsFragment
+);
 
-export type PassageWithJsonFragment = {
-  __typename?: 'Passage';
-  uuid: string;
-  workUuid: string;
-  label?: string | null;
-  sort: number;
-  type: string;
-  xmlId?: string | null;
-  json?: any | null;
-};
+export type PassageWithJsonFragment = { __typename?: 'Passage', uuid: string, workUuid: string, label?: string | null, sort: number, type: string, xmlId?: string | null, json?: any | null };
 
-export type PassageWithCommentsFragment = {
-  __typename?: 'Passage';
-  comments: Array<{ __typename?: 'Comment' } & CommentThreadFieldsFragment>;
-} & PassageWithAnnotationsFragment;
+export type PassageWithCommentsFragment = (
+  { __typename?: 'Passage', comments: Array<(
+    { __typename?: 'Comment' }
+    & CommentThreadFieldsFragment
+  )> }
+  & PassageWithAnnotationsFragment
+);
 
-export type TitleFieldsFragment = {
-  __typename?: 'Title';
-  uuid: string;
-  content: string;
-  language: string;
-  type: string;
-  attestation?: string | null;
-};
+export type TitleFieldsFragment = { __typename?: 'Title', uuid: string, content: string, language: string, type: string, attestation?: string | null };
 
-export type TocEntryFieldsFragment = {
-  __typename?: 'TocEntry';
-  uuid: string;
-  content: string;
-  label?: string | null;
-  sort: number;
-  level: number;
-  section: string;
-};
+export type TocEntryFieldsFragment = { __typename?: 'TocEntry', uuid: string, content: string, label?: string | null, sort: number, level: number, section: string };
 
-export type TocEntryNestedFragment = {
-  __typename?: 'TocEntry';
-  children: Array<
-    {
-      __typename?: 'TocEntry';
-      children: Array<
-        {
-          __typename?: 'TocEntry';
-          children: Array<
-            {
-              __typename?: 'TocEntry';
-              children: Array<
-                {
-                  __typename?: 'TocEntry';
-                  children: Array<
-                    { __typename?: 'TocEntry' } & TocEntryFieldsFragment
-                  >;
-                } & TocEntryFieldsFragment
-              >;
-            } & TocEntryFieldsFragment
-          >;
-        } & TocEntryFieldsFragment
-      >;
-    } & TocEntryFieldsFragment
-  >;
-} & TocEntryFieldsFragment;
+export type TocEntryNestedFragment = (
+  { __typename?: 'TocEntry', children: Array<(
+    { __typename?: 'TocEntry', children: Array<(
+      { __typename?: 'TocEntry', children: Array<(
+        { __typename?: 'TocEntry', children: Array<(
+          { __typename?: 'TocEntry', children: Array<(
+            { __typename?: 'TocEntry' }
+            & TocEntryFieldsFragment
+          )> }
+          & TocEntryFieldsFragment
+        )> }
+        & TocEntryFieldsFragment
+      )> }
+      & TocEntryFieldsFragment
+    )> }
+    & TocEntryFieldsFragment
+  )> }
+  & TocEntryFieldsFragment
+);
 
-export type TocFieldsFragment = {
-  __typename?: 'Toc';
-  frontMatter: Array<{ __typename?: 'TocEntry' } & TocEntryNestedFragment>;
-  body: Array<{ __typename?: 'TocEntry' } & TocEntryNestedFragment>;
-  backMatter: Array<{ __typename?: 'TocEntry' } & TocEntryNestedFragment>;
-};
+export type TocFieldsFragment = { __typename?: 'Toc', frontMatter: Array<(
+    { __typename?: 'TocEntry' }
+    & TocEntryNestedFragment
+  )>, body: Array<(
+    { __typename?: 'TocEntry' }
+    & TocEntryNestedFragment
+  )>, backMatter: Array<(
+    { __typename?: 'TocEntry' }
+    & TocEntryNestedFragment
+  )> };
 
-export type UserInfoFieldsFragment = {
-  __typename?: 'UserInfo';
-  id: string;
-  displayName: string;
-  avatarUrl?: string | null;
-};
+export type UserInfoFieldsFragment = { __typename?: 'UserInfo', id: string, displayName: string, avatarUrl?: string | null };
 
-export type WorkFieldsFragment = {
-  __typename?: 'Work';
-  uuid: string;
-  title: string;
-  toh: Array<string>;
-  publicationDate?: string | null;
-  publicationVersion: string;
-  publishedVersion?: string | null;
-  publicationStatus?: string | null;
-  pages: number;
-  restriction: boolean;
-  section: string;
-  imprint?: {
-    __typename?: 'Imprint';
-    mainTitles?: {
-      __typename?: 'TitlesByLanguage';
-      tibetan?: string | null;
-      wylie?: string | null;
-      sanskrit?: string | null;
-    } | null;
-  } | null;
-};
+export type WorkFieldsFragment = { __typename?: 'Work', uuid: string, title: string, toh: Array<string>, publicationDate?: string | null, publicationVersion: string, publishedVersion?: string | null, publicationStatus?: string | null, pages: number, restriction: boolean, section: string, imprint?: { __typename?: 'Imprint', mainTitles?: { __typename?: 'TitlesByLanguage', tibetan?: string | null, wylie?: string | null, sanskrit?: string | null } | null } | null };
 
 export type LookupQueryVariables = Exact<{
   toh?: InputMaybe<Scalars['String']['input']>;
@@ -2031,14 +1985,8 @@ export type LookupQueryVariables = Exact<{
   type?: InputMaybe<LookupEntityType>;
 }>;
 
-export type LookupQuery = {
-  __typename?: 'Query';
-  lookup?: {
-    __typename?: 'LookupResult';
-    uuid: string;
-    type: LookupEntityType;
-  } | null;
-};
+
+export type LookupQuery = { __typename?: 'Query', lookup?: { __typename?: 'LookupResult', uuid: string, type: LookupEntityType } | null };
 
 export type GetPassagesQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2048,24 +1996,11 @@ export type GetPassagesQueryVariables = Exact<{
   filter?: InputMaybe<PassageFilter>;
 }>;
 
-export type GetPassagesQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    passages: {
-      __typename?: 'PassageConnection';
-      nodes: Array<{ __typename?: 'Passage' } & PassageWithAnnotationsFragment>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        nextCursor?: string | null;
-        prevCursor?: string | null;
-        hasMoreAfter: boolean;
-        hasMoreBefore: boolean;
-      };
-    };
-  } | null;
-};
+
+export type GetPassagesQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithAnnotationsFragment
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesBasicQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2075,24 +2010,11 @@ export type GetPassagesBasicQueryVariables = Exact<{
   filter?: InputMaybe<PassageFilter>;
 }>;
 
-export type GetPassagesBasicQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    passages: {
-      __typename?: 'PassageConnection';
-      nodes: Array<{ __typename?: 'Passage' } & PassageFieldsFragment>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        nextCursor?: string | null;
-        prevCursor?: string | null;
-        hasMoreAfter: boolean;
-        hasMoreBefore: boolean;
-      };
-    };
-  } | null;
-};
+
+export type GetPassagesBasicQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageFieldsFragment
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesWithJsonQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2102,24 +2024,11 @@ export type GetPassagesWithJsonQueryVariables = Exact<{
   filter?: InputMaybe<PassageFilter>;
 }>;
 
-export type GetPassagesWithJsonQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    passages: {
-      __typename?: 'PassageConnection';
-      nodes: Array<{ __typename?: 'Passage' } & PassageWithJsonFragment>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        nextCursor?: string | null;
-        prevCursor?: string | null;
-        hasMoreAfter: boolean;
-        hasMoreBefore: boolean;
-      };
-    };
-  } | null;
-};
+
+export type GetPassagesWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithJsonFragment
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassagesAroundWithJsonQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2128,36 +2037,22 @@ export type GetPassagesAroundWithJsonQueryVariables = Exact<{
   filter?: InputMaybe<PassageFilter>;
 }>;
 
-export type GetPassagesAroundWithJsonQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    passages: {
-      __typename?: 'PassageConnection';
-      nodes: Array<{ __typename?: 'Passage' } & PassageWithJsonFragment>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        nextCursor?: string | null;
-        prevCursor?: string | null;
-        hasMoreAfter: boolean;
-        hasMoreBefore: boolean;
-      };
-    };
-  } | null;
-};
+
+export type GetPassagesAroundWithJsonQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithJsonFragment
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetPassageQueryVariables = Exact<{
   uuid?: InputMaybe<Scalars['ID']['input']>;
   xmlId?: InputMaybe<Scalars['String']['input']>;
 }>;
 
-export type GetPassageQuery = {
-  __typename?: 'Query';
-  passage?:
-    | ({ __typename?: 'Passage' } & PassageWithAnnotationsFragment)
-    | null;
-};
+
+export type GetPassageQuery = { __typename?: 'Query', passage?: (
+    { __typename?: 'Passage' }
+    & PassageWithAnnotationsFragment
+  ) | null };
 
 export type GetPassagesWithCommentsQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2167,34 +2062,22 @@ export type GetPassagesWithCommentsQueryVariables = Exact<{
   filter?: InputMaybe<PassageFilter>;
 }>;
 
-export type GetPassagesWithCommentsQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    passages: {
-      __typename?: 'PassageConnection';
-      nodes: Array<{ __typename?: 'Passage' } & PassageWithCommentsFragment>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        nextCursor?: string | null;
-        prevCursor?: string | null;
-        hasMoreAfter: boolean;
-        hasMoreBefore: boolean;
-      };
-    };
-  } | null;
-};
+
+export type GetPassagesWithCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<(
+        { __typename?: 'Passage' }
+        & PassageWithCommentsFragment
+      )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, prevCursor?: string | null, hasMoreAfter: boolean, hasMoreBefore: boolean } } } | null };
 
 export type GetCommentThreadQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
   depth?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type GetCommentThreadQuery = {
-  __typename?: 'Query';
-  comment?: ({ __typename?: 'Comment' } & CommentThreadFieldsFragment) | null;
-};
+
+export type GetCommentThreadQuery = { __typename?: 'Query', comment?: (
+    { __typename?: 'Comment' }
+    & CommentThreadFieldsFragment
+  ) | null };
 
 export type GetPassageCommentsQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
@@ -2202,311 +2085,265 @@ export type GetPassageCommentsQueryVariables = Exact<{
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type GetPassageCommentsQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    passages: {
-      __typename?: 'PassageConnection';
-      nodes: Array<{
-        __typename?: 'Passage';
-        uuid: string;
-        label?: string | null;
-        sort: number;
-        type: string;
-        annotations: Array<
-          { __typename?: 'Annotation' } & AnnotationFieldsFragment
-        >;
-        comments: Array<
-          { __typename?: 'Comment' } & CommentThreadFieldsFragment
-        >;
-        unanchoredComments: Array<
-          { __typename?: 'Comment' } & CommentThreadFieldsFragment
-        >;
-      }>;
-    };
-  } | null;
-};
+
+export type GetPassageCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, passages: { __typename?: 'PassageConnection', nodes: Array<{ __typename?: 'Passage', uuid: string, label?: string | null, sort: number, type: string, annotations: Array<(
+          { __typename?: 'Annotation' }
+          & AnnotationFieldsFragment
+        )>, comments: Array<(
+          { __typename?: 'Comment' }
+          & CommentThreadFieldsFragment
+        )>, unanchoredComments: Array<(
+          { __typename?: 'Comment' }
+          & CommentThreadFieldsFragment
+        )> }> } } | null };
 
 export type GetBibliographyCommentsQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
 }>;
 
-export type GetBibliographyCommentsQuery = {
-  __typename?: 'Query';
-  work?: {
-    __typename?: 'Work';
-    uuid: string;
-    bibliographyComments: Array<{
-      __typename?: 'BibliographyEntryComments';
-      uuid: string;
-      label?: string | null;
-      anchors: Array<{
-        __typename?: 'BibliographyCommentAnchor';
-        uuid: string;
-        comment: string;
-        start: number;
-        end: number;
-      }>;
-      comments: Array<{ __typename?: 'Comment' } & CommentThreadFieldsFragment>;
-      unanchoredComments: Array<
-        { __typename?: 'Comment' } & CommentThreadFieldsFragment
-      >;
-    }>;
-  } | null;
-};
+
+export type GetBibliographyCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, bibliographyComments: Array<{ __typename?: 'BibliographyEntryComments', uuid: string, label?: string | null, anchors: Array<{ __typename?: 'BibliographyCommentAnchor', uuid: string, comment: string, start: number, end: number }>, comments: Array<(
+        { __typename?: 'Comment' }
+        & CommentThreadFieldsFragment
+      )>, unanchoredComments: Array<(
+        { __typename?: 'Comment' }
+        & CommentThreadFieldsFragment
+      )> }> } | null };
 
 export type GetWorkByUuidQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
 }>;
 
-export type GetWorkByUuidQuery = {
-  __typename?: 'Query';
-  work?: ({ __typename?: 'Work' } & WorkFieldsFragment) | null;
-};
+
+export type GetWorkByUuidQuery = { __typename?: 'Query', work?: (
+    { __typename?: 'Work' }
+    & WorkFieldsFragment
+  ) | null };
 
 export type GetWorkByTohQueryVariables = Exact<{
   toh: Scalars['String']['input'];
 }>;
 
-export type GetWorkByTohQuery = {
-  __typename?: 'Query';
-  work?: ({ __typename?: 'Work' } & WorkFieldsFragment) | null;
-};
+
+export type GetWorkByTohQuery = { __typename?: 'Query', work?: (
+    { __typename?: 'Work' }
+    & WorkFieldsFragment
+  ) | null };
 
 export type GetWorkWithTitlesQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
 }>;
 
-export type GetWorkWithTitlesQuery = {
-  __typename?: 'Query';
-  work?:
-    | ({
-        __typename?: 'Work';
-        titles: Array<{ __typename?: 'Title' } & TitleFieldsFragment>;
-      } & WorkFieldsFragment)
-    | null;
-};
+
+export type GetWorkWithTitlesQuery = { __typename?: 'Query', work?: (
+    { __typename?: 'Work', titles: Array<(
+      { __typename?: 'Title' }
+      & TitleFieldsFragment
+    )> }
+    & WorkFieldsFragment
+  ) | null };
 
 export type GetWorkWithImprintQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
   toh?: InputMaybe<Scalars['String']['input']>;
 }>;
 
-export type GetWorkWithImprintQuery = {
-  __typename?: 'Query';
-  work?:
-    | ({
-        __typename?: 'Work';
-        imprint?: ({ __typename?: 'Imprint' } & ImprintFieldsFragment) | null;
-      } & WorkFieldsFragment)
-    | null;
-};
+
+export type GetWorkWithImprintQuery = { __typename?: 'Query', work?: (
+    { __typename?: 'Work', imprint?: (
+      { __typename?: 'Imprint' }
+      & ImprintFieldsFragment
+    ) | null }
+    & WorkFieldsFragment
+  ) | null };
 
 export type GetWorkWithTocQueryVariables = Exact<{
   uuid: Scalars['ID']['input'];
 }>;
 
-export type GetWorkWithTocQuery = {
-  __typename?: 'Query';
-  work?:
-    | ({
-        __typename?: 'Work';
-        toc?: ({ __typename?: 'Toc' } & TocFieldsFragment) | null;
-      } & WorkFieldsFragment)
-    | null;
-};
+
+export type GetWorkWithTocQuery = { __typename?: 'Query', work?: (
+    { __typename?: 'Work', toc?: (
+      { __typename?: 'Toc' }
+      & TocFieldsFragment
+    ) | null }
+    & WorkFieldsFragment
+  ) | null };
 
 export type GetAllWorksQueryVariables = Exact<{
   cursor?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type GetAllWorksQuery = {
-  __typename?: 'Query';
-  works: {
-    __typename?: 'WorkConnection';
-    items: Array<{ __typename?: 'Work' } & WorkFieldsFragment>;
-    pageInfo: {
-      __typename?: 'PageInfo';
-      nextCursor?: string | null;
-      hasMoreAfter: boolean;
-    };
-  };
-};
+
+export type GetAllWorksQuery = { __typename?: 'Query', works: { __typename?: 'WorkConnection', items: Array<(
+      { __typename?: 'Work' }
+      & WorkFieldsFragment
+    )>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, hasMoreAfter: boolean } } };
 
 export type GetWorkUuidsQueryVariables = Exact<{
   cursor?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type GetWorkUuidsQuery = {
-  __typename?: 'Query';
-  works: {
-    __typename?: 'WorkConnection';
-    items: Array<{ __typename?: 'Work'; uuid: string }>;
-    pageInfo: {
-      __typename?: 'PageInfo';
-      nextCursor?: string | null;
-      hasMoreAfter: boolean;
-    };
-  };
-};
+
+export type GetWorkUuidsQuery = { __typename?: 'Query', works: { __typename?: 'WorkConnection', items: Array<{ __typename?: 'Work', uuid: string }>, pageInfo: { __typename?: 'PageInfo', nextCursor?: string | null, hasMoreAfter: boolean } } };
 
 export const LicenseFieldsFragmentDoc = gql`
-  fragment LicenseFields on License {
-    name
-    link
-    description
-  }
-`;
+    fragment LicenseFields on License {
+  name
+  link
+  description
+}
+    `;
 export const TitlesByLanguageFieldsFragmentDoc = gql`
-  fragment TitlesByLanguageFields on TitlesByLanguage {
-    tibetan
-    english
-    wylie
-    sanskrit
-  }
-`;
+    fragment TitlesByLanguageFields on TitlesByLanguage {
+  tibetan
+  english
+  wylie
+  sanskrit
+}
+    `;
 export const ImprintFieldsFragmentDoc = gql`
-  fragment ImprintFields on Imprint {
-    toh
-    section
-    version
-    restriction
-    publishYear
-    tibetanAuthors
-    isAuthorContested
-    sourceDescription
-    publisherStatement
-    tibetanTranslators
-    license {
-      ...LicenseFields
-    }
-    mainTitles {
-      ...TitlesByLanguageFields
-    }
-    longTitles {
-      ...TitlesByLanguageFields
-    }
+    fragment ImprintFields on Imprint {
+  toh
+  section
+  version
+  restriction
+  publishYear
+  tibetanAuthors
+  isAuthorContested
+  sourceDescription
+  publisherStatement
+  tibetanTranslators
+  license {
+    ...LicenseFields
   }
-`;
+  mainTitles {
+    ...TitlesByLanguageFields
+  }
+  longTitles {
+    ...TitlesByLanguageFields
+  }
+}
+    `;
 export const PassageWithJsonFragmentDoc = gql`
-  fragment PassageWithJson on Passage {
-    uuid
-    workUuid
-    label
-    sort
-    type
-    xmlId
-    json
-  }
-`;
+    fragment PassageWithJson on Passage {
+  uuid
+  workUuid
+  label
+  sort
+  type
+  xmlId
+  json
+}
+    `;
 export const PassageFieldsFragmentDoc = gql`
-  fragment PassageFields on Passage {
-    uuid
-    workUuid
-    content
-    label
-    sort
-    type
-    xmlId
-  }
-`;
+    fragment PassageFields on Passage {
+  uuid
+  workUuid
+  content
+  label
+  sort
+  type
+  xmlId
+}
+    `;
 export const AnnotationFieldsFragmentDoc = gql`
-  fragment AnnotationFields on Annotation {
-    uuid
-    type
-    start
-    end
-    metadata
-  }
-`;
+    fragment AnnotationFields on Annotation {
+  uuid
+  type
+  start
+  end
+  metadata
+}
+    `;
 export const AlignmentFieldsFragmentDoc = gql`
-  fragment AlignmentFields on Alignment {
-    folioUuid
-    toh
-    tibetan
-    folioNumber
-    volumeNumber
-  }
-`;
+    fragment AlignmentFields on Alignment {
+  folioUuid
+  toh
+  tibetan
+  folioNumber
+  volumeNumber
+}
+    `;
 export const PassageWithAnnotationsFragmentDoc = gql`
-  fragment PassageWithAnnotations on Passage {
-    ...PassageFields
-    annotations {
-      ...AnnotationFields
-    }
-    alignments {
-      ...AlignmentFields
-    }
+    fragment PassageWithAnnotations on Passage {
+  ...PassageFields
+  annotations {
+    ...AnnotationFields
   }
-`;
+  alignments {
+    ...AlignmentFields
+  }
+}
+    `;
 export const UserInfoFieldsFragmentDoc = gql`
-  fragment UserInfoFields on UserInfo {
-    id
-    displayName
-    avatarUrl
-  }
-`;
+    fragment UserInfoFields on UserInfo {
+  id
+  displayName
+  avatarUrl
+}
+    `;
 export const CommentFieldsFragmentDoc = gql`
-  fragment CommentFields on Comment {
-    uuid
-    content
-    createdAt
-    updatedAt
-    resolvedAt
-    tags
-    replyCount
-    author {
-      ...UserInfoFields
-    }
-    resolvedBy {
-      ...UserInfoFields
-    }
+    fragment CommentFields on Comment {
+  uuid
+  content
+  createdAt
+  updatedAt
+  resolvedAt
+  tags
+  replyCount
+  author {
+    ...UserInfoFields
   }
-`;
+  resolvedBy {
+    ...UserInfoFields
+  }
+}
+    `;
 export const CommentThreadFieldsFragmentDoc = gql`
-  fragment CommentThreadFields on Comment {
+    fragment CommentThreadFields on Comment {
+  ...CommentFields
+  replies {
     ...CommentFields
     replies {
       ...CommentFields
-      replies {
-        ...CommentFields
-      }
     }
   }
-`;
+}
+    `;
 export const PassageWithCommentsFragmentDoc = gql`
-  fragment PassageWithComments on Passage {
-    ...PassageWithAnnotations
-    comments {
-      ...CommentThreadFields
-    }
+    fragment PassageWithComments on Passage {
+  ...PassageWithAnnotations
+  comments {
+    ...CommentThreadFields
   }
-`;
+}
+    `;
 export const TitleFieldsFragmentDoc = gql`
-  fragment TitleFields on Title {
-    uuid
-    content
-    language
-    type
-    attestation
-  }
-`;
+    fragment TitleFields on Title {
+  uuid
+  content
+  language
+  type
+  attestation
+}
+    `;
 export const TocEntryFieldsFragmentDoc = gql`
-  fragment TocEntryFields on TocEntry {
-    uuid
-    content
-    label
-    sort
-    level
-    section
-  }
-`;
+    fragment TocEntryFields on TocEntry {
+  uuid
+  content
+  label
+  sort
+  level
+  section
+}
+    `;
 export const TocEntryNestedFragmentDoc = gql`
-  fragment TocEntryNested on TocEntry {
+    fragment TocEntryNested on TocEntry {
+  ...TocEntryFields
+  children {
     ...TocEntryFields
     children {
       ...TocEntryFields
@@ -2516,282 +2353,186 @@ export const TocEntryNestedFragmentDoc = gql`
           ...TocEntryFields
           children {
             ...TocEntryFields
-            children {
-              ...TocEntryFields
-            }
           }
         }
       }
     }
   }
-`;
+}
+    `;
 export const TocFieldsFragmentDoc = gql`
-  fragment TocFields on Toc {
-    frontMatter {
-      ...TocEntryNested
-    }
-    body {
-      ...TocEntryNested
-    }
-    backMatter {
-      ...TocEntryNested
-    }
+    fragment TocFields on Toc {
+  frontMatter {
+    ...TocEntryNested
   }
-`;
+  body {
+    ...TocEntryNested
+  }
+  backMatter {
+    ...TocEntryNested
+  }
+}
+    `;
 export const WorkFieldsFragmentDoc = gql`
-  fragment WorkFields on Work {
-    uuid
-    title
-    toh
-    publicationDate
-    publicationVersion
-    publishedVersion
-    publicationStatus
-    pages
-    restriction
-    section
-    imprint {
-      mainTitles {
-        tibetan
-        wylie
-        sanskrit
-      }
+    fragment WorkFields on Work {
+  uuid
+  title
+  toh
+  publicationDate
+  publicationVersion
+  publishedVersion
+  publicationStatus
+  pages
+  restriction
+  section
+  imprint {
+    mainTitles {
+      tibetan
+      wylie
+      sanskrit
     }
   }
-`;
+}
+    `;
 export const LookupDocument = gql`
-  query Lookup(
-    $toh: String
-    $uuid: ID
-    $xmlId: String
-    $type: LookupEntityType
-  ) {
-    lookup(toh: $toh, uuid: $uuid, xmlId: $xmlId, type: $type) {
-      uuid
-      type
-    }
+    query Lookup($toh: String, $uuid: ID, $xmlId: String, $type: LookupEntityType) {
+  lookup(toh: $toh, uuid: $uuid, xmlId: $xmlId, type: $type) {
+    uuid
+    type
   }
-`;
+}
+    `;
 export const GetPassagesDocument = gql`
-  query GetPassages(
-    $uuid: ID!
-    $cursor: String
-    $limit: Int
-    $direction: PaginationDirection
-    $filter: PassageFilter
-  ) {
-    work(uuid: $uuid) {
-      uuid
-      passages(
-        cursor: $cursor
-        limit: $limit
-        direction: $direction
-        filter: $filter
-      ) {
-        nodes {
-          ...PassageWithAnnotations
-        }
-        pageInfo {
-          nextCursor
-          prevCursor
-          hasMoreAfter
-          hasMoreBefore
-        }
+    query GetPassages($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: $direction, filter: $filter) {
+      nodes {
+        ...PassageWithAnnotations
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
       }
     }
   }
-  ${PassageWithAnnotationsFragmentDoc}
-  ${PassageFieldsFragmentDoc}
-  ${AnnotationFieldsFragmentDoc}
-  ${AlignmentFieldsFragmentDoc}
-`;
+}
+    ${PassageWithAnnotationsFragmentDoc}
+${PassageFieldsFragmentDoc}
+${AnnotationFieldsFragmentDoc}
+${AlignmentFieldsFragmentDoc}`;
 export const GetPassagesBasicDocument = gql`
-  query GetPassagesBasic(
-    $uuid: ID!
-    $cursor: String
-    $limit: Int
-    $direction: PaginationDirection
-    $filter: PassageFilter
-  ) {
-    work(uuid: $uuid) {
-      uuid
-      passages(
-        cursor: $cursor
-        limit: $limit
-        direction: $direction
-        filter: $filter
-      ) {
-        nodes {
-          ...PassageFields
-        }
-        pageInfo {
-          nextCursor
-          prevCursor
-          hasMoreAfter
-          hasMoreBefore
-        }
+    query GetPassagesBasic($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: $direction, filter: $filter) {
+      nodes {
+        ...PassageFields
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
       }
     }
   }
-  ${PassageFieldsFragmentDoc}
-`;
+}
+    ${PassageFieldsFragmentDoc}`;
 export const GetPassagesWithJsonDocument = gql`
-  query GetPassagesWithJson(
-    $uuid: ID!
-    $cursor: String
-    $limit: Int
-    $direction: PaginationDirection
-    $filter: PassageFilter
-  ) {
-    work(uuid: $uuid) {
-      uuid
-      passages(
-        cursor: $cursor
-        limit: $limit
-        direction: $direction
-        filter: $filter
-      ) {
-        nodes {
-          ...PassageWithJson
-        }
-        pageInfo {
-          nextCursor
-          prevCursor
-          hasMoreAfter
-          hasMoreBefore
-        }
+    query GetPassagesWithJson($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: $direction, filter: $filter) {
+      nodes {
+        ...PassageWithJson
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
       }
     }
   }
-  ${PassageWithJsonFragmentDoc}
-`;
+}
+    ${PassageWithJsonFragmentDoc}`;
 export const GetPassagesAroundWithJsonDocument = gql`
-  query GetPassagesAroundWithJson(
-    $uuid: ID!
-    $cursor: String!
-    $limit: Int
-    $filter: PassageFilter
-  ) {
-    work(uuid: $uuid) {
-      uuid
-      passages(
-        cursor: $cursor
-        limit: $limit
-        direction: AROUND
-        filter: $filter
-      ) {
-        nodes {
-          ...PassageWithJson
-        }
-        pageInfo {
-          nextCursor
-          prevCursor
-          hasMoreAfter
-          hasMoreBefore
-        }
+    query GetPassagesAroundWithJson($uuid: ID!, $cursor: String!, $limit: Int, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: AROUND, filter: $filter) {
+      nodes {
+        ...PassageWithJson
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
       }
     }
   }
-  ${PassageWithJsonFragmentDoc}
-`;
+}
+    ${PassageWithJsonFragmentDoc}`;
 export const GetPassageDocument = gql`
-  query GetPassage($uuid: ID, $xmlId: String) {
-    passage(uuid: $uuid, xmlId: $xmlId) {
-      ...PassageWithAnnotations
-    }
+    query GetPassage($uuid: ID, $xmlId: String) {
+  passage(uuid: $uuid, xmlId: $xmlId) {
+    ...PassageWithAnnotations
   }
-  ${PassageWithAnnotationsFragmentDoc}
-  ${PassageFieldsFragmentDoc}
-  ${AnnotationFieldsFragmentDoc}
-  ${AlignmentFieldsFragmentDoc}
-`;
+}
+    ${PassageWithAnnotationsFragmentDoc}
+${PassageFieldsFragmentDoc}
+${AnnotationFieldsFragmentDoc}
+${AlignmentFieldsFragmentDoc}`;
 export const GetPassagesWithCommentsDocument = gql`
-  query GetPassagesWithComments(
-    $uuid: ID!
-    $cursor: String
-    $limit: Int
-    $direction: PaginationDirection
-    $filter: PassageFilter
-  ) {
-    work(uuid: $uuid) {
-      uuid
-      passages(
-        cursor: $cursor
-        limit: $limit
-        direction: $direction
-        filter: $filter
-      ) {
-        nodes {
-          ...PassageWithComments
-        }
-        pageInfo {
-          nextCursor
-          prevCursor
-          hasMoreAfter
-          hasMoreBefore
-        }
+    query GetPassagesWithComments($uuid: ID!, $cursor: String, $limit: Int, $direction: PaginationDirection, $filter: PassageFilter) {
+  work(uuid: $uuid) {
+    uuid
+    passages(cursor: $cursor, limit: $limit, direction: $direction, filter: $filter) {
+      nodes {
+        ...PassageWithComments
+      }
+      pageInfo {
+        nextCursor
+        prevCursor
+        hasMoreAfter
+        hasMoreBefore
       }
     }
   }
-  ${PassageWithCommentsFragmentDoc}
-  ${PassageWithAnnotationsFragmentDoc}
-  ${PassageFieldsFragmentDoc}
-  ${AnnotationFieldsFragmentDoc}
-  ${AlignmentFieldsFragmentDoc}
-  ${CommentThreadFieldsFragmentDoc}
-  ${CommentFieldsFragmentDoc}
-  ${UserInfoFieldsFragmentDoc}
-`;
+}
+    ${PassageWithCommentsFragmentDoc}
+${PassageWithAnnotationsFragmentDoc}
+${PassageFieldsFragmentDoc}
+${AnnotationFieldsFragmentDoc}
+${AlignmentFieldsFragmentDoc}
+${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetCommentThreadDocument = gql`
-  query GetCommentThread($uuid: ID!, $depth: Int) {
-    comment(uuid: $uuid, depth: $depth) {
-      ...CommentThreadFields
-    }
+    query GetCommentThread($uuid: ID!, $depth: Int) {
+  comment(uuid: $uuid, depth: $depth) {
+    ...CommentThreadFields
   }
-  ${CommentThreadFieldsFragmentDoc}
-  ${CommentFieldsFragmentDoc}
-  ${UserInfoFieldsFragmentDoc}
-`;
+}
+    ${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetPassageCommentsDocument = gql`
-  query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
-    work(uuid: $uuid) {
-      uuid
-      passages(filter: { uuids: $uuids }, limit: $limit) {
-        nodes {
-          uuid
-          label
-          sort
-          type
-          annotations {
-            ...AnnotationFields
-          }
-          comments {
-            ...CommentThreadFields
-          }
-          unanchoredComments {
-            ...CommentThreadFields
-          }
-        }
-      }
-    }
-  }
-  ${AnnotationFieldsFragmentDoc}
-  ${CommentThreadFieldsFragmentDoc}
-  ${CommentFieldsFragmentDoc}
-  ${UserInfoFieldsFragmentDoc}
-`;
-export const GetBibliographyCommentsDocument = gql`
-  query GetBibliographyComments($uuid: ID!) {
-    work(uuid: $uuid) {
-      uuid
-      bibliographyComments {
+    query GetPassageComments($uuid: ID!, $uuids: [ID!]!, $limit: Int) {
+  work(uuid: $uuid) {
+    uuid
+    passages(filter: {uuids: $uuids}, limit: $limit) {
+      nodes {
         uuid
         label
-        anchors {
-          uuid
-          comment
-          start
-          end
+        sort
+        type
+        annotations {
+          ...AnnotationFields
         }
         comments {
           ...CommentThreadFields
@@ -2802,419 +2543,172 @@ export const GetBibliographyCommentsDocument = gql`
       }
     }
   }
-  ${CommentThreadFieldsFragmentDoc}
-  ${CommentFieldsFragmentDoc}
-  ${UserInfoFieldsFragmentDoc}
-`;
-export const GetWorkByUuidDocument = gql`
-  query GetWorkByUuid($uuid: ID!) {
-    work(uuid: $uuid) {
-      ...WorkFields
-    }
-  }
-  ${WorkFieldsFragmentDoc}
-`;
-export const GetWorkByTohDocument = gql`
-  query GetWorkByToh($toh: String!) {
-    work(toh: $toh) {
-      ...WorkFields
-    }
-  }
-  ${WorkFieldsFragmentDoc}
-`;
-export const GetWorkWithTitlesDocument = gql`
-  query GetWorkWithTitles($uuid: ID!) {
-    work(uuid: $uuid) {
-      ...WorkFields
-      titles {
-        ...TitleFields
-      }
-    }
-  }
-  ${WorkFieldsFragmentDoc}
-  ${TitleFieldsFragmentDoc}
-`;
-export const GetWorkWithImprintDocument = gql`
-  query GetWorkWithImprint($uuid: ID!, $toh: String) {
-    work(uuid: $uuid, toh: $toh) {
-      ...WorkFields
-      imprint {
-        ...ImprintFields
-      }
-    }
-  }
-  ${WorkFieldsFragmentDoc}
-  ${ImprintFieldsFragmentDoc}
-  ${LicenseFieldsFragmentDoc}
-  ${TitlesByLanguageFieldsFragmentDoc}
-`;
-export const GetWorkWithTocDocument = gql`
-  query GetWorkWithToc($uuid: ID!) {
-    work(uuid: $uuid) {
-      ...WorkFields
-      toc {
-        ...TocFields
-      }
-    }
-  }
-  ${WorkFieldsFragmentDoc}
-  ${TocFieldsFragmentDoc}
-  ${TocEntryNestedFragmentDoc}
-  ${TocEntryFieldsFragmentDoc}
-`;
-export const GetAllWorksDocument = gql`
-  query GetAllWorks($cursor: String, $limit: Int) {
-    works(cursor: $cursor, limit: $limit) {
-      items {
-        ...WorkFields
-      }
-      pageInfo {
-        nextCursor
-        hasMoreAfter
-      }
-    }
-  }
-  ${WorkFieldsFragmentDoc}
-`;
-export const GetWorkUuidsDocument = gql`
-  query GetWorkUuids($cursor: String, $limit: Int) {
-    works(cursor: $cursor, limit: $limit) {
-      items {
+}
+    ${AnnotationFieldsFragmentDoc}
+${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
+export const GetBibliographyCommentsDocument = gql`
+    query GetBibliographyComments($uuid: ID!) {
+  work(uuid: $uuid) {
+    uuid
+    bibliographyComments {
+      uuid
+      label
+      anchors {
         uuid
+        comment
+        start
+        end
       }
-      pageInfo {
-        nextCursor
-        hasMoreAfter
+      comments {
+        ...CommentThreadFields
+      }
+      unanchoredComments {
+        ...CommentThreadFields
       }
     }
   }
-`;
+}
+    ${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
+export const GetWorkByUuidDocument = gql`
+    query GetWorkByUuid($uuid: ID!) {
+  work(uuid: $uuid) {
+    ...WorkFields
+  }
+}
+    ${WorkFieldsFragmentDoc}`;
+export const GetWorkByTohDocument = gql`
+    query GetWorkByToh($toh: String!) {
+  work(toh: $toh) {
+    ...WorkFields
+  }
+}
+    ${WorkFieldsFragmentDoc}`;
+export const GetWorkWithTitlesDocument = gql`
+    query GetWorkWithTitles($uuid: ID!) {
+  work(uuid: $uuid) {
+    ...WorkFields
+    titles {
+      ...TitleFields
+    }
+  }
+}
+    ${WorkFieldsFragmentDoc}
+${TitleFieldsFragmentDoc}`;
+export const GetWorkWithImprintDocument = gql`
+    query GetWorkWithImprint($uuid: ID!, $toh: String) {
+  work(uuid: $uuid, toh: $toh) {
+    ...WorkFields
+    imprint {
+      ...ImprintFields
+    }
+  }
+}
+    ${WorkFieldsFragmentDoc}
+${ImprintFieldsFragmentDoc}
+${LicenseFieldsFragmentDoc}
+${TitlesByLanguageFieldsFragmentDoc}`;
+export const GetWorkWithTocDocument = gql`
+    query GetWorkWithToc($uuid: ID!) {
+  work(uuid: $uuid) {
+    ...WorkFields
+    toc {
+      ...TocFields
+    }
+  }
+}
+    ${WorkFieldsFragmentDoc}
+${TocFieldsFragmentDoc}
+${TocEntryNestedFragmentDoc}
+${TocEntryFieldsFragmentDoc}`;
+export const GetAllWorksDocument = gql`
+    query GetAllWorks($cursor: String, $limit: Int) {
+  works(cursor: $cursor, limit: $limit) {
+    items {
+      ...WorkFields
+    }
+    pageInfo {
+      nextCursor
+      hasMoreAfter
+    }
+  }
+}
+    ${WorkFieldsFragmentDoc}`;
+export const GetWorkUuidsDocument = gql`
+    query GetWorkUuids($cursor: String, $limit: Int) {
+  works(cursor: $cursor, limit: $limit) {
+    items {
+      uuid
+    }
+    pageInfo {
+      nextCursor
+      hasMoreAfter
+    }
+  }
+}
+    `;
 
-export type SdkFunctionWrapper = <T>(
-  action: (requestHeaders?: Record<string, string>) => Promise<T>,
-  operationName: string,
-  operationType?: string,
-  variables?: any,
-) => Promise<T>;
+export type SdkFunctionWrapper = <T>(action: (requestHeaders?:Record<string, string>) => Promise<T>, operationName: string, operationType?: string, variables?: any) => Promise<T>;
 
-const defaultWrapper: SdkFunctionWrapper = (
-  action,
-  _operationName,
-  _operationType,
-  _variables,
-) => action();
 
-export function getSdk(
-  client: GraphQLClient,
-  withWrapper: SdkFunctionWrapper = defaultWrapper,
-) {
+const defaultWrapper: SdkFunctionWrapper = (action, _operationName, _operationType, _variables) => action();
+
+export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = defaultWrapper) {
   return {
-    Lookup(
-      variables?: LookupQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<LookupQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<LookupQuery>({
-            document: LookupDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'Lookup',
-        'query',
-        variables,
-      );
+    Lookup(variables?: LookupQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<LookupQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<LookupQuery>({ document: LookupDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'Lookup', 'query', variables);
     },
-    GetPassages(
-      variables: GetPassagesQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassagesQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassagesQuery>({
-            document: GetPassagesDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassages',
-        'query',
-        variables,
-      );
+    GetPassages(variables: GetPassagesQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesQuery>({ document: GetPassagesDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassages', 'query', variables);
     },
-    GetPassagesBasic(
-      variables: GetPassagesBasicQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassagesBasicQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassagesBasicQuery>({
-            document: GetPassagesBasicDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassagesBasic',
-        'query',
-        variables,
-      );
+    GetPassagesBasic(variables: GetPassagesBasicQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesBasicQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesBasicQuery>({ document: GetPassagesBasicDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesBasic', 'query', variables);
     },
-    GetPassagesWithJson(
-      variables: GetPassagesWithJsonQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassagesWithJsonQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassagesWithJsonQuery>({
-            document: GetPassagesWithJsonDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassagesWithJson',
-        'query',
-        variables,
-      );
+    GetPassagesWithJson(variables: GetPassagesWithJsonQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesWithJsonQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesWithJsonQuery>({ document: GetPassagesWithJsonDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesWithJson', 'query', variables);
     },
-    GetPassagesAroundWithJson(
-      variables: GetPassagesAroundWithJsonQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassagesAroundWithJsonQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassagesAroundWithJsonQuery>({
-            document: GetPassagesAroundWithJsonDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassagesAroundWithJson',
-        'query',
-        variables,
-      );
+    GetPassagesAroundWithJson(variables: GetPassagesAroundWithJsonQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesAroundWithJsonQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesAroundWithJsonQuery>({ document: GetPassagesAroundWithJsonDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesAroundWithJson', 'query', variables);
     },
-    GetPassage(
-      variables?: GetPassageQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassageQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassageQuery>({
-            document: GetPassageDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassage',
-        'query',
-        variables,
-      );
+    GetPassage(variables?: GetPassageQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassageQuery>({ document: GetPassageDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassage', 'query', variables);
     },
-    GetPassagesWithComments(
-      variables: GetPassagesWithCommentsQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassagesWithCommentsQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassagesWithCommentsQuery>({
-            document: GetPassagesWithCommentsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassagesWithComments',
-        'query',
-        variables,
-      );
+    GetPassagesWithComments(variables: GetPassagesWithCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassagesWithCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassagesWithCommentsQuery>({ document: GetPassagesWithCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassagesWithComments', 'query', variables);
     },
-    GetCommentThread(
-      variables: GetCommentThreadQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetCommentThreadQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetCommentThreadQuery>({
-            document: GetCommentThreadDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetCommentThread',
-        'query',
-        variables,
-      );
+    GetCommentThread(variables: GetCommentThreadQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetCommentThreadQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetCommentThreadQuery>({ document: GetCommentThreadDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetCommentThread', 'query', variables);
     },
-    GetPassageComments(
-      variables: GetPassageCommentsQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetPassageCommentsQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetPassageCommentsQuery>({
-            document: GetPassageCommentsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetPassageComments',
-        'query',
-        variables,
-      );
+    GetPassageComments(variables: GetPassageCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetPassageCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetPassageCommentsQuery>({ document: GetPassageCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetPassageComments', 'query', variables);
     },
-    GetBibliographyComments(
-      variables: GetBibliographyCommentsQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetBibliographyCommentsQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetBibliographyCommentsQuery>({
-            document: GetBibliographyCommentsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetBibliographyComments',
-        'query',
-        variables,
-      );
+    GetBibliographyComments(variables: GetBibliographyCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetBibliographyCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetBibliographyCommentsQuery>({ document: GetBibliographyCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetBibliographyComments', 'query', variables);
     },
-    GetWorkByUuid(
-      variables: GetWorkByUuidQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetWorkByUuidQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetWorkByUuidQuery>({
-            document: GetWorkByUuidDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetWorkByUuid',
-        'query',
-        variables,
-      );
+    GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);
     },
-    GetWorkByToh(
-      variables: GetWorkByTohQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetWorkByTohQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetWorkByTohQuery>({
-            document: GetWorkByTohDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetWorkByToh',
-        'query',
-        variables,
-      );
+    GetWorkByToh(variables: GetWorkByTohQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByTohQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByTohQuery>({ document: GetWorkByTohDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByToh', 'query', variables);
     },
-    GetWorkWithTitles(
-      variables: GetWorkWithTitlesQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetWorkWithTitlesQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetWorkWithTitlesQuery>({
-            document: GetWorkWithTitlesDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetWorkWithTitles',
-        'query',
-        variables,
-      );
+    GetWorkWithTitles(variables: GetWorkWithTitlesQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkWithTitlesQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetWorkWithTitlesQuery>({ document: GetWorkWithTitlesDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkWithTitles', 'query', variables);
     },
-    GetWorkWithImprint(
-      variables: GetWorkWithImprintQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetWorkWithImprintQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetWorkWithImprintQuery>({
-            document: GetWorkWithImprintDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetWorkWithImprint',
-        'query',
-        variables,
-      );
+    GetWorkWithImprint(variables: GetWorkWithImprintQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkWithImprintQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetWorkWithImprintQuery>({ document: GetWorkWithImprintDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkWithImprint', 'query', variables);
     },
-    GetWorkWithToc(
-      variables: GetWorkWithTocQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetWorkWithTocQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetWorkWithTocQuery>({
-            document: GetWorkWithTocDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetWorkWithToc',
-        'query',
-        variables,
-      );
+    GetWorkWithToc(variables: GetWorkWithTocQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkWithTocQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetWorkWithTocQuery>({ document: GetWorkWithTocDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkWithToc', 'query', variables);
     },
-    GetAllWorks(
-      variables?: GetAllWorksQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetAllWorksQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetAllWorksQuery>({
-            document: GetAllWorksDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetAllWorks',
-        'query',
-        variables,
-      );
+    GetAllWorks(variables?: GetAllWorksQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetAllWorksQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetAllWorksQuery>({ document: GetAllWorksDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetAllWorks', 'query', variables);
     },
-    GetWorkUuids(
-      variables?: GetWorkUuidsQueryVariables,
-      requestHeaders?: GraphQLClientRequestHeaders,
-      signal?: RequestInit['signal'],
-    ): Promise<GetWorkUuidsQuery> {
-      return withWrapper(
-        (wrappedRequestHeaders) =>
-          client.request<GetWorkUuidsQuery>({
-            document: GetWorkUuidsDocument,
-            variables,
-            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
-            signal,
-          }),
-        'GetWorkUuids',
-        'query',
-        variables,
-      );
-    },
+    GetWorkUuids(variables?: GetWorkUuidsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkUuidsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetWorkUuidsQuery>({ document: GetWorkUuidsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkUuids', 'query', variables);
+    }
   };
 }
 export type Sdk = ReturnType<typeof getSdk>;
