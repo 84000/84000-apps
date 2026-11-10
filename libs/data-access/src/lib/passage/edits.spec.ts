@@ -264,6 +264,28 @@ describe('applyEditsToPassages', () => {
     expect(result.passages[0].content.slice(19, 23)).toBe('this');
   });
 
+  it('skips a glossary-only add that resends a stored legacy instance', () => {
+    // a-glossary is stored as [{ uuid: 'g1', authority: 'au1' }].
+    const result = run([
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 9,
+        end: 13,
+        text: 'lord',
+        data: { glossary: 'g1' },
+      },
+    ]);
+    expect(result.error).toBeUndefined();
+    expect(result.warnings.map((w) => w.message)).toContainEqual(
+      expect.stringContaining('Skipped add-annotation'),
+    );
+    expect(
+      result.rawAnnotations.p1.filter((r) => r.type === 'glossary-instance'),
+    ).toHaveLength(1);
+  });
+
   it('stores an added glossary instance as its entry uuid alone', () => {
     const result = run([
       {
