@@ -77,9 +77,9 @@ from the annotation's own `toh`, which scopes visibility; do not conflate them.
 A mention is zero-length: `start` and `end` are equal, at the position it marks.
 
 `glossary-instance` needs `glossary`, the entry's uuid; its authority is read
-from the entry, so an `authority` sent here is ignored. `end-note-link` needs `endNote`; its `label` is optional.
-`inline-title` needs `lang`. A kind missing what it requires is dropped like any
-other unrepresentable annotation.
+from the entry, so an `authority` sent here is ignored. `end-note-link` needs
+`endNote`; its `label` is optional. `inline-title` needs `lang`. A kind missing
+what it requires is dropped like any other unrepresentable annotation.
 
 ## Preserving an existing annotation
 

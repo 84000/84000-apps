@@ -264,6 +264,23 @@ describe('applyEditsToPassages', () => {
     expect(result.passages[0].content.slice(19, 23)).toBe('this');
   });
 
+  it('stores an added glossary instance as its entry uuid alone', () => {
+    const result = run([
+      {
+        op: 'add-annotation',
+        passageUuid: 'p1',
+        kind: 'glossary-instance',
+        start: 28,
+        end: 32,
+        text: 'this',
+        data: { glossary: 'g2', authority: 'au2' },
+      },
+    ]);
+    expect(result.error).toBeUndefined();
+    const added = result.rawAnnotations.p1.find((r) => r.start === 28);
+    expect(added?.content).toEqual([{ uuid: 'g2' }]);
+  });
+
   it('cannot tell a repeated cut from a new one when the text repeats', () => {
     // Cutting one "x" from "xx" leaves an "x" at the same offsets.
     const once = applyEditsToPassages({
