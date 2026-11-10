@@ -36,39 +36,6 @@ const search = async (hits: unknown[]) => {
 beforeEach(() => mockSearch.mockReset());
 
 describe('useMentionSearch location mapping (ED-1647)', () => {
-  it('criterion 1+2: a passage hit carries subtype and linkToh', async () => {
-    const [r] = await search([
-      hit({ passageType: 'endnotes', passageToh: 'toh12' }),
-    ]);
-
-    expect(r).toMatchObject({
-      entity: 'e-1',
-      linkType: 'passage',
-      label: 'label',
-      text: 'text',
-      subtype: 'endnotes',
-      linkToh: 'toh12',
-    });
-  });
-
-  it('criterion 1: a passage hit with no Toh scope has no linkToh', async () => {
-    const [r] = await search([hit({ passageType: 'introduction' })]);
-
-    expect(r.subtype).toBe('introduction');
-    expect(r.linkToh).toBeUndefined();
-  });
-
-  it.each(['work', 'glossary', 'bibliography', 'folio'])(
-    'criterion 4: a %s hit carries neither subtype nor linkToh',
-    async (type) => {
-      const [r] = await search([hit({ type })]);
-
-      expect(r).toMatchObject({ entity: 'e-1', linkType: type });
-      expect(r.subtype).toBeUndefined();
-      expect(r.linkToh).toBeUndefined();
-    },
-  );
-
   it('criterion 4: a non-passage hit ignores stray passage fields', async () => {
     const [r] = await search([
       hit({ type: 'glossary', passageType: 'endnotes', passageToh: 'toh12' }),

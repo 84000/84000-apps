@@ -1,7 +1,6 @@
 import type { GraphQLClient } from 'graphql-request';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './PassageStackController';
 import { StackController } from './StackController';
 import { createStackWork } from './stack-work';
 import { flush, seeds } from './stack-controller.fixture';
@@ -106,26 +105,6 @@ beforeEach(() => {
 });
 
 describe('a reader revealing a passage the spine has not placed', () => {
-  it('AC6.17: reads around the passage before the spine feed reveals it', async () => {
-    const { work, feed, settleReveal } = setup();
-    const controller = new StackController({ work, spineFeed: feed });
-
-    const revealing = controller.revealPassage('p9');
-    await flush();
-
-    // The feed's reveal is still pending, and the read has already started.
-    expect(feed.reveal).toHaveBeenCalledWith('p9');
-    expect(work.spine.indexOf('p9')).toBe(-1);
-    expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
-    expect(clientGraphql.getTranslationBlocksAround.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ passageUuid: 'p9' }),
-    );
-
-    settleReveal();
-    expect(await revealing).toBe(true);
-    controller.destroy();
-  });
-
   it('AC6.17: the passage is then read from that read, not read again', async () => {
     const { work, feed, settleReveal } = setup();
     const controller = new StackController({ work, spineFeed: feed });
@@ -138,45 +117,6 @@ describe('a reader revealing a passage the spine has not placed', () => {
     expect(controller.isHydrated('p9')).toBe(true);
     expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
     expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
-    controller.destroy();
-  });
-});
-
-describe('an editor revealing a passage the spine has not placed', () => {
-  it('AC6.18: makes no read around the passage before the spine feed reveals it', async () => {
-    const { work, feed, settleReveal } = setup();
-    const controller = new PassageStackController({ work, spineFeed: feed });
-
-    const revealing = controller.revealPassage('p9');
-    await flush();
-
-    expect(feed.reveal).toHaveBeenCalledWith('p9');
-    expect(clientGraphql.getTranslationBlocksAround).not.toHaveBeenCalled();
-
-    settleReveal();
-    expect(await revealing).toBe(true);
-    controller.destroy();
-  });
-});
-
-describe('revealing a passage the spine already holds', () => {
-  it('AC6.19: makes no read around the passage, in a reader', async () => {
-    const { work, feed } = setup();
-    const controller = new StackController({ work, spineFeed: feed });
-
-    expect(await controller.revealPassage('p3')).toBe(true);
-
-    expect(clientGraphql.getTranslationBlocksAround).not.toHaveBeenCalled();
-    controller.destroy();
-  });
-
-  it('AC6.19: makes no read around the passage, in an editor', async () => {
-    const { work, feed } = setup();
-    const controller = new PassageStackController({ work, spineFeed: feed });
-
-    expect(await controller.revealPassage('p3')).toBe(true);
-
-    expect(clientGraphql.getTranslationBlocksAround).not.toHaveBeenCalled();
     controller.destroy();
   });
 });

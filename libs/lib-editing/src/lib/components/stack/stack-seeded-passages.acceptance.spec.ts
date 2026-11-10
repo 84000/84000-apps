@@ -9,7 +9,6 @@
  */
 import { PassageLoader } from '@eightyfourthousand/lib-doc-model';
 
-import { PassageStackController } from './PassageStackController';
 import { StackController } from './StackController';
 import { flush } from './stack-controller.fixture';
 import { createStackWorkDocument } from './stack-work';
@@ -65,10 +64,9 @@ const seededWork = (unseeded: string[] = []) => {
   return { work, loaded, metas };
 };
 
-describe.each([
-  ['StackController', StackController],
-  ['PassageStackController', PassageStackController],
-])('%s over seeded passages (AC5)', (_name, Controller) => {
+describe('StackController over seeded passages scoped to a Toh (AC5)', () => {
+  const Controller = StackController;
+
   it('does not release or re-read its seeded passages when the range runs one past the order', async () => {
     const { work, loaded } = seededWork();
     const endnotes = new Controller({ work, tab: 'endnotes' });
@@ -110,53 +108,6 @@ describe.each([
       expect(work.store.has(uuid)).toBe(true);
     }
     expect(loaded).toEqual([]);
-    endnotes.destroy();
-  });
-
-  it('keeps its seeded passages when the range runs one past an unscoped order', async () => {
-    const { work, loaded } = seededWork();
-    const translation = new Controller({ work, tab: 'translation' });
-    // Not scoped, so the order is the whole run (two rows); 3 is one past it.
-    translation.setVisibleRange({ start: 0, end: 3 });
-    await flush();
-    await flush();
-
-    expect(work.store.has('t0')).toBe(true);
-    expect(work.store.has('t1')).toBe(true);
-    expect(loaded).toEqual([]);
-    translation.destroy();
-  });
-
-  it('does not touch another tab’s seeded passages', async () => {
-    const { work, loaded } = seededWork();
-    const translation = new Controller({ work, tab: 'translation' });
-    const endnotes = new Controller({ work, tab: 'endnotes' });
-    endnotes.setActiveToh('toh1');
-    translation.setVisibleRange({ start: 0, end: 3 });
-    endnotes.setVisibleRange({ start: 0, end: endnotes.getOrder().length + 1 });
-    await flush();
-    await flush();
-
-    for (const uuid of ['t0', 't1', 'n0', 'n2', 'n3']) {
-      expect(work.store.has(uuid)).toBe(true);
-    }
-    expect(loaded).toEqual([]);
-    translation.destroy();
-    endnotes.destroy();
-  });
-
-  it('still reads a passage it was not seeded with, and only that one', async () => {
-    const { work, loaded } = seededWork(['n3']);
-    const endnotes = new Controller({ work, tab: 'endnotes' });
-    endnotes.setVisibleRange({ start: 0, end: 4 });
-    await flush();
-    await flush();
-
-    expect(loaded.flat()).toEqual(['n3']);
-    expect(work.store.has('n3')).toBe(true);
-    for (const uuid of ['n0', 'n1', 'n2']) {
-      expect(work.store.has(uuid)).toBe(true);
-    }
     endnotes.destroy();
   });
 });

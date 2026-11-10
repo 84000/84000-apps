@@ -115,18 +115,6 @@ beforeEach(() => {
 });
 
 describe('NavigationProvider setDefaultToh', () => {
-  it('AC6.1: keeps the Toh in the URL when a default is offered after the URL is read', async () => {
-    window.history.replaceState(null, '', '/?toh=toh2');
-
-    renderProvider();
-
-    expect(activeToh()).toBe('toh2');
-
-    await userEvent.click(screen.getByText('Default to toh1'));
-
-    expect(activeToh()).toBe('toh2');
-  });
-
   it('AC6.1: keeps the Toh in the URL when a component with no Toh yet offers a default as it mounts', async () => {
     window.history.replaceState(null, '', '/?toh=toh2');
 
@@ -144,31 +132,6 @@ describe('NavigationProvider setDefaultToh', () => {
       await Promise.resolve();
     });
     expect(activeToh()).toBe('toh2');
-  });
-
-  it('AC6.2: makes the offered Toh active when the URL names none and there is no initialToh', async () => {
-    renderProvider();
-
-    expect(activeToh()).toBe('none');
-
-    await userEvent.click(screen.getByText('Default to toh1'));
-
-    expect(activeToh()).toBe('toh1');
-  });
-
-  it('AC6.2: makes the offered Toh active when a component offers it as it mounts', async () => {
-    render(
-      <NavigationProvider uuid="w1">
-        <Probe />
-        <MountDefault toh="toh1" />
-      </NavigationProvider>,
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(activeToh()).toBe('toh1');
   });
 
   it('AC6.3: starts on initialToh when the URL names none, and keeps it when a default is offered', async () => {

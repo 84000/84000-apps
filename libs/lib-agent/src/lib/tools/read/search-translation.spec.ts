@@ -70,13 +70,16 @@ describe('search-translation tool', () => {
 
   it('searches the published copy by default', async () => {
     mockedSearch.mockResolvedValue(empty());
-    await tool.handler({ text: 'dharma', uuid: 'work-1', toh: '1' }, extra);
+    await tool.handler(
+      { text: 'dharma', uuid: 'work-1', toh: '1', useRegex: true },
+      extra,
+    );
     expect(mockedSearch).toHaveBeenCalledWith({
       client,
       text: 'dharma',
       uuid: 'work-1',
       toh: '1',
-      useRegex: undefined,
+      useRegex: true,
       source: 'published',
     });
     expect(tool.description).toMatch(/published snapshot/);

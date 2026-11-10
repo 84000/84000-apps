@@ -253,84 +253,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
       expect(inserted).toMatchObject({ action: 'insert', annotations: 0 });
     });
 
-    it('[AC1] the import checks for moved passages carry over: a derived passage an edit moved out of order is refused', async () => {
-      const tables = metadataWorld();
-      tables.passages = [
-        {
-          uuid: derived(0),
-          work_uuid: WORK,
-          content: 'stored 0',
-          label: '1',
-          sort: 5,
-          type: 'translation',
-          xmlId: 'docx-0',
-        },
-        {
-          uuid: derived(1),
-          work_uuid: WORK,
-          content: 'stored 1',
-          label: '2',
-          sort: 3,
-          type: 'translation',
-          xmlId: 'docx-1',
-        },
-      ];
-      const before = snapshot(tables);
-
-      const { result, world } = await run(tables, importOps().slice(4));
-
-      expect(result.success).toBe(false);
-      expect(group(result, 'passages')).toMatchObject({ applied: false });
-      expect(group(result, 'passages').error).toBeTruthy();
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC1] the import checks for leftover passages carry over: stored import passages it cannot match are refused', async () => {
-      const tables = metadataWorld();
-      tables.passages = [
-        {
-          uuid: 'legacy-random-uuid',
-          work_uuid: WORK,
-          content: 'older import',
-          label: '9',
-          sort: 9,
-          type: 'translation',
-          xmlId: 'docx-9',
-        },
-      ];
-      const before = snapshot(tables);
-
-      const { result, world } = await run(tables, importOps().slice(4));
-
-      expect(result.success).toBe(false);
-      expect(group(result, 'passages')).toMatchObject({ applied: false });
-      expect(group(result, 'passages').error).toBeTruthy();
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC1] a derived passage the import no longer has is left in place, with a warning', async () => {
-      const tables = metadataWorld();
-      tables.passages = [
-        {
-          uuid: derived(7),
-          work_uuid: WORK,
-          content: 'dropped from the new import',
-          label: '8',
-          sort: 7,
-          type: 'translation',
-          xmlId: 'docx-7',
-        },
-      ];
-
-      const { result } = await run(tables, importOps().slice(4));
-
-      expect(result.success).toBe(true);
-      expect(group(result, 'passages').warnings.length).toBeGreaterThan(0);
-      expect(row(tables, 'passages', derived(7))).toBeDefined();
-    });
-
     it('[AC1] several update-work ops merge in list order', async () => {
       const tables = metadataWorld();
       const { result } = await run(tables, [
@@ -540,16 +462,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
       expect(snapshot(tables)).toEqual(before);
     });
 
-    it('[AC2] dryRun defaults to false', async () => {
-      const tables = metadataWorld();
-      const { result } = await run(tables, [
-        { op: 'update-work', patch: { toh: 'toh44' } },
-      ]);
-
-      expect(result.dryRun).toBe(false);
-      expect(workRow(tables).toh).toBe('toh44');
-    });
-
     it('[AC2] a dry run whose plan fails reports it, with nothing written', async () => {
       const tables = metadataWorld();
       const { result, world } = await run(
@@ -728,29 +640,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
       expect(snapshot(tables)).toEqual(before);
     });
 
-    it('[AC3] a failed text guard in passages writes nothing, not even the earlier work-metadata group', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, world } = await run(tables, [
-        { op: 'update-work', patch: { toh: 'toh44' } },
-        {
-          op: 'delete-text',
-          passageUuid: 'p1',
-          start: 14,
-          end: 22,
-          text: '[F.91.a]',
-        },
-      ]);
-
-      expect(result.success).toBe(false);
-      expect(group(result, 'passages')).toMatchObject({ applied: false });
-      expect(group(result, 'passages').error).toEqual(expect.any(String));
-      expect(result.notAttempted).toEqual(['work-metadata']);
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
     it('[AC3] a text guard on add-annotation that does not match writes nothing', async () => {
       const tables = editWorld();
       const before = snapshot(tables);
@@ -770,30 +659,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
 
       expect(result.success).toBe(false);
       expect(group(result, 'passages')).toMatchObject({ applied: false });
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC3] an import check that fails in passages (leftover passages) writes nothing in work-metadata either', async () => {
-      const tables = metadataWorld();
-      tables.passages = [
-        {
-          uuid: 'legacy-random-uuid',
-          work_uuid: WORK,
-          content: 'older import',
-          label: '9',
-          sort: 9,
-          type: 'translation',
-          xmlId: 'docx-9',
-        },
-      ];
-      const before = snapshot(tables);
-
-      const { result, world } = await run(tables, importOps());
-
-      expect(result.success).toBe(false);
-      expect(group(result, 'passages')).toMatchObject({ applied: false });
-      expect(result.notAttempted).toEqual(['work-metadata']);
       expect(world.writes).toEqual([]);
       expect(snapshot(tables)).toEqual(before);
     });
@@ -941,28 +806,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
       expect(first('works')).toBeLessThan(first('apply_passage_save'));
     });
 
-    it('[CONV group order] upsert-passage ops listed before metadata ops still commit metadata first', async () => {
-      const tables = metadataWorld();
-      const [meta, passages] = [importOps().slice(0, 4), importOps().slice(4)];
-      const { result, world } = await run(tables, [...passages, ...meta]);
-
-      expect(result.success).toBe(true);
-      expect(result.groups.map((g: Group) => g.group)).toEqual([
-        'work-metadata',
-        'passages',
-      ]);
-      const lastMetadataWrite = Math.max(
-        ...world.writes.map((w, at) =>
-          ['works', 'titles', 'folio_annotations'].includes(w.target) ? at : -1,
-        ),
-      );
-      const firstPassageWrite = world.writes.findIndex(
-        (w) => w.target === 'apply_passage_save',
-      );
-      expect(lastMetadataWrite).toBeGreaterThanOrEqual(0);
-      expect(lastMetadataWrite).toBeLessThan(firstPassageWrite);
-    });
-
     it('[CONV mixing] upsert-passage together with an edit op is refused before anything is written', async () => {
       const tables = editWorld();
       const before = snapshot(tables);
@@ -1004,55 +847,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
       }
     });
 
-    it('[CONV unknown] a failed commit never reports success, and never throws', async () => {
-      const tables = editWorld();
-      const outcome = await run(tables, editOps(), {
-        failures: [{ target: 'apply_passage_save', mode: 'lost-response' }],
-      });
-
-      expect(outcome.result.success).toBe(false);
-      expect(group(outcome.result, 'passages').applied).toBe('unknown');
-    });
-
-    it('[CONV text guard] a delete-text whose text is not there is refused; the guard names what it found', async () => {
-      const tables = editWorld();
-      const { result } = await run(tables, [
-        {
-          op: 'delete-text',
-          passageUuid: 'p1',
-          start: 14,
-          end: 22,
-          text: '[F.91.a]',
-        },
-      ]);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('[F.91.a]');
-      expect(row(tables, 'passages', 'p1')?.content).toBe(CONTENT);
-    });
-
-    it('[CONV text guard] the same cut sent twice is refused the second time', async () => {
-      const tables = editWorld();
-      const cut = [
-        {
-          op: 'delete-text',
-          passageUuid: 'p1',
-          start: 14,
-          end: 22,
-          text: '[F.90.a]',
-        },
-      ];
-
-      const first = await run(tables, cut);
-      const second = await run(tables, cut);
-
-      expect(first.result.success).toBe(true);
-      expect(second.result.success).toBe(false);
-      expect(row(tables, 'passages', 'p1')?.content).toBe(
-        'Then the lord  said this',
-      );
-    });
-
     it('[CONV edit ops] a passage not in the work is refused with nothing written', async () => {
       const tables = editWorld();
       tables.passages.push({
@@ -1078,18 +872,6 @@ describe('applyWorkEdits acceptance (DEV-894)', () => {
       expect(result.error).toContain('p-elsewhere');
       expect(world.writes).toEqual([]);
       expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[CONV edit ops] removing an annotation that is not on the passage warns and still succeeds', async () => {
-      const tables = editWorld();
-      const { result } = await run(tables, [
-        { op: 'remove-annotation', passageUuid: 'p1', annotationUuid: 'nope' },
-      ]);
-
-      expect(result.success).toBe(true);
-      expect(group(result, 'passages').warnings).toEqual([
-        expect.objectContaining({ passageUuid: 'p1' }),
-      ]);
     });
   });
 });

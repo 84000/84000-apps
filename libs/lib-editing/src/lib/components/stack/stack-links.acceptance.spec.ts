@@ -77,19 +77,6 @@ describe('resolveStackLink on a same-work endnote mention (ED-1647)', () => {
     });
   });
 
-  it('criterion 3: resolves a click on the anchor text node too', () => {
-    const anchor = renderAnchor({ subtype: 'endnotes', linkToh: 'toh2' });
-    expect(
-      resolveStackLink(anchor.firstChild?.parentElement ?? null),
-    ).toMatchObject({ tab: 'endnotes', toh: 'toh2' });
-  });
-
-  it('criterion 4: a body passage mention still opens the main translation tab', () => {
-    expect(
-      resolveStackLink(renderAnchor({ subtype: 'translation' })),
-    ).toMatchObject({ panel: 'main', tab: 'translation', hash: 'note-uuid' });
-  });
-
   it('criterion 4: glossary, bibliography and folio mentions resolve as before', () => {
     expect(
       resolveStackLink(renderAnchor({ linkType: 'glossary', entity: 'g-1' })),

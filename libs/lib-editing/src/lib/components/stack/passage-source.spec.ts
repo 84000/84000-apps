@@ -407,7 +407,7 @@ describe('graphqlPassageSource prime', () => {
     expect((await loading).map((s) => s.uuid)).toEqual(['p5']);
     expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledTimes(1);
     expect(clientGraphql.getTranslationBlocksAround).toHaveBeenCalledWith(
-      expect.objectContaining({ passageUuid: 'p5' }),
+      expect.objectContaining({ passageUuid: 'p5', maxPassages: 3 }),
     );
     expect(clientGraphql.getTranslationBlocks).not.toHaveBeenCalled();
   });

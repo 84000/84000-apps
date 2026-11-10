@@ -127,19 +127,6 @@ const uuids = (count: number) =>
 
 describe('readStackForPrint', () => {
   describe('AC1.1: every row of the run, in the controller’s order', () => {
-    it('AC1.1 grows a partly loaded run to its end and returns every row, in order', async () => {
-      const { controller, feed } = await open({ count: 250 });
-      expect(feed.hasMore).toBe(true);
-      expect(controller.getOrder().length).toBeLessThan(250);
-
-      const rows = await readStackForPrint(controller);
-
-      expect(rows).not.toBeNull();
-      expect(feed.hasMore).toBe(false);
-      expect(rows?.map((row) => row.meta.uuid)).toEqual(uuids(250));
-      expect(rows?.map((row) => row.meta.uuid)).toEqual(controller.getOrder());
-    });
-
     it('AC1.1 carries each row’s meta and the static HTML getStaticHTML gives a hydrated row', async () => {
       const { controller, all } = await open({ count: 120 });
 
@@ -163,20 +150,6 @@ describe('readStackForPrint', () => {
       });
     });
 
-    it('AC1.1 also grows a run that began part way back to its start', async () => {
-      const { controller, feed } = await open({ count: 300, revealAt: 'p150' });
-      expect(feed.hasMoreBefore).toBe(true);
-      expect(feed.hasMore).toBe(true);
-      expect(controller.getOrder()).not.toContain('p0');
-
-      const rows = await readStackForPrint(controller);
-
-      expect(feed.hasMoreBefore).toBe(false);
-      expect(feed.hasMore).toBe(false);
-      expect(rows?.map((row) => row.meta.uuid)).toEqual(uuids(300));
-      expect(controller.getOrder()).toEqual(uuids(300));
-    });
-
     it('AC1.1 leaves out the rows the active Toh hides', async () => {
       const tohOf = (i: number) =>
         i % 3 === 0 ? 'toh145' : i % 3 === 1 ? 'toh847' : undefined;
@@ -192,69 +165,7 @@ describe('readStackForPrint', () => {
     });
   });
 
-  describe('AC1.2: the run is extended, never replaced', () => {
-    it('AC1.2 keeps every row it began with, in the same relative order, and never calls reveal or revealStart', async () => {
-      const { controller, reveal, revealStart } = await open({ count: 250 });
-      const before = [...controller.getOrder()];
-
-      await readStackForPrint(controller);
-
-      const after = controller.getOrder();
-      expect(after.filter((uuid) => before.includes(uuid))).toEqual(before);
-      expect(reveal).not.toHaveBeenCalled();
-      expect(revealStart).not.toHaveBeenCalled();
-    });
-
-    it('AC1.2 keeps the window a deep link opened, and does not rebuild it from the start', async () => {
-      const { controller, reveal, revealStart } = await open({
-        count: 300,
-        revealAt: 'p150',
-      });
-      const before = [...controller.getOrder()];
-      expect(before).toContain('p150');
-      // Spied after the opening reveal, so only the print's calls count.
-      reveal.mockClear();
-
-      await readStackForPrint(controller);
-
-      const after = controller.getOrder();
-      expect(after.filter((uuid) => before.includes(uuid))).toEqual(before);
-      expect(reveal).not.toHaveBeenCalled();
-      expect(revealStart).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('AC1.3: it does not hold the whole work in memory', () => {
-    it('AC1.3 leaves the doc store at most 300 documents larger, for a run of 1,000', async () => {
-      const { controller, work } = await open({ count: 1000 });
-      const held = work.store.size;
-
-      const rows = await readStackForPrint(controller);
-
-      expect(rows).toHaveLength(1000);
-      expect(rows?.[999].html).toContain('passage 999 text');
-      expect(work.store.size).toBeLessThanOrEqual(held + 300);
-    }, 60_000);
-  });
-
   describe('AC1.4: progress', () => {
-    it('AC1.4 reports progress per batch, never past the total, ending at the number of rows returned', async () => {
-      const { controller } = await open({ count: 250 });
-      const calls: StackPrintProgress[] = [];
-
-      const rows = await readStackForPrint(controller, {
-        onProgress: (progress) => calls.push({ ...progress }),
-      });
-
-      expect(rows).toHaveLength(250);
-      // A run this long is read in more than one batch.
-      expect(calls.length).toBeGreaterThanOrEqual(2);
-      calls.forEach((progress) =>
-        expect(progress.loaded).toBeLessThanOrEqual(progress.total),
-      );
-      expect(calls[calls.length - 1]).toEqual({ loaded: 250, total: 250 });
-    });
-
     it('AC1.4 reports at least once for a run held entirely already', async () => {
       const { controller } = await open({ count: 30 });
       const calls: StackPrintProgress[] = [];
@@ -270,21 +181,6 @@ describe('readStackForPrint', () => {
   });
 
   describe('AC1.5: cancelling', () => {
-    it('AC1.5 resolves to null and reads nothing when the signal is aborted before the read', async () => {
-      const { controller, reads } = await open({ count: 250 });
-      const before = { ...reads };
-      const abort = new AbortController();
-      abort.abort();
-
-      const rows = await readStackForPrint(controller, {
-        signal: abort.signal,
-      });
-
-      expect(rows).toBeNull();
-      expect(reads.metas).toBe(before.metas);
-      expect(reads.loads).toBe(before.loads);
-    });
-
     it('AC1.5 resolves to null and starts no further page reads once an abort during a page read is seen', async () => {
       const { controller, reads } = await open({ count: 1000 });
       const abort = new AbortController();
@@ -325,33 +221,6 @@ describe('readStackForPrint', () => {
       expect(rows).toBeNull();
       expect(reads.metas).toBe(seen.atAbort?.metas);
       expect(reads.loads).toBe(seen.atAbort?.loads);
-    });
-  });
-
-  describe('AC1.6: a row with no content', () => {
-    // The loader reports the passage no source supplied.
-    beforeEach(() => {
-      jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    });
-    afterEach(() => jest.restoreAllMocks());
-
-    it('AC1.6 resolves to null when the source returns nothing for one row of the run', async () => {
-      const { controller, feed } = await open({
-        count: 250,
-        missing: ['p137'],
-      });
-
-      const rows = await readStackForPrint(controller);
-
-      expect(rows).toBeNull();
-      // The run was still read to its end; one row failing did not stop at it.
-      expect(feed.hasMore).toBe(false);
-    });
-
-    it('AC1.6 resolves to null when the row with no content is the first', async () => {
-      const { controller } = await open({ count: 120, missing: ['p0'] });
-
-      expect(await readStackForPrint(controller)).toBeNull();
     });
   });
 

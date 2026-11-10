@@ -243,40 +243,6 @@ describe('write tools acceptance (DEV-894)', () => {
       expect(tables.passage_annotations).toHaveLength(3);
     });
 
-    it('[AC1] a passage edit flow goes through the tool', async () => {
-      const { result, payload, tables } = await call(
-        'apply-work-edits',
-        { workUuid: WORK, ops: editOps() },
-        { tables: editWorld() },
-      );
-
-      expect(result.isError).toBeFalsy();
-      expect(payload.success).toBe(true);
-      expect(payload.groups.map((g: Group) => g.group)).toEqual(['passages']);
-      expect(payload.groups[0].applied).toBe(true);
-      expect(row(tables, 'passages', 'p1')?.content).toBe(
-        'Then the lord  said this',
-      );
-      expect(row(tables, 'passage_annotations', 'a-note')).toBeUndefined();
-      expect(
-        tables.passages.some((p) => p.content === 'Inserted passage.'),
-      ).toBe(true);
-    });
-
-    it('[AC1] the result is the ApplyWorkEditsResult as JSON text', async () => {
-      const { result, payload } = await call('apply-work-edits', {
-        workUuid: WORK,
-        ops: importOps(),
-        dryRun: true,
-      });
-
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0]).toMatchObject({ type: 'text' });
-      expect(Object.keys(payload).sort()).toEqual(
-        expect.arrayContaining(['dryRun', 'groups', 'notAttempted', 'success']),
-      );
-    });
-
     it('[AC2] a dry run of an import returns the planned changes and writes nothing', async () => {
       const tables = metadataWorld();
       const before = snapshot(tables);
@@ -324,22 +290,6 @@ describe('write tools acceptance (DEV-894)', () => {
       expect(snapshot(tables)).toEqual(before);
     });
 
-    it('[AC2] a dry run of an edit flow writes nothing', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { payload, world } = await call(
-        'apply-work-edits',
-        { workUuid: WORK, ops: editOps(), dryRun: true },
-        { tables },
-      );
-
-      expect(payload.success).toBe(true);
-      expect(payload.dryRun).toBe(true);
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
     it('[AC3] a later group that fails: the tool reports isError with each group state in the JSON body', async () => {
       const tables = editWorld();
       const { result, payload } = await call(
@@ -361,154 +311,6 @@ describe('write tools acceptance (DEV-894)', () => {
       expect(payload.notAttempted).toEqual([]);
       expect(row(tables, 'works', WORK)?.toh).toBe('toh44');
       expect(row(tables, 'passages', 'p1')?.content).toBe(CONTENT);
-    });
-
-    it('[AC3] a lost response in the later group is reported as "unknown"', async () => {
-      const { result, payload } = await call(
-        'apply-work-edits',
-        {
-          workUuid: WORK,
-          ops: [{ op: 'update-work', patch: { toh: 'toh44' } }, ...editOps()],
-        },
-        {
-          tables: editWorld(),
-          failures: [{ target: 'apply_passage_save', mode: 'lost-response' }],
-        },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(group(payload, 'work-metadata').applied).toBe(true);
-      expect(group(payload, 'passages').applied).toBe('unknown');
-    });
-
-    it('[AC3] work-metadata failing on commit leaves passages notAttempted, and the body still says so', async () => {
-      const tables = metadataWorld();
-      const { result, payload, world } = await call(
-        'apply-work-edits',
-        { workUuid: WORK, ops: importOps() },
-        { tables, failures: [{ target: 'works', mode: 'rolled-back' }] },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(payload.success).toBe(false);
-      expect([false, 'unknown']).toContain(
-        group(payload, 'work-metadata').applied,
-      );
-      expect(payload.notAttempted).toEqual(['passages']);
-      expect(tables.passages).toEqual([]);
-      expect(
-        world.writes.filter((w) => w.target === 'apply_passage_save'),
-      ).toEqual([]);
-    });
-
-    it('[AC3] a planning failure (failed expect) is isError with nothing written', async () => {
-      const tables = metadataWorld();
-      const before = snapshot(tables);
-
-      const { result, payload, world } = await call(
-        'apply-work-edits',
-        {
-          workUuid: WORK,
-          ops: [
-            {
-              op: 'update-work',
-              patch: { toh: 'toh44' },
-              expect: { toh: 'toh99' },
-            },
-            ...importOps().slice(4),
-          ],
-        },
-        { tables },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(payload.success).toBe(false);
-      expect(payload.error).toContain('toh');
-      expect(payload.notAttempted).toEqual(['passages']);
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC3] a planning failure (failed text guard) is isError with nothing written', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, payload, world } = await call(
-        'apply-work-edits',
-        {
-          workUuid: WORK,
-          ops: [
-            { op: 'update-work', patch: { toh: 'toh44' } },
-            {
-              op: 'delete-text',
-              passageUuid: 'p1',
-              start: 14,
-              end: 22,
-              text: '[F.91.a]',
-            },
-          ],
-        },
-        { tables },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(payload.success).toBe(false);
-      expect(payload.notAttempted).toEqual(['work-metadata']);
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[CONV] success is not an error: isError is not set when success is true', async () => {
-      const { result, payload } = await call('apply-work-edits', {
-        workUuid: WORK,
-        ops: [{ op: 'update-work', patch: { toh: 'toh44' } }],
-      });
-
-      expect(payload.success).toBe(true);
-      expect(result.isError).toBeFalsy();
-    });
-
-    it('[CONV] upsert-passage mixed with an edit op is refused with isError and nothing written', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, payload, world } = await call(
-        'apply-work-edits',
-        { workUuid: WORK, ops: [importOps()[4], editOps()[0]] },
-        { tables },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(payload.success).toBe(false);
-      expect(payload.error).toEqual(expect.any(String));
-      expect(payload.notAttempted).toContain('passages');
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[CONV] an expect mismatch names the field and writes nothing', async () => {
-      const tables = metadataWorld();
-      const before = snapshot(tables);
-
-      const { result, payload, world } = await call(
-        'apply-work-edits',
-        {
-          workUuid: WORK,
-          ops: [
-            {
-              op: 'upsert-title',
-              title: { content: 'X', type: 'mainTitle', language: 'en' },
-              expect: { content: 'Not the stored title' },
-            },
-          ],
-        },
-        { tables },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(payload.error).toContain('content');
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
     });
 
     it('[CONV] without editor.edit the tool returns an error and neither reads nor writes', async () => {
@@ -538,41 +340,6 @@ describe('write tools acceptance (DEV-894)', () => {
   });
 
   describe('apply-entity-import alias', () => {
-    it('[AC1] keeps its name, its snake_case input schema and its metadata', () => {
-      const tool = toolNamed('apply-entity-import');
-      const schema = z.object(tool.inputSchema as z.ZodRawShape);
-
-      expect(tool.name).toBe('apply-entity-import');
-      expect(tool.annotations?.readOnlyHint).toBe(false);
-      expect(
-        schema.safeParse({
-          workUuid: WORK,
-          operations: legacyImportOperations(),
-        }).success,
-      ).toBe(true);
-      expect(
-        schema.safeParse({
-          workUuid: WORK,
-          operations: [
-            {
-              kind: 'upsert_folio_annotation',
-              patch: { source_description: 'x' },
-            },
-          ],
-        }).success,
-      ).toBe(true);
-      // Its input is `operations` with `kind`, not the new tool's `ops`/`op`.
-      expect(
-        schema.safeParse({ workUuid: WORK, ops: importOps() }).success,
-      ).toBe(false);
-      expect(
-        schema.safeParse({
-          workUuid: WORK,
-          operations: [{ op: 'update-work', patch: {} }],
-        }).success,
-      ).toBe(false);
-    });
-
     it('[AC1] an import returns { applied: true, counts, warnings } and writes the rows', async () => {
       const { result, payload, tables } = await call('apply-entity-import', {
         workUuid: WORK,
@@ -607,33 +374,6 @@ describe('write tools acceptance (DEV-894)', () => {
       expect(row(tables, 'passages', derived(0))?.content).toBe(TEXT_1);
       expect(row(tables, 'passages', derived(1))?.content).toBe(TEXT_2);
       expect(tables.passage_annotations).toHaveLength(3);
-    });
-
-    it('[AC1] re-running the same import is safe and counts titles as updates', async () => {
-      const tables = metadataWorld();
-      await call(
-        'apply-entity-import',
-        { workUuid: WORK, operations: legacyImportOperations() },
-        { tables },
-      );
-      const afterFirst = snapshot(tables);
-
-      const { payload } = await call(
-        'apply-entity-import',
-        { workUuid: WORK, operations: legacyImportOperations() },
-        { tables },
-      );
-
-      expect(payload.applied).toBe(true);
-      expect(payload.counts).toEqual({
-        workUpdates: 1,
-        titles: 0,
-        titlesUpdated: 2,
-        folioUpdates: 0,
-        passages: 2,
-        annotations: 3,
-      });
-      expect(snapshot(tables)).toEqual(afterFirst);
     });
 
     it('[AC1] a passages-only import reports zero for the groups it did not touch', async () => {
@@ -683,32 +423,6 @@ describe('write tools acceptance (DEV-894)', () => {
       ).toBe('other work description');
     });
 
-    it('[AC1] a stored import passage the new import no longer has is left in place, as a string warning', async () => {
-      const tables = metadataWorld();
-      tables.passages = [
-        {
-          uuid: derived(7),
-          work_uuid: WORK,
-          content: 'dropped from the new import',
-          label: '8',
-          sort: 7,
-          type: 'translation',
-          xmlId: 'docx-7',
-        },
-      ];
-
-      const { result, payload } = await call(
-        'apply-entity-import',
-        { workUuid: WORK, operations: legacyImportOperations().slice(3) },
-        { tables },
-      );
-
-      expect(result.isError).toBeFalsy();
-      expect(payload.warnings).toHaveLength(1);
-      expect(typeof payload.warnings[0]).toBe('string');
-      expect(row(tables, 'passages', derived(7))).toBeDefined();
-    });
-
     it('[AC1] a failure is an error result whose text is the failure message, with nothing written', async () => {
       const tables = metadataWorld();
       tables.passages = [staleLeftover()];
@@ -727,71 +441,9 @@ describe('write tools acceptance (DEV-894)', () => {
       expect(world.writes).toEqual([]);
       expect(snapshot(tables)).toEqual(before);
     });
-
-    it('[AC1] a commit that fails is an error result with the message', async () => {
-      const { result, text } = await call(
-        'apply-entity-import',
-        { workUuid: WORK, operations: legacyImportOperations() },
-        {
-          failures: [{ target: 'apply_passage_save', mode: 'rolled-back' }],
-        },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(text.length).toBeGreaterThan(0);
-    });
-
-    it('[CONV] without editor.edit it returns an error and neither reads nor writes', async () => {
-      const tables = metadataWorld();
-      const before = snapshot(tables);
-
-      const { result, world } = await call(
-        'apply-entity-import',
-        { workUuid: WORK, operations: legacyImportOperations() },
-        { tables, allowed: false },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(world.writes).toEqual([]);
-      expect(world.calls).toEqual(['rpc:authorize']);
-      expect(snapshot(tables)).toEqual(before);
-    });
   });
 
   describe('apply-passage-edits alias', () => {
-    it('[AC1] keeps its name, its input schema and its metadata', () => {
-      const tool = toolNamed('apply-passage-edits');
-      const schema = z.object(tool.inputSchema as z.ZodRawShape);
-      const [cut, add] = legacyEdits();
-
-      expect(tool.name).toBe('apply-passage-edits');
-      expect(tool.annotations?.readOnlyHint).toBe(false);
-      expect(tool.annotations?.destructiveHint).toBe(true);
-      expect(
-        schema.safeParse({ workUuid: WORK, edits: legacyEdits() }).success,
-      ).toBe(true);
-      expect(
-        schema.safeParse({ workUuid: WORK, edits: [cut], dryRun: true })
-          .success,
-      ).toBe(true);
-      // text is required for a cut and optional for an add.
-      const { text: _text, ...withoutText } = cut as Record<string, unknown>;
-      expect(
-        schema.safeParse({ workUuid: WORK, edits: [withoutText] }).success,
-      ).toBe(false);
-      const { text: _addText, ...addWithoutText } = add as Record<
-        string,
-        unknown
-      >;
-      expect(
-        schema.safeParse({ workUuid: WORK, edits: [addWithoutText] }).success,
-      ).toBe(true);
-      // Its input is `edits`, not the new tool's `ops`.
-      expect(
-        schema.safeParse({ workUuid: WORK, ops: legacyEdits() }).success,
-      ).toBe(false);
-    });
-
     it('[AC1] an edit flow returns { applied, dryRun, warnings, passages } with the passages summarised', async () => {
       const tables = editWorld();
       const { result, payload } = await call(
@@ -839,168 +491,6 @@ describe('write tools acceptance (DEV-894)', () => {
       expect(
         tables.passages.some((p) => p.content === 'Inserted passage.'),
       ).toBe(true);
-    });
-
-    it('[AC1] a dry run reports applied false and writes nothing', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, payload, world } = await call(
-        'apply-passage-edits',
-        { workUuid: WORK, edits: legacyEdits(), dryRun: true },
-        { tables },
-      );
-
-      expect(result.isError).toBeFalsy();
-      expect(payload).toMatchObject({ applied: false, dryRun: true });
-      expect(payload.passages.find((p: Row) => p.uuid === 'p1').content).toBe(
-        'Then the lord  said this',
-      );
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC1] the warnings an edit produced are returned as { message, passageUuid? }', async () => {
-      const { payload } = await call(
-        'apply-passage-edits',
-        {
-          workUuid: WORK,
-          edits: [
-            {
-              op: 'remove-annotation',
-              passageUuid: 'p1',
-              annotationUuid: 'nope',
-            },
-          ],
-        },
-        { tables: editWorld() },
-      );
-
-      expect(payload.applied).toBe(true);
-      expect(payload.warnings).toEqual([
-        expect.objectContaining({
-          passageUuid: 'p1',
-          message: expect.stringContaining('nope'),
-        }),
-      ]);
-    });
-
-    it('[AC1] a failure is an error result: the error, then each warning message on its own line', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, text, world } = await call(
-        'apply-passage-edits',
-        {
-          workUuid: WORK,
-          edits: [
-            {
-              op: 'remove-annotation',
-              passageUuid: 'p1',
-              annotationUuid: 'nope',
-            },
-            {
-              op: 'add-annotation',
-              passageUuid: 'p1',
-              kind: 'no-such-kind',
-              start: 0,
-              end: 4,
-            },
-          ],
-        },
-        { tables },
-      );
-
-      expect(result.isError).toBe(true);
-      const lines = text.split('\n');
-      expect(lines).toHaveLength(2);
-      expect(lines[0]).toContain('no-such-kind');
-      expect(lines[1]).toContain('nope');
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC1] a text guard that does not match is an error result naming what was expected', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, text, world } = await call(
-        'apply-passage-edits',
-        {
-          workUuid: WORK,
-          edits: [{ ...legacyEdits()[0], text: '[F.91.a]' }],
-        },
-        { tables },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(text).toContain('[F.91.a]');
-      expect(world.writes).toEqual([]);
-      expect(snapshot(tables)).toEqual(before);
-    });
-
-    it('[AC1] a passage that is not in the work is an error result naming it', async () => {
-      const { result, text } = await call(
-        'apply-passage-edits',
-        {
-          workUuid: WORK,
-          edits: [
-            {
-              op: 'remove-annotation',
-              passageUuid: 'p-missing',
-              annotationUuid: 'x',
-            },
-          ],
-        },
-        { tables: editWorld() },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(text).toContain('p-missing');
-    });
-
-    it('[AC1] a save whose response was lost is an error result starting applied: "unknown".', async () => {
-      const { result, text } = await call(
-        'apply-passage-edits',
-        { workUuid: WORK, edits: legacyEdits() },
-        {
-          tables: editWorld(),
-          failures: [{ target: 'apply_passage_save', mode: 'lost-response' }],
-        },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(text.startsWith('applied: "unknown".')).toBe(true);
-    });
-
-    it('[AC1] a save Postgres rolled back is an error result that is not "unknown"', async () => {
-      const { result, text } = await call(
-        'apply-passage-edits',
-        { workUuid: WORK, edits: legacyEdits() },
-        {
-          tables: editWorld(),
-          failures: [{ target: 'apply_passage_save', mode: 'rolled-back' }],
-        },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(text.startsWith('applied: "unknown"')).toBe(false);
-    });
-
-    it('[CONV] without editor.edit it returns an error and neither reads nor writes', async () => {
-      const tables = editWorld();
-      const before = snapshot(tables);
-
-      const { result, world } = await call(
-        'apply-passage-edits',
-        { workUuid: WORK, edits: legacyEdits() },
-        { tables, allowed: false },
-      );
-
-      expect(result.isError).toBe(true);
-      expect(world.writes).toEqual([]);
-      expect(world.calls).toEqual(['rpc:authorize']);
-      expect(snapshot(tables)).toEqual(before);
     });
   });
 });

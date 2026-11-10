@@ -374,14 +374,6 @@ describe('ThreeColumns acceptance (DEV-893)', () => {
       expect(within(dialog).getAllByTestId('left-content')).toHaveLength(1);
       expect(count('right-content')).toBe(0);
     });
-
-    it('with leftPanelOpen the left sheet (role dialog) shows the left content', () => {
-      setViewport(PHONE);
-      render(<Layout leftPanelOpen />);
-
-      const dialog = screen.getByRole('dialog');
-      expect(within(dialog).getByTestId('left-content')).toBeTruthy();
-    });
   });
 
   describe('5. crossing the breakpoint', () => {

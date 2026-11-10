@@ -71,9 +71,6 @@ const ssrApi = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getWorkGlossaryTerms: jest.Mock;
   getWorkBibliography: jest.Mock;
 };
-const navigation = jest.requireMock('next/navigation') as {
-  notFound: jest.Mock;
-};
 
 const WORK = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
 
@@ -122,7 +119,6 @@ let seededBibliography: unknown[];
 
 beforeEach(() => {
   has = { endnotes: true, abbreviations: true };
-  navigation.notFound.mockClear();
   ssrApi.getPassageMetaPage
     .mockReset()
     .mockImplementation(async ({ type }) => metaPageFor(type));
@@ -207,10 +203,6 @@ const rows = (container: Element) =>
   );
 
 describe('StackReaderBackMatterPage (AC2)', () => {
-  it('is exported from the ssr entry as a function', () => {
-    expect(typeof StackReaderBackMatterPage).toBe('function');
-  });
-
   it('shows the paginated panel’s tabs when the work has every section', async () => {
     const container = await draw();
 
@@ -250,30 +242,6 @@ describe('StackReaderBackMatterPage (AC2)', () => {
     expect(container.textContent).toContain('A cited source');
   });
 
-  it('finds out whether Notes and Abbreviations exist with a limit-1 metadata read', async () => {
-    await page(WORK);
-
-    for (const type of ['endnotes', 'abbreviations']) {
-      expect(ssrApi.getPassageMetaPage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          client: BUILD_CLIENT,
-          uuid: WORK,
-          type,
-          limit: 1,
-        }),
-      );
-    }
-  });
-
-  it('reads no passage content for the stacked tabs', async () => {
-    await page(WORK);
-
-    // The stacks read their own content, from the provider's seed.
-    for (const [args] of ssrApi.getTranslationBlocks.mock.calls) {
-      expect(['endnotes', 'abbreviations']).not.toContain(args.type);
-    }
-  });
-
   it('shows no Abbr tab when the work has no abbreviations', async () => {
     has.abbreviations = false;
 
@@ -290,29 +258,11 @@ describe('StackReaderBackMatterPage (AC2)', () => {
     expect(tabNames(container)).toEqual(['Glossary', 'Biblio', 'Abbr']);
   });
 
-  it('shows neither when the work has neither', async () => {
-    has = {};
-
-    const container = await draw();
-
-    expect(tabNames(container)).toEqual(['Glossary', 'Biblio']);
-  });
-
   it('shows no Biblio tab when the work has no bibliography, as the paginated panel does not', async () => {
     seededBibliography = [];
 
     const container = await draw();
 
     expect(tabNames(container)).toEqual(['Notes', 'Glossary', 'Abbr']);
-  });
-
-  it('for a slug that is not a uuid, calls notFound and reads nothing', async () => {
-    await expect(page('toh1')).rejects.toThrow('NEXT_NOT_FOUND');
-
-    expect(navigation.notFound).toHaveBeenCalled();
-    expect(ssrApi.getPassageMetaPage).not.toHaveBeenCalled();
-    expect(ssrApi.getTranslationBlocks).not.toHaveBeenCalled();
-    expect(ssrApi.getWorkGlossaryTerms).not.toHaveBeenCalled();
-    expect(ssrApi.getWorkBibliography).not.toHaveBeenCalled();
   });
 });

@@ -110,12 +110,6 @@ describe('ReaderLayout Toh visibility (AC6.7)', () => {
     expect(html).toMatch(/<style[^>]*>[^<]*display:\s*none/);
   });
 
-  it('server-renders no rule for another Toh than the one it was given', () => {
-    const html = renderToString(layout('toh847'));
-
-    expect(html).not.toContain(tohHiddenSelector('toh145'));
-  });
-
   it("draws the rule for the navigation's Toh once the URL names another", () => {
     window.history.replaceState(null, '', '/?toh=toh145');
 

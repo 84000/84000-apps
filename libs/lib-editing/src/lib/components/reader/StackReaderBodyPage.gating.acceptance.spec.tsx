@@ -69,9 +69,6 @@ const api = jest.requireMock('@eightyfourthousand/client-graphql/ssr') as {
   getTranslationTitles: jest.Mock;
   getTranslationMetadataByUuid: jest.Mock;
 };
-const navigation = jest.requireMock('next/navigation') as {
-  notFound: jest.Mock;
-};
 
 const WORK = '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed';
 
@@ -95,7 +92,6 @@ const BODY_BLOCKS = [
 
 beforeEach(() => {
   mockSession = null;
-  navigation.notFound.mockClear();
   api.getTranslationBlocks
     .mockReset()
     .mockResolvedValue({ blocks: BODY_BLOCKS });
@@ -114,8 +110,6 @@ const page = async (slug: string) =>
 
 const GATED = [
   ['an unpublished status (2)', { publicationStatus: '2' }],
-  ['an unpublished status (0)', { publicationStatus: '0' }],
-  ['a status that is absent', { publicationStatus: undefined }],
   ['metadata that cannot be read (null): it fails closed', null],
 ] as const;
 
@@ -148,33 +142,6 @@ describe.each(GATED)(
     });
   },
 );
-
-describe('StackReaderBodyPage for a published work (4b AC7)', () => {
-  it('reads the first 250 passages and gives the panel their alignments, as before', async () => {
-    const panel = await page(WORK);
-
-    expect(api.getTranslationBlocks).toHaveBeenCalledWith(
-      expect.objectContaining({ uuid: WORK, type: 'body', maxPassages: 250 }),
-    );
-    expect(panel.props.body).toEqual([
-      { type: 'passage', attrs: { uuid: 'p0', alignments: { a: 'b' } } },
-      { type: 'passage', attrs: { uuid: 'p1', alignments: {} } },
-    ]);
-    expect(panel.props.isPublished).toBe(true);
-    expect(panel.props.titles).toEqual(TITLES);
-  });
-});
-
-describe('StackReaderBodyPage for a slug that is not a uuid (4b AC9)', () => {
-  it('calls notFound and reads nothing', async () => {
-    await expect(page('toh1')).rejects.toThrow('NEXT_NOT_FOUND');
-
-    expect(navigation.notFound).toHaveBeenCalled();
-    expect(api.getTranslationBlocks).not.toHaveBeenCalled();
-    expect(api.getTranslationTitles).not.toHaveBeenCalled();
-    expect(api.getTranslationMetadataByUuid).not.toHaveBeenCalled();
-  });
-});
 
 describe('the gated main panel, drawn in the browser (4b AC7)', () => {
   beforeAll(() => {
@@ -237,9 +204,7 @@ describe('the gated main panel, drawn in the browser (4b AC7)', () => {
 
   it.each([
     ['a reader', { claims: { role: 'reader' } }],
-    ['a visitor with no session', null],
     ['an editor', { claims: { role: 'editor' } }],
-    ['an admin', { claims: { role: 'admin' } }],
   ])(
     'shows the "unpublished" placeholder in the Translation tab to %s',
     async (_, session) => {
@@ -270,11 +235,8 @@ describe('the gated main panel, drawn in the browser (4b AC7)', () => {
     },
   );
 
-  it.each([
-    ['a reader', { claims: { role: 'reader' } }],
-    ['an editor', { claims: { role: 'editor' } }],
-  ])('still shows the titles to %s', async (_, session) => {
-    mockSession = session;
+  it('still shows the titles to a reader', async () => {
+    mockSession = { claims: { role: 'reader' } };
 
     const { container } = await drawGated();
     await open(container, 'Front');

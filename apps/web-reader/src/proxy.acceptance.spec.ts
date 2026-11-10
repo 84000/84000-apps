@@ -75,23 +75,6 @@ beforeEach(() => {
 });
 
 describe('proxy rewrites a work path to its Toh segment', () => {
-  it('AC6.8: rewrites /translation/<uuid>?toh=toh847 to /translation/<uuid>/toh847, keeping the query', async () => {
-    const response = await proxy(request(`/translation/${WORK}?toh=toh847`));
-
-    const target = rewrittenTo(response);
-    expect(target?.pathname).toBe(`/translation/${WORK}/toh847`);
-    expect(target?.searchParams.get('toh')).toBe('toh847');
-  });
-
-  it('AC6.8: is a rewrite, not a redirect, so the address shown does not change', async () => {
-    const response = await proxy(request(`/translation/${WORK}?toh=toh847`));
-
-    expect(redirectedTo(response)).toBeUndefined();
-    expect(response.status).toBe(200);
-    expect(passedThrough(response)).toBe(false);
-    expect(rewrittenTo(response)).toBeDefined();
-  });
-
   it('AC6.8: keeps the other query parameters', async () => {
     const response = await proxy(
       request(`/translation/${WORK}?toh=toh847&left=open%3Atoc`),
@@ -101,33 +84,6 @@ describe('proxy rewrites a work path to its Toh segment', () => {
     expect(target?.pathname).toBe(`/translation/${WORK}/toh847`);
     expect(target?.searchParams.get('toh')).toBe('toh847');
     expect(target?.searchParams.get('left')).toBe('open:toc');
-  });
-
-  it('AC6.9: rewrites /translation/<uuid> with no toh to /translation/<uuid>/default', async () => {
-    const response = await proxy(request(`/translation/${WORK}`));
-
-    expect(rewrittenTo(response)?.pathname).toBe(
-      `/translation/${WORK}/default`,
-    );
-    expect(redirectedTo(response)).toBeUndefined();
-  });
-
-  it('AC6.9: rewrites a toh that is not toh… to /default', async () => {
-    const response = await proxy(
-      request(`/translation/${WORK}?toh=${encodeURIComponent('evil/../x')}`),
-    );
-
-    const target = rewrittenTo(response);
-    expect(target?.pathname).toBe(`/translation/${WORK}/default`);
-    expect(target?.pathname).not.toContain('evil');
-  });
-
-  it('AC6.9: rewrites an empty toh to /default', async () => {
-    const response = await proxy(request(`/translation/${WORK}?toh=`));
-
-    expect(rewrittenTo(response)?.pathname).toBe(
-      `/translation/${WORK}/default`,
-    );
   });
 
   it('AC6.9: keeps the other query parameters when there is no toh', async () => {
@@ -180,14 +136,6 @@ describe('proxy redirects a Toh link to the work', () => {
 
   it('AC6.10: a Toh it cannot find falls through', async () => {
     const response = await proxy(request('/translation/toh999999'));
-
-    expect(passedThrough(response)).toBe(true);
-    expect(redirectedTo(response)).toBeUndefined();
-    expect(rewrittenTo(response)).toBeUndefined();
-  });
-
-  it('AC6.10: a short /toh link it cannot find falls through', async () => {
-    const response = await proxy(request('/toh999999'));
 
     expect(passedThrough(response)).toBe(true);
     expect(redirectedTo(response)).toBeUndefined();

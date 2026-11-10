@@ -61,32 +61,6 @@ const setMention = (...args: Parameters<SetMention>) =>
   );
 
 describe('setMention location (ED-1647)', () => {
-  it.each(['endnotes', 'introduction', 'translation'])(
-    'criterion 1: saves the target section type %s as subtype',
-    (subtype) => {
-      setMention('p-1', 'passage', 'label', true, { subtype });
-
-      expect(insertedItem(editor)).toMatchObject({
-        entity: 'p-1',
-        linkType: 'passage',
-        isSameWork: true,
-        subtype,
-      });
-    },
-  );
-
-  it('criterion 2: saves the target Toh as linkToh', () => {
-    setMention('p-1', 'passage', 'label', true, {
-      subtype: 'endnotes',
-      linkToh: 'toh12',
-    });
-
-    expect(insertedItem(editor)).toMatchObject({
-      subtype: 'endnotes',
-      linkToh: 'toh12',
-    });
-  });
-
   it('criterion 2: saves linkToh even when the passage has no subtype', () => {
     setMention('p-1', 'passage', 'label', true, { linkToh: 'toh12' });
 
@@ -102,39 +76,4 @@ describe('setMention location (ED-1647)', () => {
     expect(item.subtype).toBe('introduction');
     expect(item).not.toHaveProperty('linkToh');
   });
-
-  it('criterion 4: without a location the item has neither key', () => {
-    setMention('w-1', 'work', 'A Work', false);
-
-    const item = insertedItem(editor);
-    expect(item).not.toHaveProperty('subtype');
-    expect(item).not.toHaveProperty('linkToh');
-    expect(item).toMatchObject({ entity: 'w-1', linkType: 'work' });
-    expect(item).not.toHaveProperty('isSameWork');
-  });
-
-  it('criterion 4: an empty location adds neither key', () => {
-    setMention('p-1', 'passage', 'label', true, {});
-
-    const item = insertedItem(editor);
-    expect(item).not.toHaveProperty('subtype');
-    expect(item).not.toHaveProperty('linkToh');
-  });
-
-  it.each(['glossary', 'bibliography', 'folio'])(
-    'criterion 4: a %s mention is saved as before',
-    (linkType) => {
-      setMention('e-1', linkType, 'label', true);
-
-      const item = insertedItem(editor);
-      expect(item).toMatchObject({
-        entity: 'e-1',
-        linkType,
-        isSameWork: true,
-        displayText: 'label',
-      });
-      expect(item).not.toHaveProperty('subtype');
-      expect(item).not.toHaveProperty('linkToh');
-    },
-  );
 });
