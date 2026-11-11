@@ -1,6 +1,7 @@
 import { isUuid } from '@eightyfourthousand/lib-utils';
 
 import type { DataClient } from '../../types';
+import * as plan from './plan';
 import {
   createGlossaryEntry,
   deleteGlossaryEntry,
@@ -849,6 +850,30 @@ describe('saveGlossaryEntries', () => {
   });
 
   describe('apply errors', () => {
+    it('fails without applying when planning throws', async () => {
+      const spy = jest.spyOn(plan, 'planSave').mockImplementationOnce(() => {
+        throw new Error('The stored state has nothing for r1');
+      });
+      const { client, applies } = fakeClient({ entries: [mind()] });
+      try {
+        const result = failed(
+          await saveGlossaryEntries({
+            client,
+            workUuid: W,
+            saves: [definitionSave()],
+          }),
+        );
+        expect(result).toMatchObject({
+          reason: 'failed',
+          outcomeUnknown: false,
+        });
+        expect(result.error).toContain('The stored state has nothing for r1');
+        expect(applies).toEqual([]);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it.each<[string, () => Answer, Record<string, unknown>]>([
       [
         'a permission error is forbidden',

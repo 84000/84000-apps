@@ -4,10 +4,10 @@ import type { DataClient } from '../../types';
 import { rolledBack } from '../../passage/save/commit';
 import {
   checkInput,
+  ENTRY_FIELDS,
   planSave,
-  sameMode,
-  sameNames,
-  sameNullable,
+  unchangedField,
+  type PlanFailure,
   type PlannedSave,
 } from './plan';
 import { countCitingAnnotations, readStored } from './stored';
@@ -50,6 +50,9 @@ const failure = (
   outcomeUnknown,
 });
 
+const message = (thrown: unknown) =>
+  thrown instanceof Error ? thrown.message : String(thrown);
+
 type ApplyError = { message: string; code?: string };
 
 type Applied =
@@ -72,9 +75,7 @@ const apply = async (
     // Sent, but with no answer to say whether it committed.
     answer = {
       data: null,
-      error: {
-        message: thrown instanceof Error ? thrown.message : String(thrown),
-      },
+      error: { message: message(thrown) },
     };
   }
 
@@ -138,10 +139,7 @@ const dryRunResult = async (
     annotations = await countCitingAnnotations(client, workUuid, rows);
   } catch (thrown) {
     console.error('Error counting glossary instances:', thrown);
-    return failure(
-      'failed',
-      `Nothing was saved: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
-    );
+    return failure('failed', `Nothing was saved: ${message(thrown)}`);
   }
   return {
     success: true,
@@ -198,10 +196,12 @@ export const saveGlossaryEntries = async ({
       continue;
     }
     if (!read.ok) return failure('failed', `Nothing was saved: ${read.error}`);
-    const planned = planSave(workUuid, saves, deletes, read.stored);
-    if ('reason' in planned && planned.retry) {
-      lastStale = planned.error;
-      continue;
+    let planned: PlannedSave | PlanFailure;
+    try {
+      planned = planSave(workUuid, saves, deletes, read.stored);
+    } catch (thrown) {
+      console.error('Error planning glossary save:', thrown);
+      return failure('failed', `Nothing was saved: ${message(thrown)}`);
     }
     if ('reason' in planned) {
       return failure(planned.reason, planned.error, false, planned.field);
@@ -239,41 +239,18 @@ export const glossaryEntryChange = (
   before: GlossaryEntry,
   after: GlossaryEntryChange,
 ): { change: GlossaryEntryChange; expect: GlossaryEntryExpect } => {
-  const change: GlossaryEntryChange = {};
-  const expect: GlossaryEntryExpect = {};
-  if (
-    after.authorityUuid !== undefined &&
-    after.authorityUuid !== before.authorityUuid
-  ) {
-    change.authorityUuid = after.authorityUuid;
-    expect.authorityUuid = before.authorityUuid;
+  const change: Record<string, unknown> = {};
+  const expect: Record<string, unknown> = {};
+  const copy = (value: unknown) => (Array.isArray(value) ? [...value] : value);
+  for (const key of ENTRY_FIELDS) {
+    if (unchangedField(key, after[key], before)) continue;
+    change[key] = copy(after[key]);
+    expect[key] = copy(before[key]);
   }
-  if (
-    after.definition !== undefined &&
-    !sameNullable(after.definition, before.definition)
-  ) {
-    change.definition = after.definition;
-    expect.definition = before.definition;
-  }
-  if (
-    after.definitionRend !== undefined &&
-    !sameNullable(after.definitionRend, before.definitionRend)
-  ) {
-    change.definitionRend = after.definitionRend;
-    expect.definitionRend = before.definitionRend;
-  }
-  if (
-    after.glossMode !== undefined &&
-    !sameMode(after.glossMode, before.glossMode)
-  ) {
-    change.glossMode = after.glossMode;
-    expect.glossMode = before.glossMode;
-  }
-  if (after.names !== undefined && !sameNames(after.names, before.names)) {
-    change.names = [...after.names];
-    expect.names = [...before.names];
-  }
-  return { change, expect };
+  return {
+    change: change as GlossaryEntryChange,
+    expect: expect as GlossaryEntryExpect,
+  };
 };
 
 /**

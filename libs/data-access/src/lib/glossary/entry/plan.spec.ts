@@ -284,7 +284,7 @@ describe('planSave', () => {
       for (const c of cases) {
         const failure = refusal(state, [{ uuid: E1, ...c }]);
         expect(failure).toMatchObject({ reason: 'stale' });
-        expect(failure.retry).toBeUndefined();
+        expect(failure).not.toHaveProperty('retry');
       }
     });
 
@@ -1233,6 +1233,15 @@ describe('planSave', () => {
       );
       expect(result.changes.names).toEqual({ inserted: 1, updated: 0 });
     });
+  });
+
+  it('throws on stored state the read should have refused', () => {
+    const e = mind();
+    const missingRoot = stateOf([e]);
+    missingRoot.rows.delete(E1);
+    expect(() => planSave(W, [], [{ uuid: E1 }], missingRoot)).toThrow(
+      `The stored state has nothing for ${E1}`,
+    );
   });
 
   describe('delete', () => {

@@ -33,14 +33,50 @@ const NAME_COLUMNS =
 /** Rows one request returns at most (PostgREST's `max_rows`). */
 const PAGE = 1000;
 
-class ReadError extends Error {}
-
 const unwrap = <T>(
   { data, error }: { data: unknown; error: { message: string } | null },
   what: string,
 ): T[] => {
-  if (error) throw new ReadError(`${what}: ${error.message}`);
+  if (error) throw new Error(`${what}: ${error.message}`);
   return (data ?? []) as T[];
+};
+
+type EntriesRead =
+  | { ok: true; entries: GlossaryEntry[] }
+  | { ok: false; error: string };
+
+/** `read_glossary_entries`: entries of one work by uuid, in `uuids` order. */
+export const readEntries = async (
+  client: DataClient,
+  workUuid: string,
+  uuids: readonly string[],
+): Promise<EntriesRead> => {
+  try {
+    const { data, error } = await client.rpc('read_glossary_entries', {
+      p_work_uuid: workUuid,
+      p_uuids: uuids,
+    });
+    if (error) {
+      console.error(
+        `Error reading glossary entries of work ${workUuid}:`,
+        error,
+      );
+      return { ok: false, error: error.message };
+    }
+    return {
+      ok: true,
+      entries: ((data ?? []) as GlossaryEntryDTO[]).map(glossaryEntryFromDTO),
+    };
+  } catch (thrown) {
+    console.error(
+      `Error reading glossary entries of work ${workUuid}:`,
+      thrown,
+    );
+    return {
+      ok: false,
+      error: thrown instanceof Error ? thrown.message : String(thrown),
+    };
+  }
 };
 
 /** `select <columns> from <table> where <column> in (<values>)`, paged. */
@@ -109,20 +145,11 @@ export const readStored = async (
   try {
     const reads = plannedReads(saves, deletes);
 
-    const entries = new Map(
-      reads.entries.length
-        ? unwrap<GlossaryEntryDTO>(
-            await client.rpc('read_glossary_entries', {
-              p_work_uuid: workUuid,
-              p_uuids: reads.entries,
-            }),
-            'reading glossary entries',
-          ).map((dto) => {
-            const entry = glossaryEntryFromDTO(dto);
-            return [entry.uuid, entry] as const;
-          })
-        : [],
-    );
+    const read = reads.entries.length
+      ? await readEntries(client, workUuid, reads.entries)
+      : { ok: true as const, entries: [] };
+    if (!read.ok) return read;
+    const entries = new Map(read.entries.map((e) => [e.uuid, e]));
 
     const entryRows = [...entries.values()].flatMap((e) =>
       e.names.map((n) => n.glossaryUuid),

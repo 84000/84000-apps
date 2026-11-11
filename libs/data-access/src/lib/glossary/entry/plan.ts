@@ -12,6 +12,7 @@ import {
   GLOSSARY_MODES,
   GLOSSARY_TERM_TYPES,
   type GlossaryEntry,
+  type GlossaryEntryChange,
   type GlossaryEntryDelete,
   type GlossaryEntryExpect,
   type GlossaryEntryName,
@@ -95,8 +96,6 @@ export type PlanFailure = {
   reason: GlossarySaveFailure;
   error: string;
   field?: string;
-  /** The reads disagreed: read and plan again. */
-  retry?: boolean;
 };
 
 export type PlannedSave = {
@@ -123,11 +122,27 @@ const invalid = (field: string, error: string): PlanFailure => ({
 
 const stale = (error: string): PlanFailure => ({ reason: 'stale', error });
 
-const skew = (error: string): PlanFailure => ({
-  reason: 'stale',
-  error,
-  retry: true,
-});
+/**
+ * A stored value `readStored` guarantees: it refuses reads that disagree, so
+ * a missing one is a bug, not a concurrent change.
+ */
+const must = <K, V>(map: ReadonlyMap<K, V>, key: K): V => {
+  const value = map.get(key);
+  if (value === undefined) {
+    throw new Error(`The stored state has nothing for ${String(key)}`);
+  }
+  return value;
+};
+
+/** `row`'s values of `keys`. */
+const pick = <T extends object, K extends keyof T>(
+  row: T,
+  keys: readonly K[],
+): Pick<T, K> => {
+  const out = {} as Pick<T, K>;
+  for (const key of keys) out[key] = row[key];
+  return out;
+};
 
 /**
  * A definition as it is written: reduced to the glossary allowlist, and `null`
@@ -146,10 +161,8 @@ export const storedGlossaryDefinition = (
 };
 
 /** Whether two matching modes are the same, `null` being `match`. */
-export const sameMode = (
-  a: string | null | undefined,
-  b: string | null | undefined,
-) => (a ?? 'match') === (b ?? 'match');
+const sameMode = (a: string | null | undefined, b: string | null | undefined) =>
+  (a ?? 'match') === (b ?? 'match');
 
 const sameText = (
   a: Pick<ElementInput, 'language' | 'content' | 'contentTransformed'>,
@@ -160,7 +173,7 @@ const sameText = (
   (a.contentTransformed ?? null) === b.contentTransformed;
 
 /** Whether an optional value equals a stored one, absent being `null`. */
-export const sameNullable = (a: string | null | undefined, b: string | null) =>
+const sameNullable = (a: string | null | undefined, b: string | null) =>
   (a ?? null) === b;
 
 /** Whether `name` would leave the stored `before` as it is. */
@@ -171,7 +184,7 @@ const sameName = (name: ElementInput, before: GlossaryEntryName) =>
   sameNullable(name.attestation, before.attestation);
 
 /** Whether `names` is the stored list, in any order. */
-export const sameNames = (
+const sameNames = (
   names: readonly ElementInput[],
   before: readonly GlossaryEntryName[],
 ) => {
@@ -185,6 +198,34 @@ export const sameNames = (
     );
   });
 };
+
+type EntryField = keyof Required<GlossaryEntryExpect>;
+
+/** How each entry-wide value compares with the stored entry's. */
+const SAME: {
+  [K in EntryField]: (
+    value: Exclude<GlossaryEntryChange[K], undefined>,
+    stored: GlossaryEntry[K],
+  ) => boolean;
+} = {
+  authorityUuid: (a, b) => a === b,
+  definition: (a, b) => a === b,
+  definitionRend: (a, b) => a === b,
+  glossMode: sameMode,
+  names: sameNames,
+};
+
+/** The entry-wide fields a save changes and an expectation guards. */
+export const ENTRY_FIELDS = Object.keys(SAME) as EntryField[];
+
+/** Whether `value` for `key` is absent or the same as `entry`'s. */
+export const unchangedField = <K extends EntryField>(
+  key: K,
+  value: GlossaryEntryChange[K],
+  entry: GlossaryEntry,
+): boolean =>
+  value === undefined ||
+  SAME[key](value as Exclude<GlossaryEntryChange[K], undefined>, entry[key]);
 
 // ---------------------------------------------------------------- input checks
 
@@ -418,21 +459,21 @@ class NameOps {
     if (this.link.has(row.uuid)) return;
     this.link.set(row.uuid, {
       uuid: row.uuid,
-      expected: {
-        authority_uuid: row.authority_uuid,
-        language: row.language,
-        content: row.content,
-        content_transformed: row.content_transformed,
-      },
+      expected: pick(row, [
+        'authority_uuid',
+        'language',
+        'content',
+        'content_transformed',
+      ]),
     });
   }
 
   addUpdate(row: NameRow, set: NameCols) {
-    const expected: NameCols = {};
-    for (const key of Object.keys(set) as (keyof NameCols)[]) {
-      (expected as Record<string, unknown>)[key] = row[key];
-    }
-    this.update.set(row.uuid, { uuid: row.uuid, set, expected });
+    this.update.set(row.uuid, {
+      uuid: row.uuid,
+      set,
+      expected: pick(row, Object.keys(set) as (keyof NameCols)[]),
+    });
   }
 
   addInsert(
@@ -453,40 +494,34 @@ class NameOps {
   }
 }
 
-const rowExpected = (row: GlossaryRow, set: RowCols): RowCols => {
-  const expected: RowCols = {};
-  for (const key of Object.keys(set) as (keyof RowCols)[]) {
-    (expected as Record<string, unknown>)[key] = row[key];
-  }
-  return expected;
-};
-
 /** What `expect` says differs from what is stored; `null` when it all matches. */
 const staleExpect = (
   entry: GlossaryEntry,
   expect: GlossaryEntryExpect | undefined,
-): string | null => {
-  if (!expect) return null;
-  if (
-    expect.authorityUuid !== undefined &&
-    expect.authorityUuid !== entry.authorityUuid
-  )
-    return 'authorityUuid';
-  if (expect.definition !== undefined && expect.definition !== entry.definition)
-    return 'definition';
-  if (
-    expect.definitionRend !== undefined &&
-    expect.definitionRend !== entry.definitionRend
-  )
-    return 'definitionRend';
-  if (
-    expect.glossMode !== undefined &&
-    !sameMode(expect.glossMode, entry.glossMode)
-  )
-    return 'glossMode';
-  if (expect.names !== undefined && !sameNames(expect.names, entry.names))
-    return 'names';
-  return null;
+): EntryField | null =>
+  (expect &&
+    ENTRY_FIELDS.find((key) => !unchangedField(key, expect[key], entry))) ??
+  null;
+
+/**
+ * Each name of `list` with the stored name of the row it keeps, whether it
+ * links another names row, and whether it changes the text of its own.
+ */
+const diffNames = (
+  entry: GlossaryEntry | undefined,
+  list: readonly ElementInput[],
+) => {
+  const current = new Map((entry?.names ?? []).map((n) => [n.glossaryUuid, n]));
+  return list.map((name) => {
+    const was = name.glossaryUuid ? current.get(name.glossaryUuid) : undefined;
+    const link = !!name.nameUuid && name.nameUuid !== was?.nameUuid;
+    return {
+      name,
+      was,
+      link,
+      textChanged: !!was && !link && !sameText(name, was),
+    };
+  });
 };
 
 /**
@@ -516,18 +551,12 @@ export const planSave = (
   // Names rows any save of this call links: never edited or moved in place.
   const linkedInCall = new Set<string>();
   for (const save of saves) {
-    const current = new Map(
-      (stored.entries.get(save.uuid)?.names ?? []).map((n) => [
-        n.glossaryUuid,
-        n,
-      ]),
+    const diff = diffNames(
+      stored.entries.get(save.uuid),
+      save.change.names ?? [],
     );
-    for (const name of save.change.names ?? []) {
-      const was = name.glossaryUuid
-        ? current.get(name.glossaryUuid)
-        : undefined;
-      if (name.nameUuid && name.nameUuid !== was?.nameUuid)
-        linkedInCall.add(name.nameUuid);
+    for (const { name, link } of diff) {
+      if (link) linkedInCall.add(name.nameUuid as string);
     }
   }
   const names = new NameOps();
@@ -544,11 +573,6 @@ export const planSave = (
         reason: 'not-found',
         error: `${save.uuid} is not an entry of the work`,
       };
-    }
-
-    const root = entry ? stored.rows.get(entry.uuid) : undefined;
-    if (entry && !root) {
-      return skew(`The rows of entry ${save.uuid} changed while reading them`);
     }
 
     // Entry-wide values, compared with what is stored.
@@ -588,26 +612,16 @@ export const planSave = (
     }
 
     // Names: the list after the save, matched to the stored rows.
-    const current = new Map(
-      (entry?.names ?? []).map((n) => [n.glossaryUuid, n]),
-    );
     const list: ElementInput[] = change.names ?? entry?.names ?? [];
     const kept = new Set<string>();
-    const elements = list.map((name, i) => {
-      const was = name.glossaryUuid
-        ? current.get(name.glossaryUuid)
-        : undefined;
+    const elements = diffNames(entry, list).map((d, i) => {
+      const { name, was } = d;
       if (was) kept.add(was.glossaryUuid);
-      const row =
-        save.create && i === 0 ? save.uuid : (name.glossaryUuid ?? uuidv4());
-      const link = !!name.nameUuid && name.nameUuid !== was?.nameUuid;
       return {
+        ...d,
         i,
-        name,
-        was,
-        row,
-        link,
-        textChanged: !!was && !link && !sameText(name, was),
+        row:
+          save.create && i === 0 ? save.uuid : (name.glossaryUuid ?? uuidv4()),
         termTypeChanged: !was || (name.termType ?? null) !== was.termType,
         attestationChanged:
           !was || (name.attestation ?? null) !== was.attestation,
@@ -722,8 +736,7 @@ export const planSave = (
         };
       } else if (el.textChanged) {
         const text = nameText(el.name);
-        const row = stored.names.get(was.nameUuid);
-        if (!row) return skew(`Name ${was.nameUuid} changed while reading it`);
+        const row = must(stored.names, was.nameUuid);
         const shared =
           stored.usedOutside.has(`${save.uuid}>${was.nameUuid}`) ||
           stored.creatorNames.has(was.nameUuid) ||
@@ -753,9 +766,7 @@ export const planSave = (
           }
           if (row.authority_uuid !== authorityUuid)
             set.authority_uuid = authorityUuid;
-          if (!Object.keys(set).length) {
-            return skew(`Name ${row.uuid} changed while reading it`);
-          }
+          // Never empty: the read checked the names row against the entry.
           names.addUpdate(row, set);
           target = { nameUuid: row.uuid, authorityUuid, text };
         }
@@ -771,9 +782,7 @@ export const planSave = (
         } else if (copy) {
           target = { nameUuid: copy, authorityUuid, text: nameText(was) };
         } else {
-          const row = stored.names.get(was.nameUuid);
-          if (!row)
-            return skew(`Name ${was.nameUuid} changed while reading it`);
+          const row = must(stored.names, was.nameUuid);
           const shared =
             stored.usedOutside.has(`${save.uuid}>${was.nameUuid}`) ||
             stored.creatorNames.has(was.nameUuid) ||
@@ -820,9 +829,7 @@ export const planSave = (
           child_uuid: el.row,
         });
       } else {
-        const row = stored.rows.get(was.glossaryUuid);
-        if (!row)
-          return skew(`Row ${was.glossaryUuid} changed while reading it`);
+        const row = must(stored.rows, was.glossaryUuid);
         const set: RowCols = {};
         if (relink) set.authority_uuid = authorityUuid;
         if (target.nameUuid !== row.name_uuid) set.name_uuid = target.nameUuid;
@@ -837,7 +844,7 @@ export const planSave = (
           plan.p_glossaries_update.push({
             uuid: row.uuid,
             set,
-            expected: rowExpected(row, set),
+            expected: pick(row, Object.keys(set) as (keyof RowCols)[]),
           });
         }
       }
@@ -854,9 +861,7 @@ export const planSave = (
     }
 
     for (const gone of removed) {
-      const row = stored.rows.get(gone.glossaryUuid);
-      if (!row)
-        return skew(`Row ${gone.glossaryUuid} changed while reading it`);
+      const row = must(stored.rows, gone.glossaryUuid);
       plan.p_edges_delete.push({
         parent_uuid: save.uuid,
         child_uuid: row.uuid,
@@ -899,19 +904,16 @@ export const planSave = (
     }
     const differs = staleExpect(entry, del.expect);
     if (differs) return stale(`${differs} of entry ${entry.uuid} has changed`);
-    const root = stored.rows.get(entry.uuid);
-    if (!root)
-      return skew(`The rows of entry ${del.uuid} changed while reading them`);
     const rows = entry.names.map((n) => n.glossaryUuid);
     plan.p_entry_deletes.push({
       uuid: entry.uuid,
       rows,
-      expected: {
-        authority_uuid: root.authority_uuid,
-        definition: root.definition,
-        definition_rend: root.definition_rend,
-        glossMode: root.glossMode,
-      },
+      expected: pick(must(stored.rows, entry.uuid), [
+        'authority_uuid',
+        'definition',
+        'definition_rend',
+        'glossMode',
+      ]),
     });
     deleted.push(entry.uuid);
     deletedRows += rows.length;
@@ -955,8 +957,6 @@ export const usageCandidates = (
     const entry = save.create ? undefined : entries.get(save.uuid);
     if (!entry) return [];
     const authorityUuid = save.change.authorityUuid ?? entry.authorityUuid;
-    const list = save.change.names;
-    const current = new Map(entry.names.map((n) => [n.glossaryUuid, n]));
     const candidates = new Set<string>();
     for (const was of entry.names) {
       if (
@@ -966,17 +966,11 @@ export const usageCandidates = (
         candidates.add(was.nameUuid);
       }
     }
-    for (const name of list ?? []) {
-      const was = name.glossaryUuid
-        ? current.get(name.glossaryUuid)
-        : undefined;
-      if (
-        was &&
-        (!name.nameUuid || name.nameUuid === was.nameUuid) &&
-        !sameText(name, was)
-      ) {
-        candidates.add(was.nameUuid);
-      }
+    for (const { was, textChanged } of diffNames(
+      entry,
+      save.change.names ?? [],
+    )) {
+      if (textChanged) candidates.add((was as GlossaryEntryName).nameUuid);
     }
     return candidates.size ? [{ entry, names: [...candidates] }] : [];
   });

@@ -1,46 +1,6 @@
 import type { DataClient } from '../../types';
-import {
-  glossaryEntryFromDTO,
-  type GlossaryEntry,
-  type GlossaryEntryDTO,
-} from './types';
-
-type EntriesRead =
-  | { ok: true; entries: GlossaryEntry[] }
-  | { ok: false; error: string };
-
-const readEntries = async (
-  client: DataClient,
-  workUuid: string,
-  uuids: readonly string[],
-): Promise<EntriesRead> => {
-  try {
-    const { data, error } = await client.rpc('read_glossary_entries', {
-      p_work_uuid: workUuid,
-      p_uuids: uuids,
-    });
-    if (error) {
-      console.error(
-        `Error reading glossary entries of work ${workUuid}:`,
-        error,
-      );
-      return { ok: false, error: error.message };
-    }
-    return {
-      ok: true,
-      entries: ((data ?? []) as GlossaryEntryDTO[]).map(glossaryEntryFromDTO),
-    };
-  } catch (thrown) {
-    console.error(
-      `Error reading glossary entries of work ${workUuid}:`,
-      thrown,
-    );
-    return {
-      ok: false,
-      error: thrown instanceof Error ? thrown.message : String(thrown),
-    };
-  }
-};
+import { readEntries } from './stored';
+import type { GlossaryEntry } from './types';
 
 /**
  * Entries of one work by uuid, in `uuids` order. A uuid that is not an entry
