@@ -95,6 +95,8 @@ export type PlanFailure = {
   reason: GlossarySaveFailure;
   error: string;
   field?: string;
+  /** The reads disagreed: read and plan again. */
+  retry?: boolean;
 };
 
 export type PlannedSave = {
@@ -121,6 +123,12 @@ const invalid = (field: string, error: string): PlanFailure => ({
 
 const stale = (error: string): PlanFailure => ({ reason: 'stale', error });
 
+const skew = (error: string): PlanFailure => ({
+  reason: 'stale',
+  error,
+  retry: true,
+});
+
 /**
  * A definition as it is written: reduced to the glossary allowlist, and `null`
  * when no text is left.
@@ -137,8 +145,11 @@ export const storedGlossaryDefinition = (
   return htmlHasText(html) ? html : null;
 };
 
-const sameMode = (a: string | null | undefined, b: string | null | undefined) =>
-  (a ?? 'match') === (b ?? 'match');
+/** Whether two matching modes are the same, `null` being `match`. */
+export const sameMode = (
+  a: string | null | undefined,
+  b: string | null | undefined,
+) => (a ?? 'match') === (b ?? 'match');
 
 const sameText = (
   a: Pick<ElementInput, 'language' | 'content' | 'contentTransformed'>,
@@ -148,7 +159,8 @@ const sameText = (
   a.content === b.content &&
   (a.contentTransformed ?? null) === b.contentTransformed;
 
-const sameNullable = (a: string | null | undefined, b: string | null) =>
+/** Whether an optional value equals a stored one, absent being `null`. */
+export const sameNullable = (a: string | null | undefined, b: string | null) =>
   (a ?? null) === b;
 
 /** Whether `name` would leave the stored `before` as it is. */
@@ -225,7 +237,7 @@ const checkMode = (value: string | null | undefined) =>
 
 /**
  * Refuses input that is invalid whatever is stored: malformed or repeated
- * uuids, and a create's values (a create writes all of them).
+ * uuids, a create's values (a create writes all of them) and a new name's.
  */
 export const checkInput = (
   saves: readonly GlossaryEntrySave[],
@@ -266,7 +278,30 @@ export const checkInput = (
       rows.set(row, save.uuid);
     }
 
-    if (!save.create) continue;
+    const writtenNames = (written: (name: ElementInput) => boolean) =>
+      names.reduce<PlanFailure | null>(
+        (found, name, i) =>
+          found ??
+          (written(name)
+            ? checkWrittenName(name, `names[${i}]`, {
+                text: !name.nameUuid,
+                termType: true,
+                attestation: true,
+              })
+            : null),
+        null,
+      );
+
+    if (!save.create) {
+      const { authorityUuid } = save.change;
+      if (authorityUuid !== undefined && !isUuid(authorityUuid)) {
+        return invalid('authorityUuid', `${authorityUuid} is not a uuid`);
+      }
+      // A name without a row is new, so all its values are written.
+      const fault = writtenNames((name) => !name.glossaryUuid);
+      if (fault) return fault;
+      continue;
+    }
     if (save.expect !== undefined) {
       return invalid('expect', 'A create has nothing to expect');
     }
@@ -289,16 +324,7 @@ export const checkInput = (
     const fault =
       checkRend(definitionRend) ??
       checkMode(glossMode) ??
-      names.reduce<PlanFailure | null>(
-        (found, name, i) =>
-          found ??
-          checkWrittenName(name, `names[${i}]`, {
-            text: !name.nameUuid,
-            termType: true,
-            attestation: true,
-          }),
-        null,
-      );
+      writtenNames(() => true);
     if (fault) return fault;
   }
   return null;
@@ -522,7 +548,7 @@ export const planSave = (
 
     const root = entry ? stored.rows.get(entry.uuid) : undefined;
     if (entry && !root) {
-      return stale(`The rows of entry ${save.uuid} changed while reading them`);
+      return skew(`The rows of entry ${save.uuid} changed while reading them`);
     }
 
     // Entry-wide values, compared with what is stored.
@@ -697,7 +723,7 @@ export const planSave = (
       } else if (el.textChanged) {
         const text = nameText(el.name);
         const row = stored.names.get(was.nameUuid);
-        if (!row) return stale(`Name ${was.nameUuid} changed while reading it`);
+        if (!row) return skew(`Name ${was.nameUuid} changed while reading it`);
         const shared =
           stored.usedOutside.has(`${save.uuid}>${was.nameUuid}`) ||
           stored.creatorNames.has(was.nameUuid) ||
@@ -728,7 +754,7 @@ export const planSave = (
           if (row.authority_uuid !== authorityUuid)
             set.authority_uuid = authorityUuid;
           if (!Object.keys(set).length) {
-            return stale(`Name ${row.uuid} changed while reading it`);
+            return skew(`Name ${row.uuid} changed while reading it`);
           }
           names.addUpdate(row, set);
           target = { nameUuid: row.uuid, authorityUuid, text };
@@ -747,7 +773,7 @@ export const planSave = (
         } else {
           const row = stored.names.get(was.nameUuid);
           if (!row)
-            return stale(`Name ${was.nameUuid} changed while reading it`);
+            return skew(`Name ${was.nameUuid} changed while reading it`);
           const shared =
             stored.usedOutside.has(`${save.uuid}>${was.nameUuid}`) ||
             stored.creatorNames.has(was.nameUuid) ||
@@ -796,7 +822,7 @@ export const planSave = (
       } else {
         const row = stored.rows.get(was.glossaryUuid);
         if (!row)
-          return stale(`Row ${was.glossaryUuid} changed while reading it`);
+          return skew(`Row ${was.glossaryUuid} changed while reading it`);
         const set: RowCols = {};
         if (relink) set.authority_uuid = authorityUuid;
         if (target.nameUuid !== row.name_uuid) set.name_uuid = target.nameUuid;
@@ -830,7 +856,7 @@ export const planSave = (
     for (const gone of removed) {
       const row = stored.rows.get(gone.glossaryUuid);
       if (!row)
-        return stale(`Row ${gone.glossaryUuid} changed while reading it`);
+        return skew(`Row ${gone.glossaryUuid} changed while reading it`);
       plan.p_edges_delete.push({
         parent_uuid: save.uuid,
         child_uuid: row.uuid,
@@ -875,7 +901,7 @@ export const planSave = (
     if (differs) return stale(`${differs} of entry ${entry.uuid} has changed`);
     const root = stored.rows.get(entry.uuid);
     if (!root)
-      return stale(`The rows of entry ${del.uuid} changed while reading them`);
+      return skew(`The rows of entry ${del.uuid} changed while reading them`);
     const rows = entry.names.map((n) => n.glossaryUuid);
     plan.p_entry_deletes.push({
       uuid: entry.uuid,

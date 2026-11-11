@@ -1,5 +1,6 @@
 import { isUuid } from '@eightyfourthousand/lib-utils';
 
+import { inBatches } from '../../passage/in-batches';
 import type { DataClient } from '../../types';
 import {
   plannedReads,
@@ -10,23 +11,27 @@ import {
 } from './plan';
 import {
   glossaryEntryFromDTO,
+  type GlossaryEntry,
   type GlossaryEntryDTO,
   type GlossaryEntryDelete,
   type GlossaryEntrySave,
 } from './types';
 
-/** Reads for one plan: what is stored, or why it could not be read. */
+/**
+ * Reads for one plan: what is stored, or why it could not be read. `retry`
+ * when the reads disagree because something changed between them.
+ */
 export type StoredRead =
   | { ok: true; stored: StoredState }
-  | { ok: false; error: string };
+  | { ok: false; error: string; retry?: boolean };
 
 const GLOSSARY_COLUMNS =
   'uuid,authority_uuid,name_uuid,termType,attestation,definition,definition_rend,glossMode';
 const NAME_COLUMNS =
   'uuid,authority_uuid,language,content,content_transformed,internal';
 
-/** Keeps each `in (...)` filter, and so each request URL, short. */
-const PAGE = 100;
+/** Rows one request returns at most (PostgREST's `max_rows`). */
+const PAGE = 1000;
 
 class ReadError extends Error {}
 
@@ -47,16 +52,47 @@ const selectIn = async <T>(
   columns: string,
 ): Promise<T[]> => {
   const out: T[] = [];
-  for (let i = 0; i < values.length; i += PAGE) {
-    const page = values.slice(i, i + PAGE);
+  for (const batch of inBatches(values)) {
     out.push(
       ...unwrap<T>(
-        await client.from(table).select(columns).in(column, page),
+        await client.from(table).select(columns).in(column, batch),
         `reading ${table}`,
       ),
     );
   }
   return out;
+};
+
+const sameEntryRows = (
+  entry: GlossaryEntry,
+  rows: Map<string, GlossaryRow>,
+  names: Map<string, NameRow>,
+) => {
+  const root = rows.get(entry.uuid);
+  if (
+    !root ||
+    root.authority_uuid !== entry.authorityUuid ||
+    root.definition !== entry.definition ||
+    root.definition_rend !== entry.definitionRend ||
+    (root.glossMode ?? 'match') !== entry.glossMode
+  ) {
+    return false;
+  }
+  return entry.names.every((n) => {
+    const row = rows.get(n.glossaryUuid);
+    const name = names.get(n.nameUuid);
+    return (
+      !!row &&
+      row.name_uuid === n.nameUuid &&
+      row.termType === n.termType &&
+      row.attestation === n.attestation &&
+      (!name ||
+        (name.authority_uuid === n.nameAuthorityUuid &&
+          name.language === n.language &&
+          name.content === n.content &&
+          name.content_transformed === n.contentTransformed))
+    );
+  });
 };
 
 /**
@@ -182,6 +218,19 @@ export const readStored = async (
       }),
     );
 
+    // The plan's expected values come from the rows, its decisions from the
+    // entries: they must be one state.
+    const skewed =
+      [...entries.values()].some((e) => !sameEntryRows(e, rows, names)) ||
+      candidateNames.some((uuid) => !names.has(uuid));
+    if (skewed) {
+      return {
+        ok: false,
+        error: 'The entries changed while reading them',
+        retry: true,
+      };
+    }
+
     return {
       ok: true,
       stored: {
@@ -215,19 +264,25 @@ export const countCitingAnnotations = async (
   workUuid: string,
   rows: readonly string[],
 ): Promise<number> => {
+  // Uuids, not counts: one annotation may cite several of the rows.
   const found = new Set<string>();
   for (const uuid of rows) {
-    const citing = unwrap<{ uuid: string }>(
-      await client
-        .from('passage_annotations')
-        .select('uuid,passages!inner(work_uuid)')
-        .eq('type', 'glossary-instance')
-        .eq('passages.work_uuid', workUuid)
-        // A string, as jsonb takes it: an array would be sent as a Postgres one.
-        .contains('content', JSON.stringify([{ uuid }])),
-      'reading passage_annotations',
-    );
-    for (const { uuid: annotation } of citing) found.add(annotation);
+    for (let from = 0; ; from += PAGE) {
+      const citing = unwrap<{ uuid: string }>(
+        await client
+          .from('passage_annotations')
+          .select('uuid,passages!inner(work_uuid)')
+          .eq('type', 'glossary-instance')
+          .eq('passages.work_uuid', workUuid)
+          // A string, as jsonb takes it: an array would be sent as a Postgres one.
+          .contains('content', JSON.stringify([{ uuid }]))
+          .order('uuid')
+          .range(from, from + PAGE - 1),
+        'reading passage_annotations',
+      );
+      for (const { uuid: annotation } of citing) found.add(annotation);
+      if (citing.length < PAGE) break;
+    }
   }
   return found.size;
 };

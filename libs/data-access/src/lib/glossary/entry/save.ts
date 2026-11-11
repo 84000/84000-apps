@@ -2,7 +2,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 import type { DataClient } from '../../types';
 import { rolledBack } from '../../passage/save/commit';
-import { checkInput, planSave, sameNames, type PlannedSave } from './plan';
+import {
+  checkInput,
+  planSave,
+  sameMode,
+  sameNames,
+  sameNullable,
+  type PlannedSave,
+} from './plan';
 import { countCitingAnnotations, readStored } from './stored';
 import {
   glossaryEntryFromDTO,
@@ -73,7 +80,11 @@ const apply = async (
 
   const { error } = answer;
   if (error) {
-    if (error.code === 'PT409') return { status: 'stale', error };
+    // Refused as stale, or a create that lost a race for its uuid (23505):
+    // rolled back, and a new read says which.
+    if (error.code === 'PT409' || error.code === '23505') {
+      return { status: 'stale', error };
+    }
     console.error('Error saving glossary entries:', error);
     if (error.code === '42501') {
       return { status: 'failed', result: failure('forbidden', error.message) };
@@ -95,8 +106,7 @@ const apply = async (
       status: 'failed',
       result: failure(
         'failed',
-        'The database answered, but not with a save result',
-        true,
+        'The save was applied, but its result could not be read',
       ),
     };
   }
@@ -151,6 +161,9 @@ const dryRunResult = async (
  * Input is checked here; the database applies the planned rows only if what
  * they were planned from is unchanged, and the save is planned again from
  * newer data a few times before it is refused as stale.
+ *
+ * A dry run plans without applying. Its names are sorted like the read's,
+ * but by this runtime's collation, so punctuation may order differently.
  */
 export const saveGlossaryEntries = async ({
   client,
@@ -180,8 +193,16 @@ export const saveGlossaryEntries = async ({
   let lastStale = '';
   for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
     const read = await readStored(client, workUuid, saves, deletes);
+    if (!read.ok && read.retry) {
+      lastStale = read.error;
+      continue;
+    }
     if (!read.ok) return failure('failed', `Nothing was saved: ${read.error}`);
     const planned = planSave(workUuid, saves, deletes, read.stored);
+    if ('reason' in planned && planned.retry) {
+      lastStale = planned.error;
+      continue;
+    }
     if ('reason' in planned) {
       return failure(planned.reason, planned.error, false, planned.field);
     }
@@ -208,9 +229,6 @@ export const saveGlossaryEntries = async ({
     `The entries kept changing while saving them: ${lastStale}`,
   );
 };
-
-const sameNullable = (a: string | null | undefined, b: string | null) =>
-  (a ?? null) === b;
 
 /**
  * The change and expect for turning `before` (as read) into `after`: each
@@ -246,7 +264,7 @@ export const glossaryEntryChange = (
   }
   if (
     after.glossMode !== undefined &&
-    (after.glossMode ?? 'match') !== (before.glossMode ?? 'match')
+    !sameMode(after.glossMode, before.glossMode)
   ) {
     change.glossMode = after.glossMode;
     expect.glossMode = before.glossMode;
