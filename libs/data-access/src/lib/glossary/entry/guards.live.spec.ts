@@ -28,6 +28,7 @@ import {
   interceptApply,
   liveEnv,
   makeEntry,
+  nameOf,
   nm,
   readEntry,
   saveChange,
@@ -852,20 +853,20 @@ describeLive('DEV-880 live: guards (criteria 5, 6, 14, 15, 16)', () => {
       // Editing an existing Tibetan name so that it loses its script.
       await refused(
         (e) => ({
-          names: editName(e.names, e.names[2].glossaryUuid, {
+          names: editName(e.names, nameOf(e, 'fix bo').glossaryUuid, {
             contentTransformed: null,
           }),
         }),
-        'names[2].contentTransformed',
+        'names[1].contentTransformed',
       );
       // Changing a name to Tibetan without giving it a script.
       await refused(
         (e) => ({
-          names: editName(e.names, e.names[1].glossaryUuid, {
+          names: editName(e.names, nameOf(e, 'fix child').glossaryUuid, {
             language: 'Bo-Ltn',
           }),
         }),
-        'names[1].contentTransformed',
+        'names[2].contentTransformed',
       );
     });
 
@@ -974,11 +975,11 @@ describeLive('DEV-880 live: guards (criteria 5, 6, 14, 15, 16)', () => {
       await db
         .from('glossaries')
         .update({ attestation: 'attestedLegacyValue', termType: 'legacyType' })
-        .eq('uuid', e.names[1].glossaryUuid);
+        .eq('uuid', nameOf(e, 'old child').glossaryUuid);
       await db
         .from('names')
         .update({ content_transformed: null })
-        .eq('uuid', e.names[3].nameUuid);
+        .eq('uuid', nameOf(e, 'old bo').nameUuid);
       return readEntry(db, workA, e.uuid);
     };
 
@@ -996,7 +997,9 @@ describeLive('DEV-880 live: guards (criteria 5, 6, 14, 15, 16)', () => {
       expect(rows.find((r) => r['uuid'] === e.uuid)?.['definition_rend']).toBe(
         'bothWithStandard',
       );
-      const child = rows.find((r) => r['uuid'] === e.names[1].glossaryUuid);
+      const child = rows.find(
+        (r) => r['uuid'] === nameOf(e, 'old child').glossaryUuid,
+      );
       expect(child).toMatchObject({
         attestation: 'attestedLegacyValue',
         termType: 'legacyType',
@@ -1023,7 +1026,7 @@ describeLive('DEV-880 live: guards (criteria 5, 6, 14, 15, 16)', () => {
       const result = expectSuccess(
         await saveChange(db, workA, e, {
           names: [
-            ...editName(e.names, e.names[2].glossaryUuid, {
+            ...editName(e.names, nameOf(e, 'old plain').glossaryUuid, {
               content: 'old plain 2',
             }),
             nm.en('old added', { attestation: 'attestedOther' }),
@@ -1032,13 +1035,17 @@ describeLive('DEV-880 live: guards (criteria 5, 6, 14, 15, 16)', () => {
       );
       const after = result.entries[0];
       expect(
-        after.names.find((n) => n.glossaryUuid === e.names[1].glossaryUuid),
+        after.names.find(
+          (n) => n.glossaryUuid === nameOf(e, 'old child').glossaryUuid,
+        ),
       ).toMatchObject({
         attestation: 'attestedLegacyValue',
         termType: 'legacyType',
       });
       expect(
-        after.names.find((n) => n.glossaryUuid === e.names[3].glossaryUuid),
+        after.names.find(
+          (n) => n.glossaryUuid === nameOf(e, 'old bo').glossaryUuid,
+        ),
       ).toMatchObject({
         language: 'Bo-Ltn',
         contentTransformed: null,

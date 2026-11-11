@@ -23,6 +23,7 @@ import {
   interceptApply,
   liveEnv,
   makeEntry,
+  nameOf,
   nameRow,
   nm,
   readEntry,
@@ -389,16 +390,20 @@ describeLive('DEV-880 live: create and delete (criteria 17, 18, 19)', () => {
       const e2 = await makeEntry(db, {
         workUuid: workB,
         authorityUuid: authA,
-        names: [nm.en('del shared', { nameUuid: e1.names[1].nameUuid })],
+        names: [
+          nm.en('del shared', {
+            nameUuid: nameOf(e1, 'del shared').nameUuid,
+          }),
+        ],
       });
       await s.creator({
         workUuid: workA,
         authorityUuid: authA,
-        nameUuid: e1.names[2].nameUuid,
+        nameUuid: nameOf(e1, 'del creator').nameUuid,
       });
       const [child1, child2] = [
-        e1.names[1].glossaryUuid,
-        e1.names[2].glossaryUuid,
+        nameOf(e1, 'del shared').glossaryUuid,
+        nameOf(e1, 'del creator').glossaryUuid,
       ];
 
       const pA1 = await s.passage(workA);
@@ -485,7 +490,9 @@ describeLive('DEV-880 live: create and delete (criteria 17, 18, 19)', () => {
           String(a['uuid']).localeCompare(String(b['uuid'])),
         ),
       ).toEqual(keptBefore);
-      expect(await nameRow(db, e1.names[1].nameUuid)).toMatchObject({
+      expect(
+        await nameRow(db, nameOf(e1, 'del shared').nameUuid),
+      ).toMatchObject({
         content: 'del shared',
       });
       expect(await readEntry(db, workB, e2.uuid)).toEqual(e2Before[0]);
