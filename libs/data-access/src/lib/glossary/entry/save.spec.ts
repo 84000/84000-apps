@@ -117,6 +117,8 @@ type Db = {
   authorities?: string[];
   /** Annotations on passages of a work, citing glossary rows. */
   annotations?: { uuid: string; work: string; cites: string[] }[];
+  /** The names rows creators use. */
+  creatorNames?: string[];
 };
 
 /**
@@ -182,7 +184,7 @@ const fakeClient = (
       })),
     ),
     authorities: (db.authorities ?? [A, B]).map((uuid) => ({ uuid })),
-    creators: [],
+    creators: (db.creatorNames ?? []).map((name_uuid) => ({ name_uuid })),
     passage_annotations: (db.annotations ?? []).map((a) => ({
       uuid: a.uuid,
       type: 'glossary-instance',
@@ -641,6 +643,43 @@ describe('saveGlossaryEntries', () => {
         names: { inserted: 1, updated: 0 },
         annotations: { deleted: 0 },
       });
+      expect(applies).toEqual([]);
+    });
+
+    it('copies names rows another entry or a creator uses, and edits the others in place', async () => {
+      const e = mind();
+      const other: GlossaryEntry = {
+        ...mind(),
+        uuid: E2,
+        workUuid: '30000000-0000-4000-8000-000000000009',
+        // The same names row as the first entry's Tibetan name.
+        names: [e.names[1]].map((x) => ({ ...x, glossaryUuid: E2 })),
+      };
+      const { client, applies } = fakeClient({
+        entries: [e, other],
+        creatorNames: [n(3)],
+      });
+      const renamed = e.names.map((x) => ({ ...x, content: `${x.content}!` }));
+      const result = succeeded(
+        await saveGlossaryEntries({
+          client,
+          workUuid: W,
+          dryRun: true,
+          saves: [
+            {
+              uuid: E1,
+              change: { names: renamed },
+              expect: { names: e.names },
+            },
+          ],
+        }),
+      );
+      const uuidOf = (content: string) =>
+        result.entries[0].names.find((x) => x.content === content)?.nameUuid;
+      expect(uuidOf('mind!')).toBe(n(1));
+      expect(uuidOf('sems!')).not.toBe(n(2));
+      expect(uuidOf('citta!')).not.toBe(n(3));
+      expect(result.changes.names).toEqual({ inserted: 2, updated: 1 });
       expect(applies).toEqual([]);
     });
 

@@ -1231,6 +1231,7 @@ describe('planSave', () => {
       expect(result.entries[0].names.map((x) => x.glossaryUuid)).not.toContain(
         E1,
       );
+      expect(result.changes.names).toEqual({ inserted: 1, updated: 0 });
     });
   });
 
