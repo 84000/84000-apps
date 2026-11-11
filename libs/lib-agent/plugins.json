@@ -90,7 +90,11 @@
       ],
       "agents": ["libs/lib-agent/agents/library-assistant.md"],
       "renames": {},
-      "eft": ["kangyur-tengyur-recensions", "text-analysis-and-retrieval"],
+      "eft": [
+        "copyediting",
+        "kangyur-tengyur-recensions",
+        "text-analysis-and-retrieval"
+      ],
       "sharedReference": {
         "text-analysis-and-retrieval": [
           "libs/lib-agent/reference/session-documents",
@@ -109,7 +113,8 @@
         "copyediting": [
           "libs/lib-agent/reference/session-documents",
           "libs/lib-agent/reference/whole-work-analysis",
-          "libs/lib-agent/reference/local-files"
+          "libs/lib-agent/reference/local-files",
+          "libs/lib-agent/reference/eft"
         ],
         "kangyur-tengyur-recensions": [
           "libs/lib-agent/reference/local-files",
