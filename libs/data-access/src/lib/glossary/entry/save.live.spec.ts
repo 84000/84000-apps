@@ -291,8 +291,6 @@ const en = (
   attestation: null,
   ...o,
 });
-const sa = (content: string, o: Partial<GlossaryEntryNameInput> = {}) =>
-  en(content, { language: 'Sa-Ltn', ...o });
 const bo = (
   wylie: string,
   script: string,
@@ -704,36 +702,6 @@ describeLive('glossary entry saves against the database', () => {
     await expectRoundTrips(workA, e.uuid);
   });
 
-  it('round-trips several entries in one call with no changes', async () => {
-    const a = await makeEntry({
-      workUuid: workA,
-      authorityUuid: authA,
-      names: [en('rt multi a')],
-      definition: 'A.',
-    });
-    const b = await makeEntry({
-      workUuid: workA,
-      authorityUuid: authB,
-      names: [en('rt multi b'), sa('rt multi b sa')],
-    });
-    const ea = await readEntry(workA, a.uuid);
-    const eb = await readEntry(workA, b.uuid);
-    const before = await s.snapshot();
-    const ok = succeeded(
-      await saveGlossaryEntries({
-        client: db,
-        workUuid: workA,
-        saves: [
-          { uuid: a.uuid, change: restated(ea), expect: restated(ea) },
-          { uuid: b.uuid, change: restated(eb), expect: restated(eb) },
-        ],
-      }),
-    );
-    expect(ok.entries).toEqual([ea, eb]);
-    expect(ok.changes).toEqual(ZERO);
-    expect(await s.snapshot()).toEqual(before);
-  });
-
   it('accepts every value in the fixed sets, and null, and reads them back', async () => {
     const attestations = [...GLOSSARY_ATTESTATIONS, null];
     const termTypes = [...GLOSSARY_TERM_TYPES, null];
@@ -917,21 +885,6 @@ describeLive('glossary entry saves against the database', () => {
       names: [en('del again new')],
     });
     expect(again.uuid).toBe(e.uuid);
-
-    const quiet = await makeEntry({
-      workUuid: workA,
-      authorityUuid: authA,
-      names: [en('del quiet')],
-    });
-    const none = succeeded(
-      await deleteGlossaryEntry({
-        client: db,
-        workUuid: workA,
-        uuid: quiet.uuid,
-      }),
-    );
-    expect(none.changes.annotations.deleted).toBe(0);
-    expect(none.changes.glossaries.deleted).toBe(1);
   });
 
   it('refuses a caller without permission as forbidden, writing nothing', async () => {

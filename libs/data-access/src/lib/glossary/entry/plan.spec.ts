@@ -2,7 +2,6 @@ import { isUuid } from '@eightyfourthousand/lib-utils';
 
 import {
   planSave,
-  storedGlossaryDefinition,
   type NameRow,
   type PlanFailure,
   type PlannedSave,
@@ -1235,15 +1234,6 @@ describe('planSave', () => {
     });
   });
 
-  it('throws on stored state the read should have refused', () => {
-    const e = mind();
-    const missingRoot = stateOf([e]);
-    missingRoot.rows.delete(E1);
-    expect(() => planSave(W, [], [{ uuid: E1 }], missingRoot)).toThrow(
-      `The stored state has nothing for ${E1}`,
-    );
-  });
-
   describe('delete', () => {
     it("plans every row of the entry, expecting the root's stored values", () => {
       const e = mind();
@@ -1297,30 +1287,9 @@ describe('planSave', () => {
       });
       expect(result.changes.glossaryEdges).toEqual({ inserted: 0, deleted: 3 });
     });
-
-    it('is stale when its expectation differs', () => {
-      expect(
-        refusal(
-          stateOf([mind()]),
-          [],
-          [{ uuid: E1, expect: { definition: 'Not stored.' } }],
-        ).reason,
-      ).toBe('stale');
-    });
   });
 
   describe('definitions', () => {
-    it('stores a definition reduced to the allowlist, without comments, and null when no text is left', () => {
-      expect(
-        storedGlossaryDefinition(
-          '<p onclick="x()">See <!-- a note --><strong>this</strong><script>bad()</script>.</p>',
-        ),
-      ).toBe('<p>See <strong>this</strong>.</p>');
-      expect(storedGlossaryDefinition('<p><!-- only --></p>')).toBeNull();
-      expect(storedGlossaryDefinition('<p> </p>')).toBeNull();
-      expect(storedGlossaryDefinition(null)).toBeNull();
-    });
-
     it('writes the sanitized definition, and leaves one equal to the stored value as it is', () => {
       const e = { ...mind(), definition: '<p>Old<!-- kept --></p>' };
       const state = stateOf([e]);

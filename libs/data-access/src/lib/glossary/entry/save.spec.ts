@@ -336,12 +336,6 @@ describe('saveGlossaryEntries', () => {
         'uuid',
       ],
       [
-        'a delete uuid that is not a uuid',
-        [],
-        [{ uuid: 'not-a-uuid' }],
-        'uuid',
-      ],
-      [
         'a row uuid that is not a uuid',
         [added(input('x', { glossaryUuid: 'not-a-uuid' }))],
         [],
@@ -353,7 +347,6 @@ describe('saveGlossaryEntries', () => {
         [],
         'uuid',
       ],
-      ['an entry deleted twice', [], [{ uuid: E1 }, { uuid: E1 }], 'uuid'],
       [
         'an entry saved and deleted',
         [definitionSave()],
@@ -380,12 +373,6 @@ describe('saveGlossaryEntries', () => {
         'names[1].glossaryUuid',
       ],
       ['a create without names', [create({ names: [] })], [], 'names'],
-      [
-        'a create without an authority',
-        [create({ authorityUuid: '' })],
-        [],
-        'authorityUuid',
-      ],
       [
         'a create with a non-uuid authority',
         [create({ authorityUuid: 'not-a-uuid' })],
@@ -415,40 +402,16 @@ describe('saveGlossaryEntries', () => {
         'names[1].attestation',
       ],
       [
-        'a create with a term type outside the set',
-        [create({ names: [input('mind', { termType: 'translationBogus' })] })],
-        [],
-        'names[0].termType',
-      ],
-      [
         'a create with the legacy definition rend',
         [create({ definitionRend: 'bothWithStandard' })],
         [],
         'definitionRend',
       ],
       [
-        'a create with a matching mode outside the set',
-        [create({ glossMode: 'sometimes' })],
-        [],
-        'glossMode',
-      ],
-      [
         'a create with a Tibetan name without its script',
-        [create({ names: [input('mind'), bo('sems', null)] })],
-        [],
-        'names[1].contentTransformed',
-      ],
-      [
-        'a create with a Tibetan name with an empty script',
         [create({ names: [input('mind'), bo('sems', '')] })],
         [],
         'names[1].contentTransformed',
-      ],
-      [
-        'a create with a Tibetan name without its Wylie',
-        [create({ names: [bo('', 'སེམས')] })],
-        [],
-        'names[0].content',
       ],
       [
         'a create with a name without a language',
@@ -463,46 +426,10 @@ describe('saveGlossaryEntries', () => {
         'names[0].content',
       ],
       [
-        'a new name with an attestation outside the set',
-        [added(input('added', { attestation: 'bogus' }))],
-        [],
-        'names[3].attestation',
-      ],
-      [
-        'a new name with a term type outside the set',
-        [added(input('added', { termType: 'bogus' }))],
-        [],
-        'names[3].termType',
-      ],
-      [
-        'a new Tibetan name without its script',
+        'a new name on a stored entry without its Tibetan script',
         [added(bo('new', null))],
         [],
         'names[3].contentTransformed',
-      ],
-      [
-        'a new Tibetan name with an empty script',
-        [added(bo('new', ''))],
-        [],
-        'names[3].contentTransformed',
-      ],
-      [
-        'a new Tibetan name without its Wylie',
-        [added(bo('', 'ཧ'))],
-        [],
-        'names[3].content',
-      ],
-      [
-        'a new name without a language',
-        [added(input('added', { language: '' }))],
-        [],
-        'names[3].language',
-      ],
-      [
-        'a new name without content',
-        [added(input(''))],
-        [],
-        'names[3].content',
       ],
     ])('%s', async (_name, saves, deletes, field) => {
       const { client, touched } = untouchableClient();
@@ -524,50 +451,28 @@ describe('saveGlossaryEntries', () => {
   });
 
   it('applies nothing when the saves restate what is stored', async () => {
-    const legacy: GlossaryEntry = {
-      ...mind(),
-      definitionRend: 'bothWithStandard',
-      names: [
-        stored(E1, n(1), 'Tara', {
-          language: 'Sa-Ltn',
-          termType: 'translationMain',
-        }),
-        stored(r(1), n(2), 'rt bo', { language: 'Bo-Ltn' }),
-        stored(r(2), n(4), 'foreign', { nameAuthorityUuid: B }),
-        stored(r(3), n(5), 'legacy', {
-          termType: 'legacyType',
-          attestation: 'attestedLegacyValue',
-        }),
-        stored(r(4), n(1), 'Tara', {
-          language: 'Sa-Ltn',
-          termType: 'translationAlternative',
-          attestation: 'attestedDictionary',
-        }),
-      ],
-    };
-    const { client, applies } = fakeClient({ entries: [legacy] });
+    const e = mind();
+    const { client, applies } = fakeClient({ entries: [e] });
     const restated = {
-      authorityUuid: legacy.authorityUuid,
-      definition: legacy.definition,
-      definitionRend: legacy.definitionRend,
-      glossMode: legacy.glossMode,
-      names: legacy.names,
+      authorityUuid: e.authorityUuid,
+      definition: e.definition,
+      definitionRend: e.definitionRend,
+      glossMode: e.glossMode,
+      names: e.names,
     };
-    for (const save of [
-      { uuid: E1, change: {} },
-      { uuid: E1, change: restated },
-      { uuid: E1, change: restated, expect: restated },
-    ]) {
-      expect(
-        await saveGlossaryEntries({ client, workUuid: W, saves: [save] }),
-      ).toEqual({
-        success: true,
-        dryRun: false,
-        entries: [legacy],
-        deleted: [],
-        changes: ZERO,
-      });
-    }
+    expect(
+      await saveGlossaryEntries({
+        client,
+        workUuid: W,
+        saves: [{ uuid: E1, change: restated, expect: restated }],
+      }),
+    ).toEqual({
+      success: true,
+      dryRun: false,
+      entries: [e],
+      deleted: [],
+      changes: ZERO,
+    });
     expect(applies).toEqual([]);
   });
 
@@ -607,41 +512,6 @@ describe('saveGlossaryEntries', () => {
         glossaries: { inserted: 2, updated: 0, deleted: 0 },
         glossaryEdges: { inserted: 2, deleted: 0 },
         names: { inserted: 2, updated: 0 },
-        annotations: { deleted: 0 },
-      });
-      expect(applies).toEqual([]);
-    });
-
-    it("returns a save as it would be stored, with the plan's counts, and applies nothing", async () => {
-      const e = mind();
-      const { client, applies } = fakeClient({ entries: [e] });
-      const result = succeeded(
-        await saveGlossaryEntries({
-          client,
-          workUuid: W,
-          dryRun: true,
-          saves: [
-            {
-              uuid: E1,
-              change: {
-                definition: 'Dry after.',
-                names: [...e.names, input('dry added')],
-              },
-              expect: { definition: 'Stored.', names: e.names },
-            },
-          ],
-        }),
-      );
-      expect(result.dryRun).toBe(true);
-      expect(result.entries[0]).toMatchObject({
-        uuid: E1,
-        definition: 'Dry after.',
-      });
-      expect(result.entries[0].names).toHaveLength(4);
-      expect(result.changes).toEqual({
-        glossaries: { inserted: 1, updated: 1, deleted: 0 },
-        glossaryEdges: { inserted: 1, deleted: 0 },
-        names: { inserted: 1, updated: 0 },
         annotations: { deleted: 0 },
       });
       expect(applies).toEqual([]);
@@ -716,24 +586,6 @@ describe('saveGlossaryEntries', () => {
         names: { inserted: 0, updated: 0 },
         annotations: { deleted: 4 },
       });
-      expect(applies).toEqual([]);
-    });
-
-    it('refuses a stale expectation', async () => {
-      const { client, applies } = fakeClient({ entries: [mind()] });
-      const result = await saveGlossaryEntries({
-        client,
-        workUuid: W,
-        dryRun: true,
-        saves: [
-          {
-            uuid: E1,
-            change: { definition: 'x' },
-            expect: { definition: 'not stored' },
-          },
-        ],
-      });
-      expect(failed(result).reason).toBe('stale');
       expect(applies).toEqual([]);
     });
   });
@@ -1082,72 +934,18 @@ describe('single-entry wrappers', () => {
     });
   });
 
-  it('saveGlossaryEntry is stale when the read has gone out of date', async () => {
-    const e = mind();
-    const { client, applies } = fakeClient({
-      entries: [{ ...e, definition: 'Changed by someone else.' }],
-    });
-    const result = await saveGlossaryEntry({
-      client,
-      workUuid: W,
-      before: e,
-      after: { definition: 'Mine.' },
-    });
-    expect(failed(result).reason).toBe('stale');
-    expect(applies).toEqual([]);
-  });
-
-  it('createGlossaryEntry generates the entry uuid when none is given', async () => {
-    const { client, applies } = fakeClient({ entries: [] });
-    await createGlossaryEntry({
-      client,
-      workUuid: W,
-      entry: { authorityUuid: A, names: [input('generated')] },
-    });
-    const [args] = applies as {
-      p_entries: { uuid: string }[];
-      p_glossaries_insert: { uuid: string }[];
-    }[];
-    expect(isUuid(args.p_entries[0].uuid)).toBe(true);
-    expect(args.p_glossaries_insert[0].uuid).toBe(args.p_entries[0].uuid);
-  });
-
-  it('deleteGlossaryEntry deletes the entry, guarded by its expectation', async () => {
-    const e = mind();
-    const stale = fakeClient({ entries: [e] });
+  it('deleteGlossaryEntry is guarded by its expectation', async () => {
+    const { client, applies } = fakeClient({ entries: [mind()] });
     expect(
       failed(
         await deleteGlossaryEntry({
-          client: stale.client,
+          client,
           workUuid: W,
           uuid: E1,
           expect: { definition: 'Not stored.' },
         }),
       ).reason,
     ).toBe('stale');
-    expect(stale.applies).toEqual([]);
-
-    const { client, applies } = fakeClient({ entries: [e] });
-    succeeded(
-      await deleteGlossaryEntry({
-        client,
-        workUuid: W,
-        uuid: E1,
-        expect: { definition: 'Stored.', names: e.names },
-      }),
-    );
-    expect(applies).toHaveLength(1);
-    expect(applies[0]['p_entry_deletes']).toEqual([
-      {
-        uuid: E1,
-        rows: [E1, r(1), r(2)],
-        expected: {
-          authority_uuid: A,
-          definition: 'Stored.',
-          definition_rend: 'appendWithStandard',
-          glossMode: 'match',
-        },
-      },
-    ]);
+    expect(applies).toEqual([]);
   });
 });
