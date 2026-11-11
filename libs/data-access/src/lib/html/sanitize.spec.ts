@@ -1,5 +1,6 @@
 import {
   BIBLIOGRAPHY_ALLOWLIST,
+  GLOSSARY_DEFINITION_ALLOWLIST,
   COMMENT_ALLOWLIST,
   htmlHasText,
   sanitizeHtml,
@@ -144,5 +145,69 @@ describe('BIBLIOGRAPHY_ALLOWLIST', () => {
     expect(bibliography('<p><font>old</font> <mark>new</mark></p>')).toBe(
       '<p>old new</p>',
     );
+  });
+});
+
+describe('GLOSSARY_DEFINITION_ALLOWLIST', () => {
+  const definition = (html: string) =>
+    sanitizeHtml({
+      html,
+      allowlist: GLOSSARY_DEFINITION_ALLOWLIST,
+      trim: false,
+    });
+
+  it.each([
+    [
+      'converted TEI',
+      '<p class="paragraph">See <tei:foreign xml:lang="Sa-Ltn">karman</tei:foreign>, ' +
+        '<term rend="bold" ref="x">las</term>, <hi rend="italic">this</hi> and ' +
+        '<ref target="http://read.84000.co/translation/toh6.html" rend="pending" inst="link">Toh 6</ref>.</p>',
+    ],
+    [
+      'notes and divisions',
+      '<div type="section" place="end"><note type="definition" rend="x">A note</note>' +
+        '<cite xml:lang="Bo-Ltn" class="c">mdo</cite> <title xml:lang="en">Sūtra</title></div>',
+    ],
+    [
+      'pointers and pending references',
+      '<p><span class="ref-pending" data-href="/entity/work/1" data-glossary-id="g" data-ref="r" data-inst="i">ref</span> ' +
+        '<a href="/entity/passage/1" title="t" data-pointer-type="passage" data-pointer-target="p">here</a>' +
+        '<ptr target="#x"></ptr></p>',
+    ],
+    [
+      "the editor's inline marks",
+      '<p><strong>b</strong> <u>u</u> <sub>s</sub> <sup>t</sup> <span class="foreign" lang="Sa-Ltn" data-type="foreign">k</span></p>',
+    ],
+  ])('keeps %s', (_name, html) => {
+    expect(definition(html)).toBe(html);
+  });
+
+  it('reads a self-closing element as empty, not as wrapping what follows', () => {
+    expect(
+      definition(
+        '<p>See <a href="/entity/passage/1"/> and <ref target="x"/> after.</p>',
+      ),
+    ).toBe(
+      '<p>See <a href="/entity/passage/1"></a> and <ref target="x"></ref> after.</p>',
+    );
+  });
+
+  it('drops scripts, handlers and script links', () => {
+    expect(
+      definition(
+        '<p onclick="x()">One<script>bad()</script>' +
+          '<a href="javascript:alert(1)">two</a><ref target="javascript:x()">three</ref>' +
+          '<span data-href="javascript:y()">four</span></p>',
+      ),
+    ).toBe('<p>One<a>two</a><ref>three</ref><span>four</span></p>');
+  });
+
+  it('leaves other fields parsing self-closing elements as HTML', () => {
+    expect(
+      sanitizeHtml({
+        html: '<p>A<br/>B</p>',
+        allowlist: BIBLIOGRAPHY_ALLOWLIST,
+      }),
+    ).toBe('<p>A<br />B</p>');
   });
 });

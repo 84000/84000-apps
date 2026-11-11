@@ -12,6 +12,13 @@ export interface HtmlAllowlist {
   tags: string[];
   /** Attributes kept, by tag name. Anything else is dropped. */
   attributes: Record<string, string[]>;
+  /**
+   * Reads `<a/>` as an empty element, as XML does. Without it, HTML parsing
+   * opens the element and wraps the text that follows it.
+   */
+  selfClosing?: boolean;
+  /** Attributes beyond the usual (`href`, `src`, ...) that hold a URL, so are scheme-checked. */
+  urlAttributes?: string[];
 }
 
 /**
@@ -89,6 +96,66 @@ export const BIBLIOGRAPHY_ALLOWLIST: HtmlAllowlist = {
   },
 };
 
+/** Attributes per tag in glossary definitions converted from TEI. */
+const TEI_DEFINITION_ATTRIBUTES: Record<string, string[]> = {
+  p: ['class'],
+  span: [
+    'class',
+    'lang',
+    'type',
+    'data-glossary-id',
+    'data-ref',
+    'data-href',
+    'data-inst',
+  ],
+  em: ['class'],
+  cite: ['class', 'lang', 'xml:lang'],
+  a: ['href', 'target', 'title', 'data-pointer-type', 'data-pointer-target'],
+  note: ['type', 'rend'],
+  div: ['type', 'place'],
+  foreign: ['xml:lang', 'type'],
+  'tei:foreign': ['xml:lang', 'type'],
+  hi: ['rend'],
+  ref: ['target', 'rend', 'inst'],
+  ptr: ['target'],
+  term: ['rend', 'ref'],
+  title: ['xml:lang'],
+  sup: [],
+  emph: [],
+  distinct: [],
+};
+
+const mergeAttributes = (
+  ...sets: Record<string, string[]>[]
+): Record<string, string[]> => {
+  const merged: Record<string, string[]> = {};
+  for (const set of sets) {
+    for (const [tag, attributes] of Object.entries(set)) {
+      merged[tag] = [...new Set([...(merged[tag] ?? []), ...attributes])];
+    }
+  }
+  return merged;
+};
+
+/**
+ * What a glossary definition may hold: the markup converted from TEI that
+ * definitions carry today, and the editor's inline set.
+ */
+export const GLOSSARY_DEFINITION_ALLOWLIST: HtmlAllowlist = {
+  tags: [
+    ...new Set([
+      ...BIBLIOGRAPHY_ALLOWLIST.tags,
+      ...Object.keys(TEI_DEFINITION_ATTRIBUTES),
+    ]),
+  ],
+  attributes: mergeAttributes(
+    BIBLIOGRAPHY_ALLOWLIST.attributes,
+    TEI_DEFINITION_ATTRIBUTES,
+  ),
+  selfClosing: true,
+  urlAttributes: ['target', 'data-href', 'data-pointer-target'],
+};
+
 /**
  * Reduces an HTML fragment to what its field allows.
  *
@@ -120,6 +187,11 @@ export const sanitizeHtml = ({
     // is code, not text a person meant to write.
     nonTextTags: ['script', 'style', 'textarea', 'option', 'noscript'],
     disallowedTagsMode: 'discard',
+    parser: { recognizeSelfClosing: allowlist.selfClosing ?? false },
+    allowedSchemesAppliedToAttributes: [
+      ...sanitize.defaults.allowedSchemesAppliedToAttributes,
+      ...(allowlist.urlAttributes ?? []),
+    ],
   });
   return trim ? clean.trim() : clean;
 };

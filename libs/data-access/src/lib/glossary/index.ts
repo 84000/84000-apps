@@ -1,4 +1,5 @@
 export * from './batch';
+export * from './entry';
 export * from './excerpts';
 export * from './instance';
 export * from './landing';
