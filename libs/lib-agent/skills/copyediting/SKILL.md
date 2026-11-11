@@ -56,6 +56,7 @@ proceeding on assumptions:
       general document skill, not one this plugin ships
 - [ ] LibreOffice (`soffice`), for page references and for checking that the
       tracked file opens
+- [ ] A shell, for `eft` in mode 1 — see _Checks before delivery_
 
 ## Storage
 
@@ -111,10 +112,24 @@ outside the change log survives byte for byte: styles, fields, bookmarks,
 section properties, the endnotes. Never rebuild the document from extracted
 text.
 
-- **Wording, spelling, punctuation**: `w:del` around the removed run text (as
-  `w:delText`) and `w:ins` around the added run, each with `w:author="Claude"`
-  and a `w:date`. Split a run only as far as the change requires, and carry the
-  run's own `w:rPr` onto both halves.
+- **Wording, spelling, punctuation**: derive each change from a character
+  diff of the paragraph's old and new text, trim the common prefix and
+  suffix, and track only the remainder, widened to the whole word only where
+  `shared-policies/copyedit-report` calls for it. Never use the change log's
+  Before and After as the span: they quote context so the change can be
+  found. The removed text goes in a `w:del` (as `w:delText`) and the added
+  text in a `w:ins`, each with `w:author="Claude"` and a `w:date`. A deletion
+  spanning runs is placed in full before its insertion, never split around
+  it. Give `xml:space="preserve"` to any `w:t` or `w:delText` that begins or
+  ends with a space.
+- **Splitting a run**: split at the exact character offset, counting each
+  `w:br`, `w:tab` and note reference as a position. **Never rebuild a run from
+  its text.** A split copies the whole run: its `w:rPr`, and every non-text
+  child (`w:br`, `w:cr`, `w:tab`, `w:sym`, `w:footnoteReference`,
+  `w:endnoteReference`, `w:fldChar`, `w:instrText`,
+  `w:lastRenderedPageBreak`) stays in order on the side where it stood.
+- **Stray spaces** (doubled, trailing, before punctuation): a `w:del` around
+  the one space character and nothing else.
 - **Formatting only**: change the run's `w:rPr` and record the previous
   properties in a `w:rPrChange` with the same author.
 - **Comments**: one `w:comment` per query location in `word/comments.xml`,
@@ -127,22 +142,54 @@ text.
 
 ### Checks before delivery
 
-All four, every time. A tracked file that fails one is not delivered.
+All five, every time. A tracked file that fails one is not delivered.
+
+Checks 1, 2 and 5 run on `eft docx check-tracked`, 84000's command line,
+never on code written in the session. Run it with the launcher in this skill,
+as `reference/eft/running.md` says (it also covers Windows and the launcher's
+messages):
+
+```sh
+sh "<this skill>/scripts/eft.sh" docx check-tracked <supplied.docx> <tracked.docx> --changes > "$S/check-tracked.tsv"
+```
+
+`<this skill>` is the directory this file is in, and `S` is
+`84000/scratch/<toh>/copyedit/`. It compares the body, the notes, and the
+headers and footers, for the revisions by "Claude", and exits 0 only when
+every check passes. Each row of its output has a `check`, the `part` and
+paragraph or note it is in (`where`), the `problem`, and the text around it
+(`context`, with `[` `]` marking the place, `↵` a line break and `→` a tab).
+Every row except a `change` row is a failure: fix the tracked file and run it
+again until it exits 0. If eft cannot run, make checks 2 and 5 as described
+below, and say in the review header that they were made without eft.
 
 1. **Accept-all gives the corrected text.** Accept every revision in a copy
    (drop `w:del` elements with their content, unwrap `w:ins`, drop
    `w:rPrChange`), extract the text, and compare it with the original text with
    the change log applied. Any difference is a change missing from the log or
-   a logged change entered wrongly.
-2. **Reject-all gives the original.** Reject every revision in a copy (drop
-   `w:ins` with its content, unwrap `w:del` and turn its `w:delText` back into
-   `w:t`, restore each `w:rPrChange`), and compare its text and run formatting
-   with the supplied file. Any difference is an untracked alteration.
+   a logged change entered wrongly. eft's `change` rows list every tracked
+   change with its place: each must match a change-log entry, and every entry
+   must have its rows. Its `accept-all` rows are line breaks, tabs or note
+   references that accepting the revisions loses or moves.
+2. **Reject-all gives the original, structure included.** Reject every
+   revision in a copy and compare it with the supplied file paragraph by
+   paragraph, keeping every run child in order (text, `w:br`, `w:tab`, note
+   references, fields) and each character's run formatting, and ignoring rsid
+   attributes and run segmentation. Also count `w:br` per paragraph in the
+   reject-all and accept-all copies against the supplied file. A text-only
+   comparison is not this check. eft's `reject-all` and `parts` rows.
 3. **The validator passes** — the `docx` skill's validation script.
 4. **It opens in LibreOffice and in Word.** Convert it headless
    (`soffice --headless --convert-to pdf`) and confirm the PDF renders with the
    comments present. If Word is not available to the session, say so when
    delivering; do not report a Word check that was not made.
+5. **Every tracked change is minimal.** For each group of adjacent
+   `w:del`/`w:ins`, the deleted and inserted text share no leading or trailing
+   character beyond what the whole-word rule requires, the span never goes
+   past a word boundary, and no `w:ins` stands between two parts of one
+   deletion. Rebuild any change that fails. eft's `minimal` rows, with its
+   `space` rows (a lost edge space) and `comments` rows (a comment inside a
+   note).
 
 ## Page references
 
