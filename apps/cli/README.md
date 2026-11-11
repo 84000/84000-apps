@@ -6,16 +6,21 @@
   or EWTS.
 - `eft extract`: one witness's text from an eText collection.
 - `eft structure`: a text's closing and speech formulas, with folios.
+- `eft docx check-tracked`: check a tracked-changes copy of a Word file
+  against its original: rejecting the revisions gives the original, structure
+  and formatting included; accepting them keeps every line break, tab and note
+  reference; and each tracked change covers only the text that changes.
 
 Run `eft --help` for the commands, and `eft <command> --help` for one
 command's arguments and options.
 
 The syllable analysis the Tibetan commands match on is
 `@eightyfourthousand/lib-tibetan`; `src/tibetan/` adds reading eText
-collections and plain `[F.12.a]` files and the n-gram search. Each command is
-a file under `src/commands/` (a group such as `search` is a folder), listed in
-its group's `commands`. The app uses only `node:fs` and `node:path`, so it runs
-unchanged on Node and Bun.
+collections and plain `[F.12.a]` files and the n-gram search; `src/docx/`
+reads Word files with its own zip reader and XML parser. Each command is a
+file under `src/commands/` (a group such as `search` is a folder), listed in
+its group's `commands`. The app uses only `node:fs`, `node:path` and
+`node:zlib`, so it runs unchanged on Node and Bun.
 
 ```sh
 npx nx bundle cli    # dist/apps/cli/eft.mjs, for node
