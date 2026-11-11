@@ -1,6 +1,6 @@
 {
   "name": "eft",
-  "version": "2026.11.0",
+  "version": "2026.11.1",
   "private": true,
   "description": "84000's command line. Not published to npm: released as standalone binaries on GitHub, tagged eft-v<version>."
 }

@@ -28,6 +28,7 @@ const BOOLEAN_FLAGS = new Set([
   'help',
   'print-patterns',
   'version',
+  'changes',
 ]);
 
 /** Split arguments into positionals and `--name value` flags. */

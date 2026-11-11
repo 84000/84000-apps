@@ -6,13 +6,14 @@ import {
   type Io,
 } from './command';
 import { version } from '../package.json';
+import { docx } from './commands/docx';
 import { extract } from './commands/extract';
 import { search } from './commands/search';
 import { structure } from './commands/structure';
 
 export type { Io } from './command';
 
-const commands: Command[] = [search, extract, structure];
+const commands: Command[] = [search, extract, structure, docx];
 
 /** `eft`, 84000's command line: a group of commands. */
 export const eft: Command = {
