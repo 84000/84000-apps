@@ -36,7 +36,6 @@ const plural = (count: number, one: string, many: string) =>
 
 /** The passages an entry's instances are in, as read for the dialog. */
 type Instances =
-  | { uuid: string; status: 'loading' }
   | { uuid: string; status: 'error' }
   | { uuid: string; status: 'read'; page: GlossaryExcerptsPage };
 
@@ -88,7 +87,6 @@ export const GlossaryRowMenu = ({
     if (!deleting) return;
     const { uuid } = deleting;
     let current = true;
-    setRead({ uuid, status: 'loading' });
     getGlossaryTermExcerpts({
       client: createBrowserClient(),
       uuid,
@@ -251,7 +249,7 @@ const GlossaryDeleteInstances = ({
 }: {
   instances: Instances | null;
 }) => {
-  if (!instances || instances.status === 'loading') {
+  if (!instances) {
     return (
       <p className="text-muted-foreground text-sm">
         Finding the passages with instances…
