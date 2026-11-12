@@ -34,7 +34,6 @@ type StoredInstance = {
   passage_uuid: string;
   type: string;
   content: unknown;
-  passages: { label: string | null; work_uuid: string } | null;
 };
 
 const citesTerm = (content: unknown, termUuid: string) =>
@@ -82,7 +81,7 @@ export const removeGlossaryTermInstances = async ({
   for (const batch of inBatches(uuids)) {
     const { data, error } = await client
       .from('passage_annotations')
-      .select('uuid, passage_uuid, type, content, passages(label, work_uuid)')
+      .select('uuid, passage_uuid, type, content')
       .in('uuid', batch);
     if (error) {
       console.error('Error reading glossary instances to remove:', error);
@@ -90,6 +89,29 @@ export const removeGlossaryTermInstances = async ({
     }
     for (const row of (data ?? []) as unknown as StoredInstance[]) {
       stored.set(row.uuid, row);
+    }
+  }
+
+  // Passages of the work, with their labels; one missing is in another work.
+  const labels = new Map<string, string | null>();
+  const passageUuids = [
+    ...new Set([...stored.values()].map((row) => row.passage_uuid)),
+  ];
+  for (const batch of inBatches(passageUuids)) {
+    const { data, error } = await client
+      .from('passages')
+      .select('uuid, label')
+      .eq('work_uuid', workUuid)
+      .in('uuid', batch);
+    if (error) {
+      console.error('Error reading passages of glossary instances:', error);
+      return nothing(`Failed to read the passages: ${error.message}`);
+    }
+    for (const row of (data ?? []) as {
+      uuid: string;
+      label: string | null;
+    }[]) {
+      labels.set(row.uuid, row.label);
     }
   }
 
@@ -109,7 +131,7 @@ export const removeGlossaryTermInstances = async ({
     const fail = (error: string) =>
       failed.push({
         passageUuid,
-        passageLabel: rows[0].passages?.label ?? null,
+        passageLabel: labels.get(passageUuid) ?? null,
         annotationUuids: rows.map((row) => row.uuid),
         error,
       });
@@ -117,7 +139,7 @@ export const removeGlossaryTermInstances = async ({
       (row) =>
         row.type !== 'glossary-instance' ||
         !citesTerm(row.content, termUuid) ||
-        row.passages?.work_uuid !== workUuid,
+        !labels.has(passageUuid),
     );
     if (stray) {
       return fail(`${stray.uuid} is not an instance of this entry in the work`);

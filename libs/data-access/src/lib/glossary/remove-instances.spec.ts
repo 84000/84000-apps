@@ -15,14 +15,35 @@ const stored = (
   passage_uuid: passage,
   type: 'glossary-instance',
   content: [{ type: 'glossary' }, { uuid: 'term' }],
-  passages: { label: `label-${passage}`, work_uuid: 'work' },
   ...overrides,
 });
 
-const clientReading = (result: { data: unknown; error: unknown }) => {
+/**
+ * Answers the instance read with `result`, and the passage read with every
+ * passage it asks for, labelled, except those in `otherWork`.
+ */
+const clientReading = (
+  result: { data: unknown; error: unknown },
+  otherWork: string[] = [],
+) => {
   const inFilter = jest.fn(() => Promise.resolve(result));
   const client = {
-    from: () => ({ select: () => ({ in: inFilter }) }),
+    from: (table: string) =>
+      table === 'passages'
+        ? {
+            select: () => ({
+              eq: () => ({
+                in: (_: string, uuids: string[]) =>
+                  Promise.resolve({
+                    data: uuids
+                      .filter((uuid) => !otherWork.includes(uuid))
+                      .map((uuid) => ({ uuid, label: `label-${uuid}` })),
+                    error: null,
+                  }),
+              }),
+            }),
+          }
+        : { select: () => ({ in: inFilter }) },
   } as unknown as DataClient;
   return { client, inFilter };
 };
@@ -143,16 +164,17 @@ describe('removeGlossaryTermInstances', () => {
   });
 
   it('removes nothing that is not an instance of the entry in the work, and counts one already gone', async () => {
-    const { client } = clientReading({
-      data: [
-        stored('a1', 'p1', { type: 'end-note-link' }),
-        stored('a2', 'p2', { content: [{ uuid: 'other' }] }),
-        stored('a3', 'p3', {
-          passages: { label: '3', work_uuid: 'other-work' },
-        }),
-      ],
-      error: null,
-    });
+    const { client } = clientReading(
+      {
+        data: [
+          stored('a1', 'p1', { type: 'end-note-link' }),
+          stored('a2', 'p2', { content: [{ uuid: 'other' }] }),
+          stored('a3', 'p3'),
+        ],
+        error: null,
+      },
+      ['p3'],
+    );
 
     const result = await removeGlossaryTermInstances({
       client,
