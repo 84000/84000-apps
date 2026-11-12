@@ -38,7 +38,9 @@ export type GlossaryInstanceRemovalFailure = {
   error: string;
 };
 
+/** What a removal did, passage by passage. */
 export type RemoveGlossaryTermInstancesResult = {
+  /** Instances removed, or already gone. */
   removed: string[];
   failed: GlossaryInstanceRemovalFailure[];
   /** The passages as saved, for the editor to take in. */

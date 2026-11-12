@@ -402,6 +402,21 @@ describe('GlossaryInstancesTable', () => {
       expect(mockRemove).not.toHaveBeenCalled();
     });
 
+    it('drops a pending confirmation on paging', async () => {
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1)], 51))
+        .mockResolvedValueOnce(page([row(51)], 51, 50));
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      await screen.findByRole('button', { name: '1.51' });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
     it('moves back a page when the last one empties', async () => {
       mockGetGlossaryTermInstances
         .mockResolvedValueOnce(page([row(1)], 51))

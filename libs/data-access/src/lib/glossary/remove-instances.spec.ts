@@ -142,7 +142,7 @@ describe('removeGlossaryTermInstances', () => {
     jest.restoreAllMocks();
   });
 
-  it('removes nothing that is not an instance of the entry in the work', async () => {
+  it('removes nothing that is not an instance of the entry in the work, and counts one already gone', async () => {
     const { client } = clientReading({
       data: [
         stored('a1', 'p1', { type: 'end-note-link' }),
@@ -162,12 +162,11 @@ describe('removeGlossaryTermInstances', () => {
     });
 
     expect(mockApplyPassageEdits).not.toHaveBeenCalled();
-    expect(result.removed).toEqual([]);
+    expect(result.removed).toEqual(['gone']);
     expect(result.failed.flatMap((f) => f.annotationUuids).sort()).toEqual([
       'a1',
       'a2',
       'a3',
-      'gone',
     ]);
   });
 

@@ -17,8 +17,9 @@ export type GlossaryInstanceRemovalFailure = {
   error: string;
 };
 
+/** What a removal did, passage by passage. */
 export type RemoveGlossaryTermInstancesResult = {
-  /** Instances removed. */
+  /** Instances removed, or already gone. */
   removed: string[];
   /** Passages whose instances stay, with the reason. */
   failed: GlossaryInstanceRemovalFailure[];
@@ -93,15 +94,8 @@ export const removeGlossaryTermInstances = async ({
   }
 
   const failed: GlossaryInstanceRemovalFailure[] = [];
-  const missing = uuids.filter((uuid) => !stored.has(uuid));
-  if (missing.length > 0) {
-    failed.push({
-      passageUuid: '',
-      passageLabel: null,
-      annotationUuids: missing,
-      error: 'Not found: already removed, or never stored',
-    });
-  }
+  // One already gone, such as from another tab, needs no removing.
+  const removed = uuids.filter((uuid) => !stored.has(uuid));
 
   const byPassage = new Map<string, StoredInstance[]>();
   for (const row of stored.values()) {
@@ -110,7 +104,6 @@ export const removeGlossaryTermInstances = async ({
     byPassage.set(row.passage_uuid, list);
   }
 
-  const removed: string[] = [];
   const passages: Passage[] = [];
   const removeFrom = async (passageUuid: string, rows: StoredInstance[]) => {
     const fail = (error: string) =>

@@ -67,6 +67,7 @@ export const GlossaryInstancesTable = ({
       const read = ++readRef.current;
       setState('loading');
       setSelected(new Set());
+      setConfirming(undefined);
       getGlossaryTermInstances({
         client: createGraphQLClient(),
         uuid: termUuid,
@@ -357,7 +358,7 @@ export const GlossaryInstancesTable = ({
         <Button
           variant="ghost"
           size="sm"
-          disabled={pageIndex === 0 || state === 'loading'}
+          disabled={pageIndex === 0 || busy}
           onClick={() => goTo(0)}
         >
           First
@@ -365,7 +366,7 @@ export const GlossaryInstancesTable = ({
         <Button
           variant="ghost"
           size="sm"
-          disabled={pageIndex === 0 || state === 'loading'}
+          disabled={pageIndex === 0 || busy}
           onClick={() => goTo(pageIndex - 1)}
         >
           Previous
@@ -377,7 +378,7 @@ export const GlossaryInstancesTable = ({
         <Button
           variant="ghost"
           size="sm"
-          disabled={pageIndex >= pageCount - 1 || state === 'loading'}
+          disabled={pageIndex >= pageCount - 1 || busy}
           onClick={() => goTo(pageIndex + 1)}
         >
           Next
@@ -385,7 +386,7 @@ export const GlossaryInstancesTable = ({
         <Button
           variant="ghost"
           size="sm"
-          disabled={pageIndex >= pageCount - 1 || state === 'loading'}
+          disabled={pageIndex >= pageCount - 1 || busy}
           onClick={() => goTo(pageCount - 1)}
         >
           Last
