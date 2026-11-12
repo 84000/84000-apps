@@ -732,5 +732,9 @@ unedited entry is never rewritten. A refused save (the entry changed or was
 deleted since) keeps the row's text and dirty state and records a conflict,
 which the row shows above its definition with the entry as stored now: "Use
 theirs" reseeds the row from it, "Keep mine" makes it the guard, so the next
-save writes over it. When a save's answer is lost, the entry is read back,
-and the row settles only if what is stored is what was sent.
+save writes over it. For an entry deleted since, "Discard my edit" drops the
+row's edit. Until the choice is made, later saves leave the row out, and it
+still counts as unsaved. When a save's answer is lost, the entry is read
+back, and the row settles only if what is stored is what was sent. Pasted
+HTML takes only the editor's own marks: no stored elements, kept markup,
+pointers or wrappers.
