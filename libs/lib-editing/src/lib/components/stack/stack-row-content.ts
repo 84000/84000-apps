@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/core';
 import type {
   PassageDoc,
   WorkDocument,
@@ -47,6 +48,8 @@ export class StackRowContent {
   private compareLeads = new Map<string, string>();
   /** HTML the host gave for rows, which wins over their documents. */
   private readonly givenHTML?: ReadonlyMap<string, string>;
+  /** Draws a row's document as HTML. */
+  private readonly render: (doc: JSONContent) => string;
   /** Per-hydrated-document teardown: content observer + undo bookkeeping. */
   private wiring = new Map<string, () => void>();
 
@@ -55,10 +58,12 @@ export class StackRowContent {
     spineFeed?: PassageStackControllerOptions['spineFeed'];
     charCounts?: Iterable<readonly [string, number]>;
     staticHTML?: ReadonlyMap<string, string>;
+    renderRow?: (doc: JSONContent) => string;
     bump: () => void;
   }) {
     this.work = host.work;
     this.givenHTML = host.staticHTML;
+    this.render = host.renderRow ?? renderStaticPassageHTML;
     this.spineFeed = host.spineFeed;
     this.bump = host.bump;
     if (host.charCounts) {
@@ -125,7 +130,7 @@ export class StackRowContent {
     const doc = this.work.store.peek(uuid);
     if (!doc) return null;
 
-    const html = renderStaticPassageHTML(doc.toJSON());
+    const html = this.render(doc.toJSON());
     this.staticHTML.set(uuid, html);
     return html;
   };
@@ -139,7 +144,7 @@ export class StackRowContent {
     const known = this.givenHTML?.get(uuid) ?? this.staticHTML.get(uuid);
     if (known !== undefined) return known;
     const doc = this.work.store.peek(uuid);
-    return doc ? renderStaticPassageHTML(doc.toJSON()) : null;
+    return doc ? this.render(doc.toJSON()) : null;
   };
 
   /**

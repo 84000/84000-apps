@@ -18,15 +18,21 @@ import type {
 } from '@eightyfourthousand/lib-doc-model';
 import type { GraphQLClient } from 'graphql-request';
 
-import type { StackController } from './StackController';
+import { StackController } from './StackController';
 import {
   loadBibliographyWork,
   readerBibliographyWork,
   type BibliographyWork,
 } from './bibliography-work';
+import {
+  loadGlossaryWork,
+  renderGlossaryRow,
+  type GlossaryWork,
+} from './glossary-work';
 import { SpineFeed } from './spine-feed';
 import {
   BIBLIOGRAPHY_TAB,
+  GLOSSARY_TAB,
   STACK_SECTIONS,
   type StackReaderSeed,
 } from './stack-seed';
@@ -40,6 +46,8 @@ export type StackWork = {
    * saves, and undoes, apart from them. Null when it could not be read.
    */
   bibliography: BibliographyWork | null;
+  /** The glossary, as a work of its own. Null when it was not read. */
+  glossary: GlossaryWork | null;
   /** The view for a tab, or null when this provider does not draw it. */
   controllerFor: (tab: string) => StackController | null;
   /** Whether every view is read-only, as the provider was told. */
@@ -70,9 +78,11 @@ type StackViews = {
 const loadedFrom = (
   { work, controllers }: StackViews,
   bibliography: BibliographyWork | null,
+  glossary: GlossaryWork | null = null,
 ): LoadedStackWork => ({
   work,
   bibliography,
+  glossary,
   controllerFor: (tab) => controllers.get(tab) ?? null,
   controllers: [...controllers.values()],
 });
@@ -188,9 +198,21 @@ export const seedStackWork = ({
     return loadedFrom(views, views.bibliography ?? null);
   })();
 
+/** A glossary's view: read-only, its rows drawn as the readers draw them. */
+const glossaryView = (glossary: GlossaryWork) =>
+  new StackController({
+    work: glossary.work,
+    tab: GLOSSARY_TAB,
+    rows: 'glossary',
+    spineFeed: glossary.feed,
+    glossary,
+    renderRow: renderGlossaryRow,
+    readOnly: true,
+  });
+
 /**
- * Load a work's sections and bibliography into views, and keep the views in
- * the mode asked for.
+ * Load a work's sections, bibliography and glossary into views, and keep the
+ * views in the mode asked for.
  *
  * The state lives with the caller so its own effects, declared before this
  * hook, are torn down before the work they observe is destroyed.
@@ -207,6 +229,7 @@ export const useStackWorkLoad = ({
   createView,
   seed,
   withBibliography = true,
+  withGlossary = false,
 }: {
   workUuid: string;
   readOnly: boolean;
@@ -221,6 +244,8 @@ export const useStackWorkLoad = ({
    * rows, comment marks and all. A reader must not make it.
    */
   withBibliography?: boolean;
+  /** Whether to read the glossary, the draft entries an editor works on. */
+  withGlossary?: boolean;
 }) => {
   // Read when the views are built, so they start in the current mode.
   const readOnlyRef = useRef(readOnly);
@@ -248,12 +273,14 @@ export const useStackWorkLoad = ({
           work: adopted.work,
           extras: new Map(),
           controllers: new Map(
-            [...STACK_SECTIONS.map(({ tab }) => tab), BIBLIOGRAPHY_TAB].flatMap(
-              (tab) => {
-                const view = adopted.controllerFor(tab);
-                return view ? [[tab, view] as const] : [];
-              },
-            ),
+            [
+              ...STACK_SECTIONS.map(({ tab }) => tab),
+              BIBLIOGRAPHY_TAB,
+              GLOSSARY_TAB,
+            ].flatMap((tab) => {
+              const view = adopted.controllerFor(tab);
+              return view ? [[tab, view] as const] : [];
+            }),
           ),
           bibliography: adopted.bibliography,
         }
@@ -276,6 +303,13 @@ export const useStackWorkLoad = ({
     // Its own work, so it reads alongside the passages rather than after.
     const readingBibliography = withBibliography
       ? loadBibliographyWork({
+          workUuid,
+          client: createBrowserClient(),
+          graphql: client,
+        })
+      : Promise.resolve(null);
+    const readingGlossary = withGlossary
+      ? loadGlossaryWork({
           workUuid,
           client: createBrowserClient(),
           graphql: client,
@@ -318,9 +352,13 @@ export const useStackWorkLoad = ({
           }),
         );
       }
-      // A seeded work is already drawn; it only gains a bibliography it read.
-      if (!seeded || read)
-        setStack(loadedFrom(views, read ?? seededBibliography));
+      const glossary = await readingGlossary;
+      if (cancelled) return;
+      if (glossary) controllers.set(GLOSSARY_TAB, glossaryView(glossary));
+      // A seeded work is already drawn; it only gains what it read.
+      if (!seeded || read || glossary) {
+        setStack(loadedFrom(views, read ?? seededBibliography, glossary));
+      }
     })();
 
     return () => {
@@ -332,8 +370,9 @@ export const useStackWorkLoad = ({
       void readingBibliography.then((bibliography) =>
         bibliography?.work.destroy(),
       );
+      void readingGlossary.then((glossary) => glossary?.work.destroy());
     };
-  }, [workUuid, setStack, createView, seed, withBibliography]);
+  }, [workUuid, setStack, createView, seed, withBibliography, withGlossary]);
 };
 
 /** Offer a loaded work to the stacks drawn under it. */
@@ -351,6 +390,7 @@ export const StackWorkContextProvider = ({
       stack && {
         work: stack.work,
         bibliography: stack.bibliography,
+        glossary: stack.glossary,
         controllerFor: stack.controllerFor,
         readOnly,
       },

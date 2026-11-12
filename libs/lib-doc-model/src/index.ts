@@ -71,10 +71,15 @@ export type {
   WorkDocumentOptions,
 } from './lib/work-document';
 
-export { BIBLIOGRAPHY_ROW_TYPES, rowKindOf } from './lib/types';
+export {
+  BIBLIOGRAPHY_ROW_TYPES,
+  GLOSSARY_ROW_TYPE,
+  rowKindOf,
+} from './lib/types';
 export type {
   BibliographyRowType,
   FocusTarget,
+  GlossaryRowType,
   LabelChange,
   ParentChange,
   PassagePlacement,

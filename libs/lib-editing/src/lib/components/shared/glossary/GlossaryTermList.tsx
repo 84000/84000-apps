@@ -1,8 +1,8 @@
 'use client';
 
-import { SectionTitle } from '@eightyfourthousand/design-system';
 import { LabeledElement } from '../LabeledElement';
 import { GlossaryInstanceBody } from './GlossaryInstanceBody';
+import { GlossaryTitle } from './GlossaryTitle';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { useGlossaryPagination } from './GlossaryPaginationProvider';
 import { GlossarySkeleton } from './GlossarySkeleton';
@@ -23,14 +23,7 @@ export const GlossaryTermList = ({
 
   return (
     <div className={cn('flex flex-col w-full', className)}>
-      <LabeledElement
-        className="mt-2"
-        id={'glossary'}
-        label="g."
-        excerpt="Glossary"
-      >
-        <SectionTitle>Glossary</SectionTitle>
-      </LabeledElement>
+      <GlossaryTitle className="mt-2" />
       <div className="mt-3 flex flex-col gap-6">
         {startCursor && (
           <div className="flex flex-col gap-6">

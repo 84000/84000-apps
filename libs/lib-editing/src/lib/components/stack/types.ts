@@ -3,6 +3,7 @@ import type { ComponentType } from 'react';
 import type { UndoManager, XmlFragment } from 'yjs';
 import type { Passage } from '@eightyfourthousand/data-access';
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
+import type { GlossaryWork } from './glossary-work';
 import type { BeyondPage } from './spine-feed';
 import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
@@ -181,6 +182,14 @@ export type PassageStackControllerOptions = {
    * never split, merged or deleted here. Defaults to passages.
    */
   rows?: StackRows;
+  /**
+   * A row's static HTML from its document. Defaults to the reader's passage
+   * renderer; rows of another entity, with markup that renderer drops, pass
+   * their own.
+   */
+  renderRow?: (doc: JSONContent) => string;
+  /** The glossary whose entries the rows are, for glossary rows. */
+  glossary?: GlossaryWork;
 };
 
 /** What a live row's editor is bound to. */
@@ -246,7 +255,7 @@ export type StackControllerOptions = PassageStackControllerOptions & {
 };
 
 /** The entity a stack's rows are. */
-export type StackRows = 'passages' | 'bibliography';
+export type StackRows = 'passages' | 'bibliography' | 'glossary';
 
 /**
  * Scrolls one mounted view of a stack to a row. `settle` holds the row in

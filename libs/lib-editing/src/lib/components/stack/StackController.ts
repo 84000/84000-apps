@@ -1,6 +1,9 @@
 import { Editor, Extensions } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
-import { getBookmarks } from '@eightyfourthousand/data-access';
+import {
+  getBookmarks,
+  type GlossaryEntry,
+} from '@eightyfourthousand/data-access';
 import {
   rowKindOf,
   type FocusTarget,
@@ -11,6 +14,7 @@ import {
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import * as bibliography from './bibliography-structure';
+import type { GlossaryWork } from './glossary-work';
 import { bibliographyRowStyle, type StackRowStyle } from './row-classes';
 import { StackHydration } from './stack-hydration';
 import { StackLiveEditors } from './stack-live-editors';
@@ -83,6 +87,7 @@ export class StackController {
   private version = 0;
   private disposers: (() => void)[] = [];
   private extras?: ReadonlyMap<string, PassageExtras>;
+  private glossary?: GlossaryWork;
 
   constructor(options: StackControllerOptions) {
     this.work = options.work;
@@ -92,6 +97,7 @@ export class StackController {
     this.tab = options.tab;
     this.rows = options.rows ?? 'passages';
     this.extras = options.extras;
+    this.glossary = options.glossary;
     this.windowKey = options.windowKey ?? options.tab ?? 'default';
     if (!options.serverRendered) this.readBookmarks();
     this.content = new StackRowContent({
@@ -99,6 +105,7 @@ export class StackController {
       spineFeed: options.spineFeed,
       charCounts: options.charCounts,
       staticHTML: options.staticHTML,
+      renderRow: options.renderRow,
       bump: () => this.bump(),
     });
     this.live = new StackLiveEditors({
@@ -280,6 +287,13 @@ export class StackController {
   /** A row's own presentation. A passage has none: its blocks carry it. */
   rowStyle = (meta: PassageMeta): StackRowStyle =>
     this.rows === 'bibliography' ? bibliographyRowStyle(meta) : {};
+
+  /** The glossary the rows are entries of, for glossary rows. */
+  getGlossary = () => this.glossary ?? null;
+
+  /** A glossary row's entry, once its row has been read. */
+  getGlossaryEntry = (uuid: string): GlossaryEntry | null =>
+    this.glossary?.entries.get(uuid) ?? null;
 
   /** Whether a row shows the bookmark indicator. */
   showsBookmark = (uuid: string) => this.readOnly && this.bookmarks.has(uuid);
