@@ -38,7 +38,7 @@ const serializers = new WeakMap<Schema, DOMSerializer>();
  * bare `<p>` and a link a bare `<a href>`, which is what stored entries hold
  * and what the reader styles. Everything else renders as the editor does.
  */
-const storageSerializer = (schema: Schema): DOMSerializer => {
+export const storageSerializer = (schema: Schema): DOMSerializer => {
   const cached = serializers.get(schema);
   if (cached) return cached;
   const base = DOMSerializer.fromSchema(schema);
@@ -61,7 +61,7 @@ const storageSerializer = (schema: Schema): DOMSerializer => {
  * and a newline between two `<p>`s would otherwise become a paragraph of its
  * own. Within a block it is text, and kept.
  */
-const dropWhitespaceBetweenBlocks = (container: HTMLElement) => {
+export const dropWhitespaceBetweenBlocks = (container: HTMLElement) => {
   const hasBlocks = [...container.children].some((el) => el.tagName === 'P');
   if (!hasBlocks) return;
   [...container.childNodes].forEach((node) => {
