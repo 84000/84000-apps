@@ -31,14 +31,15 @@ describe('cutGlossaryInstanceContext', () => {
     });
   });
 
-  it('keeps letters joined to the instance without counting them', () => {
-    const joined = 'a b c d e f bodhisattva’s g h';
+  it('counts letters joined to the instance as a word', () => {
+    const joined = 'a b c d e f bodhisattva’s g h i j k';
     const at = joined.indexOf('bodhisattva');
     expect(cutGlossaryInstanceContext(joined, at, at + 11)).toMatchObject({
       before: 'b c d e f ',
       text: 'bodhisattva',
-      after: '’s g h',
+      after: '’s g h i j',
       truncatedStart: true,
+      truncatedEnd: true,
     });
   });
 

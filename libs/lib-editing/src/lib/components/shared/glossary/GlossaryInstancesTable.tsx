@@ -159,49 +159,47 @@ export const GlossaryInstancesTable = ({
         )}
       </div>
 
-      {pageCount > 1 && (
-        <nav
-          aria-label="Instance pages"
-          className="flex items-center justify-end gap-1 text-sm"
+      <nav
+        aria-label="Instance pages"
+        className="flex items-center justify-end gap-1 text-sm"
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pageIndex === 0 || state === 'loading'}
+          onClick={() => goTo(0)}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pageIndex === 0 || state === 'loading'}
-            onClick={() => goTo(0)}
-          >
-            First
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pageIndex === 0 || state === 'loading'}
-            onClick={() => goTo(pageIndex - 1)}
-          >
-            Previous
-          </Button>
-          <span className="px-2 text-muted-foreground" aria-live="polite">
-            Page {(pageIndex + 1).toLocaleString()} of{' '}
-            {pageCount.toLocaleString()}
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pageIndex >= pageCount - 1 || state === 'loading'}
-            onClick={() => goTo(pageIndex + 1)}
-          >
-            Next
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={pageIndex >= pageCount - 1 || state === 'loading'}
-            onClick={() => goTo(pageCount - 1)}
-          >
-            Last
-          </Button>
-        </nav>
-      )}
+          First
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pageIndex === 0 || state === 'loading'}
+          onClick={() => goTo(pageIndex - 1)}
+        >
+          Previous
+        </Button>
+        <span className="px-2 text-muted-foreground" aria-live="polite">
+          Page {(pageIndex + 1).toLocaleString()} of{' '}
+          {pageCount.toLocaleString()}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pageIndex >= pageCount - 1 || state === 'loading'}
+          onClick={() => goTo(pageIndex + 1)}
+        >
+          Next
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={pageIndex >= pageCount - 1 || state === 'loading'}
+          onClick={() => goTo(pageCount - 1)}
+        >
+          Last
+        </Button>
+      </nav>
     </div>
   );
 };

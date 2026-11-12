@@ -52,9 +52,9 @@ const isWhitespace = (char: string | undefined) =>
 
 /**
  * Cuts the text an instance covers out of its passage, with up to `words`
- * whitespace-separated words on each side. Letters joined to the instance
- * (as in "bodhisattva's") go with it and are not counted. Offsets are UTF-16
- * code units, as annotation offsets are. Pure.
+ * whitespace-separated words on each side; letters joined to the instance
+ * (as in "bodhisattva's") count as one. Offsets are UTF-16 code units, as
+ * annotation offsets are. Pure.
  */
 export const cutGlossaryInstanceContext = (
   content: string | null | undefined,
@@ -82,14 +82,12 @@ export const cutGlossaryInstanceContext = (
   }
 
   let from = start;
-  while (from > 0 && !isWhitespace(content[from - 1])) from--;
   for (let counted = 0; counted < words && from > 0; counted++) {
     while (from > 0 && isWhitespace(content[from - 1])) from--;
     while (from > 0 && !isWhitespace(content[from - 1])) from--;
   }
 
   let to = end;
-  while (to < length && !isWhitespace(content[to])) to++;
   for (let counted = 0; counted < words && to < length; counted++) {
     while (to < length && isWhitespace(content[to])) to++;
     while (to < length && !isWhitespace(content[to])) to++;
