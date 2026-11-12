@@ -6,3 +6,4 @@ export * from './landing';
 export * from './pagination';
 export * from './search';
 export * from './section';
+export * from './term-instances';

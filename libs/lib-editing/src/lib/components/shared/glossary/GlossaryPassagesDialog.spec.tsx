@@ -25,6 +25,11 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   getGlossaryTermExcerpts: (...args: unknown[]) =>
     mockGetGlossaryTermExcerpts(...args),
 }));
+jest.mock('./GlossaryInstancesTable', () => ({
+  GlossaryInstancesTable: ({ termUuid }: { termUuid: string }) => (
+    <p>instances of {termUuid}</p>
+  ),
+}));
 
 const item = (n: number, overrides = {}) => ({
   uuid: `p-${n}`,
@@ -67,9 +72,9 @@ const Opener = () => {
   );
 };
 
-const openDialog = async () => {
+const openDialog = async ({ instances = false } = {}) => {
   render(
-    <GlossaryPassagesProvider>
+    <GlossaryPassagesProvider instances={instances}>
       <Opener />
     </GlossaryPassagesProvider>,
   );
@@ -194,6 +199,35 @@ describe('GlossaryPassagesDialog', () => {
 
     expect(await within(dialog).findByText(/couldn.t be loaded/)).toBeTruthy();
     expect(within(dialog).queryByText(/isn.t linked/)).toBeNull();
+  });
+});
+
+describe('the Instances tab', () => {
+  it('is not in the reader', async () => {
+    mockGetGlossaryTermExcerpts.mockResolvedValue(page([item(1)], 1));
+
+    const dialog = await openDialog();
+
+    await within(dialog).findByText('1.1');
+    expect(within(dialog).queryByRole('tab')).toBeNull();
+  });
+
+  it('is in the editor, beside the passages, and lists on request', async () => {
+    mockGetGlossaryTermExcerpts.mockResolvedValue(page([item(1)], 1));
+
+    const dialog = await openDialog({ instances: true });
+
+    const passagesTab = within(dialog).getByRole('tab', { name: 'Passages' });
+    expect(passagesTab.getAttribute('aria-selected')).toBe('true');
+    await within(dialog).findByText('1.1');
+    expect(within(dialog).queryByText(/instances of/)).toBeNull();
+
+    await userEvent.click(
+      within(dialog).getByRole('tab', { name: 'Instances' }),
+    );
+
+    expect(within(dialog).getByText('instances of term-1')).toBeTruthy();
+    expect(within(dialog).queryByText('1.1')).toBeNull();
   });
 });
 

@@ -40,6 +40,11 @@ export {
   type GlossaryExcerptsPage,
   type GlossaryPassageExcerpt,
 } from './get-glossary-term-excerpts';
+export {
+  getGlossaryTermInstances,
+  type GlossaryTermInstanceRow,
+  type GlossaryTermInstancesPage,
+} from './get-glossary-term-instances';
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';

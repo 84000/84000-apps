@@ -25,6 +25,7 @@ import { useStackSelection } from './useStackSelection';
 import { useStackVisibleRange } from './useStackVisibleRange';
 import type { StackLinkTarget } from './stack-links';
 import { useNavigation } from '../shared/NavigationContext';
+import { writeHighlight } from '../shared/navigation-params';
 import { panelForTab, type PanelName } from '../shared/types';
 
 export { scrollParent } from './useStackScroller';
@@ -132,16 +133,7 @@ export const PassageStack = ({
         return;
       }
       if (link.toh) setToh(link.toh);
-      // The provider reads the highlight range back off the URL, and its own
-      // sync preserves whatever else is already there.
-      const query = new URLSearchParams(window.location.search);
-      query.delete('start');
-      query.delete('end');
-      if (link.highlight) {
-        query.set('start', link.highlight.start);
-        query.set('end', link.highlight.end);
-      }
-      window.history.replaceState(null, '', `?${query.toString()}`);
+      writeHighlight(link.highlight);
       updatePanel({
         name: link.panel,
         state: { open: true, tab: link.tab, hash: link.hash },

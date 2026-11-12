@@ -452,6 +452,43 @@ export type GlossaryTermInstancePassagesArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/** One glossary-instance annotation citing a glossary term, with the text it covers */
+export type GlossaryTermInstanceRow = {
+  __typename?: 'GlossaryTermInstanceRow';
+  /** Up to five words of passage text after the instance */
+  after: Scalars['String']['output'];
+  /** Up to five words of passage text before the instance */
+  before: Scalars['String']['output'];
+  /** End offset in the passage text, in UTF-16 code units */
+  end: Scalars['Int']['output'];
+  /** The offsets fall outside the passage text, so no text could be cut */
+  outOfRange: Scalars['Boolean']['output'];
+  passageLabel?: Maybe<Scalars['String']['output']>;
+  passageSort: Scalars['Int']['output'];
+  passageType: Scalars['String']['output'];
+  passageUuid: Scalars['ID']['output'];
+  /** Start offset in the passage text, in UTF-16 code units */
+  start: Scalars['Int']['output'];
+  /** The text the instance covers */
+  text: Scalars['String']['output'];
+  /** Whether passage text after `after` was left out */
+  truncatedEnd: Scalars['Boolean']['output'];
+  /** Whether passage text before `before` was left out */
+  truncatedStart: Scalars['Boolean']['output'];
+  /** Annotation UUID */
+  uuid: Scalars['ID']['output'];
+};
+
+/** A page of the instances that cite a glossary term */
+export type GlossaryTermInstancesPage = {
+  __typename?: 'GlossaryTermInstancesPage';
+  items: Array<GlossaryTermInstanceRow>;
+  /** Where this page starts among them */
+  offset: Scalars['Int']['output'];
+  /** Number of instances listed for the term across every page */
+  totalCount: Scalars['Int']['output'];
+};
+
 /** Names for a glossary term instance in different languages */
 export type GlossaryTermNames = {
   __typename?: 'GlossaryTermNames';
@@ -1012,6 +1049,12 @@ export type Query = {
    */
   glossaryTermExcerpts?: Maybe<GlossaryExcerptsPage>;
   /**
+   * The glossary-instance annotations that cite a glossary term, one per
+   * instance, in passage order and then by offset. Draft content only: null for
+   * a published-content request, or when the read fails.
+   */
+  glossaryTermInstances?: Maybe<GlossaryTermInstancesPage>;
+  /**
    * Get paginated passage references for a glossary term (per-term, on-demand)
    * @deprecated Use glossaryTermExcerpts
    */
@@ -1147,6 +1190,15 @@ export type QueryGlossaryInstanceArgs = {
 export type QueryGlossaryTermExcerptsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  toh?: InputMaybe<Scalars['String']['input']>;
+  uuid: Scalars['ID']['input'];
+};
+
+
+/** Root Query type - extend this in other schema files */
+export type QueryGlossaryTermInstancesArgs = {
+  first?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
   toh?: InputMaybe<Scalars['String']['input']>;
   uuid: Scalars['ID']['input'];
 };

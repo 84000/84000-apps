@@ -4,6 +4,7 @@ import {
   getGlossaryInstance,
   getGlossaryInstances,
   getGlossaryTermExcerpts,
+  getGlossaryTermInstances,
   getWorkGlossaryTermsPage,
   searchWorkGlossaryTerms,
 } from '@eightyfourthousand/data-access';
@@ -69,6 +70,23 @@ export const glossaryTermExcerptsResolver = async (
     ...page,
     items: page.items.map(({ excerpt, ...item }) => ({ ...item, ...excerpt })),
   };
+};
+
+/** A page of an entry's instances, for the editor only. */
+export const glossaryTermInstancesResolver = async (
+  _parent: unknown,
+  args: { uuid: string; toh?: string; first?: number; offset?: number },
+  ctx: GraphQLContext,
+) => {
+  if (ctx.source !== 'draft') return null;
+
+  return getGlossaryTermInstances({
+    client: ctx.supabase,
+    uuid: args.uuid,
+    toh: args.toh,
+    first: args.first,
+    offset: args.offset,
+  });
 };
 
 export const workGlossaryResolver = async (

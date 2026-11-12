@@ -72,6 +72,7 @@ export const NavigationProvider = ({
   hoverCards = editable,
   commentsPanel = editable,
   withImprint = true,
+  glossaryInstances = false,
   children,
 }: {
   /** The studio rather than the reader. Defaults to the reader. */
@@ -91,6 +92,8 @@ export const NavigationProvider = ({
    * serve, whose details are not shown. Defaults to true.
    */
   withImprint?: boolean;
+  /** Whether the glossary passages dialog lists each instance too. */
+  glossaryInstances?: boolean;
   uuid: string;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
@@ -118,6 +121,13 @@ export const NavigationProvider = ({
   const [showOuterContent, setShowOuterContent] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [highlight, setHighlight] = useState<HighlightRange | undefined>();
+  // Takes the live URL's range, keeping equal state so it reads as unchanged.
+  const readHighlight = useCallback(() => {
+    const range = parseHighlight(new URLSearchParams(window.location.search));
+    setHighlight((prev) =>
+      prev?.start === range?.start && prev?.end === range?.end ? prev : range,
+    );
+  }, []);
   const [focusedComment, setFocusedComment] = useState<string | undefined>();
   const [commentsRevision, setCommentsRevision] = useState(0);
   const [hasTranslationContent, setHasTranslationContent] = useState(
@@ -183,8 +193,11 @@ export const NavigationProvider = ({
 
         return newPanels;
       });
+      // A link writes its range to the URL before naming the passage, and the
+      // stack answers the passage at once: the range must land with it.
+      readHighlight();
     },
-    [isMobile, hasTranslationContent],
+    [isMobile, hasTranslationContent, readHighlight],
   );
 
   /**
@@ -337,15 +350,10 @@ export const NavigationProvider = ({
     // Re-read the highlight range so an in-session navigation (e.g. a
     // same-work mention link that pushes `start`/`end`) triggers a highlight,
     // and navigating away (no range) clears it.
-    const newHighlight = parseHighlight(live);
-    setHighlight((prev) =>
-      prev?.start === newHighlight?.start && prev?.end === newHighlight?.end
-        ? prev
-        : newHighlight,
-    );
+    readHighlight();
 
     setUrlRead(true);
-  }, []);
+  }, [readHighlight]);
 
   const hasHoverCards = useFeatureFlagEnabled('translation-hover-cards');
   // Static, not a PostHog flag: an ad blocker stops the flags arriving and the
@@ -454,7 +462,7 @@ export const NavigationProvider = ({
 
   return (
     <NavigationContext.Provider value={contextValue}>
-      <GlossaryPassagesProvider>
+      <GlossaryPassagesProvider instances={glossaryInstances}>
         <HoverCardProvider enabled={hasHoverCards && hoverCards}>
           {children}
         </HoverCardProvider>

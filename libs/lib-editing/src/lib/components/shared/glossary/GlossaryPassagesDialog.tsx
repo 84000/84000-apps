@@ -12,7 +12,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@eightyfourthousand/design-system';
+import { cn } from '@eightyfourthousand/lib-utils';
 import {
   ReactNode,
   createContext,
@@ -25,6 +30,7 @@ import {
 } from 'react';
 import { useNavigation } from '../NavigationContext';
 import { locationForPassageType } from '../types';
+import { GlossaryInstancesTable } from './GlossaryInstancesTable';
 
 /** Passages shown per page. */
 export const GLOSSARY_PASSAGES_PAGE_SIZE = 20;
@@ -54,8 +60,11 @@ export const useGlossaryPassages = () => useContext(GlossaryPassagesContext);
  * outlives a hover card that closes as it opens.
  */
 export const GlossaryPassagesProvider = ({
+  instances = false,
   children,
 }: {
+  /** Whether the dialog has the editor's "Instances" tab. */
+  instances?: boolean;
   children: ReactNode;
 }) => {
   const [term, setTerm] = useState<GlossaryPassagesTerm>();
@@ -64,7 +73,11 @@ export const GlossaryPassagesProvider = ({
   return (
     <GlossaryPassagesContext.Provider value={value}>
       {children}
-      <GlossaryPassagesDialog term={term} onClose={() => setTerm(undefined)} />
+      <GlossaryPassagesDialog
+        term={term}
+        instances={instances}
+        onClose={() => setTerm(undefined)}
+      />
     </GlossaryPassagesContext.Provider>
   );
 };
@@ -74,12 +87,17 @@ type LoadState = 'idle' | 'loading' | 'error';
 const countLabel = (count: number, one: string, many: string) =>
   `${count.toLocaleString()} ${count === 1 ? one : many}`;
 
-/** Lists every passage that cites a glossary entry, a page at a time. */
+/**
+ * Lists every passage that cites a glossary entry, a page at a time. With
+ * `instances`, a second tab lists each instance.
+ */
 export const GlossaryPassagesDialog = ({
   term,
+  instances = false,
   onClose,
 }: {
   term?: GlossaryPassagesTerm;
+  instances?: boolean;
   onClose: () => void;
 }) => {
   const { toh, updatePanel } = useNavigation();
@@ -87,6 +105,7 @@ export const GlossaryPassagesDialog = ({
   const [totalCount, setTotalCount] = useState<number>();
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [state, setState] = useState<LoadState>('idle');
+  const [tab, setTab] = useState<'passages' | 'instances'>('passages');
   // Each read gets a number; a read answers only if it is still the latest, so
   // a slow page for an earlier entry or Toh never lands in this one.
   const readRef = useRef(0);
@@ -136,6 +155,7 @@ export const GlossaryPassagesDialog = ({
     setTotalCount(undefined);
     setNextCursor(null);
     setState(term ? 'loading' : 'idle');
+    setTab('passages');
   }
 
   useEffect(() => {
@@ -161,10 +181,69 @@ export const GlossaryPassagesDialog = ({
 
   const firstPageFailed = state === 'error' && totalCount === undefined;
 
+  const passages = (
+    <div className="overflow-y-auto -mx-2 px-2 min-h-0">
+      {totalCount === 0 && (
+        <p className="text-sm text-muted-foreground">
+          This entry isn&apos;t linked in any passage.
+        </p>
+      )}
+      {firstPageFailed && (
+        <p className="text-sm text-muted-foreground">
+          The passages couldn&apos;t be loaded.{' '}
+          <Button
+            variant="link"
+            className="p-0 h-auto"
+            onClick={() => loadPage(null)}
+          >
+            Try again
+          </Button>
+        </p>
+      )}
+      <ol className="flex flex-col gap-1">
+        {items.map((item) => (
+          <li key={item.uuid}>
+            <GlossaryPassageExcerptButton
+              item={item}
+              onClick={() => jumpTo(item)}
+            />
+          </li>
+        ))}
+      </ol>
+      {state === 'loading' && (
+        <p className="text-sm text-muted-foreground py-2">Loading…</p>
+      )}
+      {state === 'error' && !firstPageFailed && (
+        <p className="text-sm text-muted-foreground py-2">
+          The next passages couldn&apos;t be loaded.
+        </p>
+      )}
+      {nextCursor && state !== 'loading' && (
+        <Button
+          variant="link"
+          className="px-0"
+          onClick={() => loadPage(nextCursor)}
+        >
+          {state === 'error'
+            ? 'Try again'
+            : `Show the next ${Math.min(
+                GLOSSARY_PASSAGES_PAGE_SIZE,
+                (totalCount ?? 0) - items.length,
+              ).toLocaleString()} ›`}
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <Dialog open={!!term} onOpenChange={(open) => !open && onClose()}>
       {term && (
-        <DialogContent className="max-w-2xl w-full max-h-[85vh] flex flex-col gap-3">
+        <DialogContent
+          className={cn(
+            'w-full max-h-[85vh] flex flex-col gap-3',
+            instances ? 'max-w-4xl' : 'max-w-2xl',
+          )}
+        >
           <DialogHeader>
             <DialogTitle className="text-primary">
               {term.english || 'Glossary entry'}
@@ -180,57 +259,32 @@ export const GlossaryPassagesDialog = ({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="overflow-y-auto -mx-2 px-2 min-h-0">
-            {totalCount === 0 && (
-              <p className="text-sm text-muted-foreground">
-                This entry isn&apos;t linked in any passage.
-              </p>
-            )}
-            {firstPageFailed && (
-              <p className="text-sm text-muted-foreground">
-                The passages couldn&apos;t be loaded.{' '}
-                <Button
-                  variant="link"
-                  className="p-0 h-auto"
-                  onClick={() => loadPage(null)}
-                >
-                  Try again
-                </Button>
-              </p>
-            )}
-            <ol className="flex flex-col gap-1">
-              {items.map((item) => (
-                <li key={item.uuid}>
-                  <GlossaryPassageExcerptButton
-                    item={item}
-                    onClick={() => jumpTo(item)}
-                  />
-                </li>
-              ))}
-            </ol>
-            {state === 'loading' && (
-              <p className="text-sm text-muted-foreground py-2">Loading…</p>
-            )}
-            {state === 'error' && !firstPageFailed && (
-              <p className="text-sm text-muted-foreground py-2">
-                The next passages couldn&apos;t be loaded.
-              </p>
-            )}
-            {nextCursor && state !== 'loading' && (
-              <Button
-                variant="link"
-                className="px-0"
-                onClick={() => loadPage(nextCursor)}
-              >
-                {state === 'error'
-                  ? 'Try again'
-                  : `Show the next ${Math.min(
-                      GLOSSARY_PASSAGES_PAGE_SIZE,
-                      (totalCount ?? 0) - items.length,
-                    ).toLocaleString()} ›`}
-              </Button>
-            )}
-          </div>
+          {instances ? (
+            <Tabs
+              value={tab}
+              onValueChange={(value) =>
+                setTab(value === 'instances' ? 'instances' : 'passages')
+              }
+              className="min-h-0 flex-1"
+            >
+              <TabsList>
+                <TabsTrigger value="passages">Passages</TabsTrigger>
+                <TabsTrigger value="instances">Instances</TabsTrigger>
+              </TabsList>
+              <TabsContent value="passages" className="min-h-0 flex flex-col">
+                {passages}
+              </TabsContent>
+              <TabsContent value="instances" className="min-h-0 flex flex-col">
+                <GlossaryInstancesTable
+                  key={`${term.uuid}:${toh ?? ''}`}
+                  termUuid={term.uuid}
+                  onClose={onClose}
+                />
+              </TabsContent>
+            </Tabs>
+          ) : (
+            passages
+          )}
         </DialogContent>
       )}
     </Dialog>
