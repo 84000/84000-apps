@@ -311,6 +311,12 @@ export class Scratch {
     const count = async (rows: Promise<Row[]>) => (await rows).length;
     return {
       works: await count(select(this.db, 'works', 'uuid', this.works)),
+      passages: await count(
+        select(this.db, 'passages', 'work_uuid', this.works),
+      ),
+      creators: await count(
+        select(this.db, 'creators', 'work_uuid', this.works),
+      ),
       authorities: await count(
         select(this.db, 'authorities', 'uuid', authorities),
       ),

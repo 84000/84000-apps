@@ -329,8 +329,10 @@ describe('planGlossary', () => {
 
   it('reports each entry its own copied and moved names rows, and a delete with no after', async () => {
     const F = '20000000-0000-4000-8000-000000000002';
+    const G = '20000000-0000-4000-8000-000000000003';
     const other: GlossaryEntry = { ...stored, uuid: F, names: [] };
-    read.mockResolvedValue({ ok: true, entries: [stored, other] });
+    const third: GlossaryEntry = { ...stored, uuid: G, names: [] };
+    read.mockResolvedValue({ ok: true, entries: [stored, other, third] });
     const row = (
       entryUuid: string,
       nameUuid: string,
@@ -338,12 +340,17 @@ describe('planGlossary', () => {
     ) => ({ entryUuid, nameUuid, language: 'en', content: nameUuid, action });
     save.mockResolvedValue({
       ...ok,
-      entries: [{ ...stored, authorityUuid: B }],
+      // The deleted entry is listed too, so only the delete branch nulls it.
+      entries: [
+        { ...stored, authorityUuid: B },
+        other,
+        { ...third, authorityUuid: B },
+      ],
       deleted: [F],
       nameRows: [
         row(E, 'n-moved', 'moved'),
         row(E, 'n-copied', 'copied'),
-        row(F, 'n-other', 'copied'),
+        row(G, 'n-other', 'copied'),
       ],
     });
     const result = await plan(
@@ -354,8 +361,14 @@ describe('planGlossary', () => {
         expect: { authority: A },
       },
       { op: 'delete-glossary-entry', uuid: F },
+      {
+        op: 'relink-glossary-entry',
+        uuid: G,
+        authority: B,
+        expect: { authority: A },
+      },
     );
-    const [relinked, deleted] = result.changes.entries;
+    const [relinked, deleted, relinkedThird] = result.changes.entries;
     const text = (nameUuid: string) => ({
       nameUuid,
       language: 'en',
@@ -371,6 +384,12 @@ describe('planGlossary', () => {
       action: 'delete',
       before: other,
       after: null,
+      movedNames: [],
+      copiedNames: [],
+    });
+    expect(relinkedThird).toMatchObject({
+      action: 'update',
+      after: { uuid: G, authorityUuid: B },
       movedNames: [],
       copiedNames: [text('n-other')],
     });

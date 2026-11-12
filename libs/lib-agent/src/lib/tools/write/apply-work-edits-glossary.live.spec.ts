@@ -42,6 +42,8 @@ describeLive('glossary ops in the apply-work-edits tool, live', () => {
     if (s) {
       expect(await s.leftovers()).toEqual({
         works: 0,
+        passages: 0,
+        creators: 0,
         authorities: 0,
         names: 0,
         glossaries: 0,

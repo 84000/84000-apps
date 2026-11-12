@@ -78,6 +78,8 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
       // Nothing the specs made may outlive them, including ops' authorities.
       expect(await s.leftovers()).toEqual({
         works: 0,
+        passages: 0,
+        creators: 0,
         authorities: 0,
         names: 0,
         glossaries: 0,
