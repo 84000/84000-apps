@@ -260,6 +260,36 @@ describe('the Instances tab', () => {
     expect(within(dialog).queryByText('1.1')).toBeNull();
     expect(mockGetGlossaryTermExcerpts).toHaveBeenCalledTimes(2);
   });
+
+  it('retries the first page when the read after a removal fails', async () => {
+    mockGetGlossaryTermExcerpts
+      .mockResolvedValueOnce(page([item(1)], 60))
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(page([item(2)], 59));
+
+    const dialog = await openDialog({ instances: true });
+    await within(dialog).findByText('1.1');
+    await userEvent.click(
+      within(dialog).getByRole('tab', { name: 'Instances' }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'removed' }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole('tab', { name: 'Passages' }),
+    );
+
+    await within(dialog).findByText(/The passages couldn.t be loaded/);
+    expect(within(dialog).queryByText('1.1')).toBeNull();
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Try again' }),
+    );
+
+    await within(dialog).findByText('1.2');
+    expect(mockGetGlossaryTermExcerpts).toHaveBeenLastCalledWith(
+      expect.objectContaining({ after: null }),
+    );
+  });
 });
 
 describe('GlossaryPassagesLink', () => {
