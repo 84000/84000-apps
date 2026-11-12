@@ -2,11 +2,24 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GlossaryTermInstanceRow } from '@eightyfourthousand/client-graphql';
 
+import {
+  EditorContext,
+  type EditorContextState,
+} from '../../editor/editor-context';
 import { GlossaryInstancesTable } from './GlossaryInstancesTable';
 
 const mockUpdatePanel = jest.fn();
 const mockGetGlossaryTermInstances = jest.fn();
 const mockNavigation = { toh: 'toh8', updatePanel: mockUpdatePanel };
+const mockRemove = jest.fn();
+let mockDirty = false;
+const mockEditor = {
+  readOnly: true,
+  work: { uuid: 'work-1' },
+  dirtyStore: { getSnapshot: () => mockDirty },
+  save: jest.fn(async () => undefined),
+  applyReplacedPassages: jest.fn(async () => undefined),
+};
 
 jest.mock('../NavigationContext', () => ({
   useNavigation: () => mockNavigation,
@@ -15,6 +28,7 @@ jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
   getGlossaryTermInstances: (...args: unknown[]) =>
     mockGetGlossaryTermInstances(...args),
+  removeGlossaryTermInstances: (...args: unknown[]) => mockRemove(...args),
 }));
 
 const row = (
@@ -50,12 +64,21 @@ const page = (
 const onClose = jest.fn();
 
 const renderTable = () =>
-  render(<GlossaryInstancesTable termUuid="term-1" onClose={onClose} />);
+  render(
+    <EditorContext.Provider value={mockEditor as unknown as EditorContextState}>
+      <GlossaryInstancesTable termUuid="term-1" onClose={onClose} />
+    </EditorContext.Provider>,
+  );
 
 beforeEach(() => {
   mockUpdatePanel.mockReset();
   mockGetGlossaryTermInstances.mockReset();
   onClose.mockReset();
+  mockRemove.mockReset();
+  mockEditor.readOnly = true;
+  mockEditor.save.mockClear();
+  mockEditor.applyReplacedPassages.mockClear();
+  mockDirty = false;
   window.history.replaceState(null, '', '/?toh=toh8');
 });
 
@@ -213,5 +236,239 @@ describe('GlossaryInstancesTable', () => {
     await waitFor(() =>
       expect(screen.getByText(/isn.t linked in any passage/)).toBeTruthy(),
     );
+  });
+
+  describe('deleting', () => {
+    beforeEach(() => {
+      mockEditor.readOnly = false;
+    });
+
+    const removed = (uuids: string[], extra = {}) => ({
+      removed: uuids,
+      failed: [],
+      passages: uuids.map((uuid) => ({ uuid: `p-${uuid}`, json: null })),
+      ...extra,
+    });
+
+    it('offers no delete or select controls to a reader', async () => {
+      mockEditor.readOnly = true;
+      mockGetGlossaryTermInstances.mockResolvedValue(page([row(1)], 1));
+
+      renderTable();
+      await screen.findByRole('button', { name: '1.1' });
+
+      expect(screen.queryByRole('checkbox')).toBeNull();
+      expect(screen.queryByRole('button', { name: /Delete/ })).toBeNull();
+    });
+
+    it('deletes one instance after a confirmation', async () => {
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1), row(2)], 2))
+        .mockResolvedValueOnce(page([row(2)], 1));
+      mockRemove.mockResolvedValue(removed(['a-1']));
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      const confirm = screen.getByRole('alertdialog');
+      expect(confirm.textContent).toContain('Delete the instance in 1.1?');
+      expect(mockRemove).not.toHaveBeenCalled();
+
+      await userEvent.click(
+        within(confirm).getByRole('button', { name: 'Delete' }),
+      );
+
+      expect(mockRemove).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workUuid: 'work-1',
+          termUuid: 'term-1',
+          annotationUuids: ['a-1'],
+        }),
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: '1.1' })).toBeNull(),
+      );
+      expect(mockEditor.applyReplacedPassages).toHaveBeenCalledWith([
+        { uuid: 'p-a-1', json: null },
+      ]);
+      expect(screen.getByText('1 instance')).toBeTruthy();
+    });
+
+    it('blocks jumps while a deletion runs, and reports a removal', async () => {
+      const onRemoved = jest.fn();
+      let finish: (value: unknown) => void = () => undefined;
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1), row(2)], 2))
+        .mockResolvedValueOnce(page([row(2)], 1));
+      mockRemove.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+
+      render(
+        <EditorContext.Provider
+          value={mockEditor as unknown as EditorContextState}
+        >
+          <GlossaryInstancesTable
+            termUuid="term-1"
+            onClose={onClose}
+            onRemoved={onRemoved}
+          />
+        </EditorContext.Provider>,
+      );
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      expect(
+        screen.getByRole('button', { name: '1.2' }).hasAttribute('disabled'),
+      ).toBe(true);
+      finish(removed(['a-1']));
+      await waitFor(() => expect(onRemoved).toHaveBeenCalled());
+    });
+
+    it('cancels without deleting', async () => {
+      mockGetGlossaryTermInstances.mockResolvedValue(page([row(1)], 1));
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(mockRemove).not.toHaveBeenCalled();
+    });
+
+    it('deletes the selected instances, select-all covering the page', async () => {
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1), row(2), row(3)], 3))
+        .mockResolvedValueOnce(page([], 0));
+      mockRemove.mockResolvedValue(removed(['a-1', 'a-2', 'a-3']));
+
+      renderTable();
+      await screen.findByRole('button', { name: '1.1' });
+      const deleteSelected = () =>
+        screen.getByRole('button', { name: /Delete selected/ });
+      expect(deleteSelected().hasAttribute('disabled')).toBe(true);
+
+      await userEvent.click(
+        screen.getByRole('checkbox', { name: 'Select instance in 1.2' }),
+      );
+      expect(deleteSelected().textContent).toBe('Delete selected (1)');
+
+      await userEvent.click(
+        screen.getByRole('checkbox', { name: 'Select all on this page' }),
+      );
+      expect(deleteSelected().textContent).toBe('Delete selected (3)');
+
+      await userEvent.click(deleteSelected());
+      const confirm = screen.getByRole('alertdialog');
+      expect(confirm.textContent).toContain('Delete 3 instances?');
+      await userEvent.click(
+        within(confirm).getByRole('button', { name: 'Delete' }),
+      );
+
+      expect(mockRemove).toHaveBeenCalledWith(
+        expect.objectContaining({ annotationUuids: ['a-1', 'a-2', 'a-3'] }),
+      );
+      await waitFor(() =>
+        expect(screen.getByText(/isn.t linked in any passage/)).toBeTruthy(),
+      );
+    });
+
+    it('names the passages that failed and keeps their rows', async () => {
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1), row(2)], 2))
+        .mockResolvedValueOnce(page([row(2)], 1));
+      mockRemove.mockResolvedValue(
+        removed(['a-1'], {
+          failed: [
+            {
+              passageUuid: 'p-2',
+              passageLabel: '1.2',
+              annotationUuids: ['a-2'],
+              error: 'deadlock detected',
+            },
+          ],
+        }),
+      );
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('checkbox', {
+          name: 'Select all on this page',
+        }),
+      );
+      await userEvent.click(
+        screen.getByRole('button', { name: /Delete selected/ }),
+      );
+      await userEvent.click(
+        within(screen.getByRole('alertdialog')).getByRole('button', {
+          name: 'Delete',
+        }),
+      );
+
+      expect(
+        await screen.findByText(/Instances in 1\.2 couldn.t be deleted/),
+      ).toBeTruthy();
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: '1.1' })).toBeNull(),
+      );
+      expect(screen.getByRole('button', { name: '1.2' })).toBeTruthy();
+      expect(screen.getByText(/Not deleted: deadlock detected/)).toBeTruthy();
+    });
+
+    it('saves pending changes first, and stops if they stay unsaved', async () => {
+      mockDirty = true;
+      mockGetGlossaryTermInstances.mockResolvedValue(page([row(1)], 1));
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      expect(mockEditor.save).toHaveBeenCalled();
+      expect(await screen.findByText(/nothing was deleted/)).toBeTruthy();
+      expect(mockRemove).not.toHaveBeenCalled();
+    });
+
+    it('drops a pending confirmation on paging', async () => {
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1)], 51))
+        .mockResolvedValueOnce(page([row(51)], 51, 50));
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+
+      await screen.findByRole('button', { name: '1.51' });
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('moves back a page when the last one empties', async () => {
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1)], 51))
+        .mockResolvedValueOnce(page([row(51)], 51, 50))
+        .mockResolvedValueOnce(page([row(1)], 50, 0));
+      mockRemove.mockResolvedValue(removed(['a-51']));
+
+      renderTable();
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Last' }),
+      );
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.51' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      await waitFor(() =>
+        expect(mockGetGlossaryTermInstances).toHaveBeenLastCalledWith(
+          expect.objectContaining({ offset: 0 }),
+        ),
+      );
+    });
   });
 });

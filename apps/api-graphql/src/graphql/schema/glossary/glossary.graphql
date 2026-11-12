@@ -426,3 +426,59 @@ extend type Work {
     withAttestations: Boolean
   ): [GlossaryTermInstance!]!
 }
+
+"""
+A passage whose glossary instances could not be removed
+"""
+type GlossaryInstanceRemovalFailure {
+  """
+  The passage, or empty for instances that were not found
+  """
+  passageUuid: ID!
+  passageLabel: String
+
+  """
+  The instances asked for in it, none of which were removed
+  """
+  annotationUuids: [ID!]!
+  error: String!
+}
+
+"""
+Result of removing glossary instances
+"""
+type RemoveGlossaryTermInstancesResult {
+  """
+  Instances removed
+  """
+  removed: [ID!]!
+
+  """
+  Passages whose instances stay, with the reason
+  """
+  failed: [GlossaryInstanceRemovalFailure!]!
+
+  """
+  The passages as saved, for an open editor to take in
+  """
+  passages: [Passage!]!
+
+  """
+  Set when nothing was attempted, such as without permission
+  """
+  error: String
+}
+
+extend type Mutation {
+  """
+  Remove glossary-instance annotations of one glossary term, leaving the
+  passage text as it is. Each passage saves on its own, so one that fails keeps
+  its instances while the others' removals stand.
+  Requires editor.edit permission.
+  """
+  removeGlossaryTermInstances(
+    workUuid: ID!
+    termUuid: ID!
+    annotationUuids: [ID!]!
+  ): RemoveGlossaryTermInstancesResult!
+}

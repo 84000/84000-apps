@@ -17,6 +17,7 @@ import {
   glossaryTermExcerptsResolver,
   glossaryTermInstancesResolver,
 } from './schema/glossary/glossary.resolver';
+import { removeGlossaryTermInstancesMutation } from './schema/glossary/glossary.mutation';
 import { healthQueries } from './schema/health/health.query';
 import { lookupQueries } from './schema/lookup/lookup.query';
 import { passageQueries } from './schema/passage/passage.query';
@@ -97,6 +98,7 @@ export const resolvers = {
     ...snapshotMutations,
     replace: replaceMutation,
     savePassages: savePassagesMutation,
+    removeGlossaryTermInstances: removeGlossaryTermInstancesMutation,
   },
 
   EntitySearchResult: entitySearchResultResolvers,

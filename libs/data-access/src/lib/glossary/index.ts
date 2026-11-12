@@ -5,5 +5,6 @@ export * from './instance';
 export * from './landing';
 export * from './pagination';
 export * from './search';
+export * from './remove-instances';
 export * from './section';
 export * from './term-instances';

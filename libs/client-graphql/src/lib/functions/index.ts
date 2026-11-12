@@ -45,6 +45,11 @@ export {
   type GlossaryTermInstanceRow,
   type GlossaryTermInstancesPage,
 } from './get-glossary-term-instances';
+export {
+  removeGlossaryTermInstances,
+  type GlossaryInstanceRemovalFailure,
+  type RemoveGlossaryTermInstancesResult,
+} from './remove-glossary-term-instances';
 export { getBibliographyEntry } from './get-bibliography-entry';
 export { getWorkBibliography } from './get-work-bibliography';
 export { getWorkFolios } from './get-work-folios';

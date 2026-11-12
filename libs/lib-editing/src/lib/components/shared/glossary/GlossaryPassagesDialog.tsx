@@ -143,6 +143,15 @@ export const GlossaryPassagesDialog = ({
     [load],
   );
 
+  // Re-read from the start after a removal, so a failed read retries the
+  // first page rather than appending to the old list.
+  const refresh = useCallback(() => {
+    setItems([]);
+    setTotalCount(undefined);
+    setNextCursor(null);
+    loadPage(null);
+  }, [loadPage]);
+
   // A new entry or Toh starts from an empty list, adjusted during render so
   // the old list never shows under the new title.
   const [shown, setShown] = useState<{
@@ -279,6 +288,7 @@ export const GlossaryPassagesDialog = ({
                   key={`${term.uuid}:${toh ?? ''}`}
                   termUuid={term.uuid}
                   onClose={onClose}
+                  onRemoved={refresh}
                 />
               </TabsContent>
             </Tabs>

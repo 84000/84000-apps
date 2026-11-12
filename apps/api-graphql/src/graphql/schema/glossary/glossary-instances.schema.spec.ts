@@ -4,24 +4,31 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { graphql, type GraphQLSchema } from 'graphql';
 import { join } from 'node:path';
 
-import { getGlossaryTermInstances as readInstances } from '@eightyfourthousand/client-graphql';
+import {
+  getGlossaryTermInstances as readInstances,
+  removeGlossaryTermInstances as removeInstances,
+} from '@eightyfourthousand/client-graphql';
 import type { GraphQLContext } from '../../context';
 import { resolvers } from '../../resolvers';
 
-// The instances read through the real schema and resolvers, with the data
-// layer mocked: the editor's alone, and the client's document runs as written.
+// The instances read and removal through the real schema and resolvers, with
+// the data layer mocked: the client's documents run as written.
 
 // The editor library is UI code the resolvers reach only for passage fields,
 // and Jest cannot load its assets.
-jest.mock('@eightyfourthousand/lib-editing', () => ({}));
+jest.mock('@eightyfourthousand/lib-editing', () => ({
+  blockFromPassage: () => null,
+}));
 jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
   getGlossaryTermInstances: jest.fn(),
+  removeGlossaryTermInstances: jest.fn(),
   hasPermission: jest.fn(),
 }));
 
 const dataAccess = jest.requireMock('@eightyfourthousand/data-access') as {
   getGlossaryTermInstances: jest.Mock;
+  removeGlossaryTermInstances: jest.Mock;
   hasPermission: jest.Mock;
 };
 
@@ -80,12 +87,19 @@ const row = (i: number) => ({
   outOfRange: false,
 });
 
-const ctx = (source: 'draft' | 'published'): GraphQLContext =>
+const ctx = (source: 'draft' | 'published', signedIn = true): GraphQLContext =>
   ({
     source,
     supabase: { marker: 'client' },
-    loaders: {},
-    session: { userId: 'u1', email: 'e@x.org', claims: { role: 'editor' } },
+    // A saved passage's json reads its annotations; these have none.
+    loaders: {
+      annotationsByPassageUuid: { load: async () => [] },
+      alignmentsByPassageUuid: { load: async () => [] },
+      passageReferencesByPassageUuid: { load: async () => [] },
+    },
+    session: signedIn
+      ? { userId: 'u1', email: 'e@x.org', claims: { role: 'editor' } }
+      : null,
   }) as unknown as GraphQLContext;
 
 const ask = (source: 'draft' | 'published', variables = {}) =>
@@ -97,22 +111,25 @@ const ask = (source: 'draft' | 'published', variables = {}) =>
   });
 
 /** Sends a client function's own document and variables to the schema. */
-const schemaClient = {
+const clientFor = (contextValue: GraphQLContext) => ({
   request: (document: string, variables: Record<string, unknown>) =>
     graphql({
       schema,
       source: document,
       variableValues: variables,
-      contextValue: ctx('draft'),
+      contextValue,
     }).then((result) => {
       if (result.errors) throw result.errors[0];
       return result.data;
     }),
-};
+});
+const schemaClient = clientFor(ctx('draft'));
 
 beforeEach(() => {
   dataAccess.getGlossaryTermInstances.mockReset();
+  dataAccess.removeGlossaryTermInstances.mockReset();
   dataAccess.hasPermission.mockReset();
+  dataAccess.hasPermission.mockResolvedValue(true);
   dataAccess.getGlossaryTermInstances.mockResolvedValue({
     items: [row(1), row(2)],
     totalCount: 18697,
@@ -163,5 +180,81 @@ describe('glossaryTermInstances', () => {
       offset: 50,
       items: [row(1), row(2)],
     });
+  });
+});
+
+describe('removeGlossaryTermInstances', () => {
+  const rewritten = (uuid: string) => ({
+    uuid,
+    workUuid: 'work-1',
+    content: 'text',
+    label: '1.1',
+    sort: 1,
+    type: 'translation',
+    annotations: [],
+  });
+
+  const remove = (signedIn = true) =>
+    removeInstances({
+      client: clientFor(ctx('draft', signedIn)) as never,
+      workUuid: 'work-1',
+      termUuid: 'term-1',
+      annotationUuids: ['a-1', 'b-1'],
+    });
+
+  it('runs the client mutation against the schema', async () => {
+    dataAccess.removeGlossaryTermInstances.mockResolvedValue({
+      removed: ['a-1'],
+      failed: [
+        {
+          passageUuid: 'p-2',
+          passageLabel: '1.2',
+          annotationUuids: ['b-1'],
+          error: 'deadlock detected',
+        },
+      ],
+      passages: [rewritten('p-1')],
+    });
+
+    const result = await remove();
+
+    expect(dataAccess.hasPermission).toHaveBeenCalledWith(
+      expect.objectContaining({ permission: 'editor.edit' }),
+    );
+    expect(dataAccess.removeGlossaryTermInstances).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client: { marker: 'client' },
+        workUuid: 'work-1',
+        termUuid: 'term-1',
+        annotationUuids: ['a-1', 'b-1'],
+      }),
+    );
+    expect(result).toMatchObject({
+      removed: ['a-1'],
+      failed: [
+        {
+          passageUuid: 'p-2',
+          passageLabel: '1.2',
+          annotationUuids: ['b-1'],
+          error: 'deadlock detected',
+        },
+      ],
+    });
+    expect(result.passages.map((passage) => passage.uuid)).toEqual(['p-1']);
+  });
+
+  it.each([
+    ['a user without editor.edit', true],
+    ['a signed-out caller', false],
+  ])('removes nothing for %s', async (_name, signedIn) => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    dataAccess.hasPermission.mockResolvedValue(false);
+
+    const result = await remove(signedIn);
+
+    expect(dataAccess.removeGlossaryTermInstances).not.toHaveBeenCalled();
+    expect(result.removed).toEqual([]);
+    expect(result.error).toBeTruthy();
+    jest.restoreAllMocks();
   });
 });
