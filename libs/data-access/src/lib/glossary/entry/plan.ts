@@ -608,7 +608,7 @@ export const planSave = (
   const nameRows: GlossaryNameRowChange[] = [];
   const nameRow = (
     entryUuid: string,
-    nameUuid: string,
+    { nameUuid, language, content }: GlossaryEntryName,
     action: GlossaryNameRowChange['action'],
   ) => {
     if (
@@ -616,7 +616,7 @@ export const planSave = (
         (r) => r.entryUuid === entryUuid && r.nameUuid === nameUuid,
       )
     ) {
-      nameRows.push({ entryUuid, nameUuid, action });
+      nameRows.push({ entryUuid, nameUuid, language, content, action });
     }
   };
 
@@ -824,7 +824,7 @@ export const planSave = (
               n.glossaryUuid !== was.glossaryUuid,
           );
         if (shared) {
-          nameRow(save.uuid, was.nameUuid, 'copied');
+          nameRow(save.uuid, was, 'copied');
           target = {
             nameUuid: names.addInsert(authorityUuid, text, row.internal),
             authorityUuid,
@@ -843,7 +843,7 @@ export const planSave = (
           }
           if (row.authority_uuid !== authorityUuid) {
             set.authority_uuid = authorityUuid;
-            nameRow(save.uuid, was.nameUuid, 'moved');
+            nameRow(save.uuid, was, 'moved');
           }
           // Never empty: the read checked the names row against the entry.
           names.addUpdate(row, set);
@@ -859,7 +859,7 @@ export const planSave = (
             text: nameText(was),
           };
         } else if (copy) {
-          nameRow(save.uuid, was.nameUuid, 'copied');
+          nameRow(save.uuid, was, 'copied');
           target = { nameUuid: copy, authorityUuid, text: nameText(was) };
         } else {
           const row = must(stored.names, was.nameUuid);
@@ -875,12 +875,12 @@ export const planSave = (
               row.internal,
             );
             names.copies.set(was.nameUuid, uuid);
-            nameRow(save.uuid, was.nameUuid, 'copied');
+            nameRow(save.uuid, was, 'copied');
             target = { nameUuid: uuid, authorityUuid, text: nameText(row) };
           } else {
             names.addUpdate(row, { authority_uuid: authorityUuid });
             moved.add(was.nameUuid);
-            nameRow(save.uuid, was.nameUuid, 'moved');
+            nameRow(save.uuid, was, 'moved');
             target = { nameUuid: row.uuid, authorityUuid, text: nameText(row) };
           }
         }

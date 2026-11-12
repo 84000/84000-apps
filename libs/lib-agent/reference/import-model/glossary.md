@@ -39,11 +39,15 @@ it.
   ```
 
   Omit `uuid` on a new entry: it is derived from the work, the authority and
-  the root name, so re-sending the same op updates that entry (and writes
-  nothing when nothing differs) instead of adding a second one. An omitted
-  `definition`, `definitionRend` or `glossMode` keeps the stored value. A
-  different `authority` relinks the entry, as below. Without `expect` the op
-  overwrites whatever is stored when the call is planned.
+  the root name's language and text, so re-sending the same op updates that
+  entry (and writes nothing when nothing differs) instead of adding a second
+  one. The derived uuid changes when any of those does, so an upsert without
+  `uuid` that changes the authority or the root name creates **another**
+  entry. To change a stored entry, give its `uuid` (or use `patch` or
+  `relink`). With `uuid` given, a different `authority` relinks the entry, as
+  below. An omitted `definition`, `definitionRend` or `glossMode` keeps the
+  stored value. Without `expect` the op overwrites whatever is stored when the
+  call is planned.
 
 - `patch-glossary-entry` — set some fields of an existing entry, each with the
   stored value you read.
@@ -86,8 +90,9 @@ name nothing matches is added. So to change the text of the entry's English
 name, send the list with the new text: that row is edited, or copied first if
 another work shares it, never changed under the other work.
 
-A matched name keeps any stored field you omit (`contentTransformed`,
-`termType`, `attestation`); send `null` to clear one. A new `Bo-Ltn` name needs
+A matched name keeps any stored `termType` or `attestation` you omit, and its
+stored `contentTransformed` while its language and text are unchanged; send
+`null` to clear one. A `Bo-Ltn` name whose text is new or changed needs
 `contentTransformed`, the Tibetan script.
 
 Fixed values, refused otherwise:
@@ -119,7 +124,9 @@ When no authority fits, create one with the entry:
 
 It is written in the same transaction as the entry and gets the next free
 `entity-N` `xmlId`. Its uuid, when omitted, is derived from the entry's, so a
-re-run links to the authority the first run created instead of making another.
+re-run links to the authority the first run created instead of making another
+(a re-run that changes its headword or definition changes nothing: the
+authority already exists).
 To have two entries share one new authority, give it a `uuid` in one op and
 name that uuid as the other op's `authority`. Search before creating: an
 authority is library-wide, and a duplicate cannot be removed here.

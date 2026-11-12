@@ -124,6 +124,9 @@ export type GlossaryCreatedAuthority = {
 export type GlossaryNameRowChange = {
   entryUuid: string;
   nameUuid: string;
+  /** The names row's text as stored before the save. */
+  language: string | null;
+  content: string;
   action: 'copied' | 'moved';
 };
 

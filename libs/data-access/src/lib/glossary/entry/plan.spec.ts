@@ -1463,6 +1463,9 @@ describe('planSave', () => {
   });
 
   describe('names rows report', () => {
+    // The names row's text as stored before the save.
+    const en = (content: string) => ({ language: 'en', content });
+
     it('reports relink moves and copies once per names row', () => {
       const e = entry({
         names: [
@@ -1487,9 +1490,19 @@ describe('planSave', () => {
         ],
       );
       expect(result.nameRows).toEqual([
-        { entryUuid: E1, nameUuid: n(1), action: 'moved' },
-        { entryUuid: E1, nameUuid: n(2), action: 'copied' },
-        { entryUuid: E1, nameUuid: n(3), action: 'copied' },
+        { entryUuid: E1, nameUuid: n(1), action: 'moved', ...en('rel root') },
+        {
+          entryUuid: E1,
+          nameUuid: n(2),
+          action: 'copied',
+          ...en('rel shared'),
+        },
+        {
+          entryUuid: E1,
+          nameUuid: n(3),
+          action: 'copied',
+          ...en('rel creator'),
+        },
       ]);
     });
 
@@ -1513,7 +1526,7 @@ describe('planSave', () => {
         ],
       );
       expect(result.nameRows).toEqual([
-        { entryUuid: E1, nameUuid: n(2), action: 'copied' },
+        { entryUuid: E1, nameUuid: n(2), action: 'copied', ...en('shared') },
       ]);
     });
   });

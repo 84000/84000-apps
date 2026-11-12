@@ -29,7 +29,8 @@ import {
 
 export { storedGlossaryDefinition } from './plan';
 
-const NO_CHANGES: GlossarySaveChanges = {
+/** Row counts of a save that writes nothing. */
+export const NO_CHANGES: GlossarySaveChanges = {
   glossaries: { inserted: 0, updated: 0, deleted: 0 },
   glossaryEdges: { inserted: 0, deleted: 0 },
   names: { inserted: 0, updated: 0 },

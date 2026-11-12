@@ -33,7 +33,9 @@ const glossaryNameFields = {
     .string()
     .nullable()
     .optional()
-    .describe('The Tibetan script, required for a new Bo-Ltn name.'),
+    .describe(
+      'The Tibetan script. Required for a Bo-Ltn name whose text is new or changed; a matched name with unchanged text keeps the stored script.',
+    ),
   termType: z.enum(GLOSSARY_TERM_TYPES).nullable().optional(),
   attestation: z.enum(GLOSSARY_ATTESTATIONS).nullable().optional(),
 };
@@ -65,7 +67,7 @@ const glossaryValues = {
 };
 
 const glossaryExpectSchema = z
-  .object({
+  .strictObject({
     authority: z.uuid().optional(),
     definition: z.string().nullable().optional(),
     definitionRend: z.enum(GLOSSARY_DEFINITION_RENDS).nullable().optional(),
@@ -114,14 +116,17 @@ const glossaryOpSchemas = [
           'An existing authority uuid, or { new: {...} } to create one with the entry (it gets the next entity-N xmlId; a re-run links to the one already created).',
         ),
       ...glossaryValues,
-      names: glossaryNamesSchema,
+      names: glossaryNamesSchema.min(1),
     }),
     expect: glossaryExpectSchema.optional(),
   }),
   z.object({
     op: z.literal('patch-glossary-entry'),
     uuid: z.uuid(),
-    set: z.object({ ...glossaryValues, names: glossaryNamesSchema.optional() }),
+    set: z.strictObject({
+      ...glossaryValues,
+      names: glossaryNamesSchema.min(1).optional(),
+    }),
     expect: glossaryExpectSchema.describe(
       'A stored value for every field of set. The call is refused if any differs.',
     ),
@@ -132,7 +137,7 @@ const glossaryOpSchemas = [
     authority: z
       .uuid()
       .describe('An existing authority, or one this call creates.'),
-    expect: z.object({ authority: z.uuid() }),
+    expect: z.strictObject({ authority: z.uuid() }),
   }),
   z.object({
     op: z.literal('delete-glossary-entry'),
