@@ -227,6 +227,20 @@ describe('planGlossary', () => {
     expect(result.changes.entries[0].action).toBe('unchanged');
   });
 
+  it('accepts a definition expect copied verbatim from a non-canonical stored one', async () => {
+    const raw = '<p>Old<!-- kept --></p>';
+    read.mockResolvedValue({
+      ok: true,
+      entries: [{ ...stored, definition: raw }],
+    });
+    const result = await plan({
+      op: 'delete-glossary-entry',
+      uuid: E,
+      expect: { definition: raw },
+    });
+    expect(result.ok).toBe(true);
+  });
+
   it('matches expected names one to one in any order', async () => {
     const twin = name(r(4), 'en', 'mind', { termType: 'translationMain' });
     const plain = name(r(5), 'en', 'mind');

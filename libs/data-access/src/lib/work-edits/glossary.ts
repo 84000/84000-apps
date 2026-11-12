@@ -201,7 +201,8 @@ const expectMismatch = (
         : field === 'glossMode'
           ? (expected ?? 'match') === entry.glossMode
           : field === 'definition'
-            ? same(
+            ? same(stored[field], expected) ||
+              same(
                 stored[field],
                 storedGlossaryDefinition((expected as string | null) ?? null),
               )
