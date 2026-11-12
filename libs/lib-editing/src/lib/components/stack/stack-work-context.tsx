@@ -319,7 +319,8 @@ export const useStackWorkLoad = ({
         );
       }
       // A seeded work is already drawn; it only gains a bibliography it read.
-      if (!seeded || read) setStack(loadedFrom(views, read ?? seededBibliography));
+      if (!seeded || read)
+        setStack(loadedFrom(views, read ?? seededBibliography));
     })();
 
     return () => {
