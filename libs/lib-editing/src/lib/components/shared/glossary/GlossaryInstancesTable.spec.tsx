@@ -295,6 +295,37 @@ describe('GlossaryInstancesTable', () => {
       expect(screen.getByText('1 instance')).toBeTruthy();
     });
 
+    it('blocks jumps while a deletion runs, and reports a removal', async () => {
+      const onRemoved = jest.fn();
+      let finish: (value: unknown) => void = () => undefined;
+      mockGetGlossaryTermInstances
+        .mockResolvedValueOnce(page([row(1), row(2)], 2))
+        .mockResolvedValueOnce(page([row(2)], 1));
+      mockRemove.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+
+      render(
+        <EditorContext.Provider
+          value={mockEditor as unknown as EditorContextState}
+        >
+          <GlossaryInstancesTable
+            termUuid="term-1"
+            onClose={onClose}
+            onRemoved={onRemoved}
+          />
+        </EditorContext.Provider>,
+      );
+      await userEvent.click(
+        await screen.findByRole('button', { name: 'Delete instance in 1.1' }),
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+      expect(
+        screen.getByRole('button', { name: '1.2' }).hasAttribute('disabled'),
+      ).toBe(true);
+      finish(removed(['a-1']));
+      await waitFor(() => expect(onRemoved).toHaveBeenCalled());
+    });
+
     it('cancels without deleting', async () => {
       mockGetGlossaryTermInstances.mockResolvedValue(page([row(1)], 1));
 

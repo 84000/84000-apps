@@ -279,6 +279,7 @@ export const GlossaryPassagesDialog = ({
                   key={`${term.uuid}:${toh ?? ''}`}
                   termUuid={term.uuid}
                   onClose={onClose}
+                  onRemoved={() => loadPage(null)}
                 />
               </TabsContent>
             </Tabs>

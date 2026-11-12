@@ -39,10 +39,13 @@ const labelOf = (row: GlossaryTermInstanceRow) =>
 export const GlossaryInstancesTable = ({
   termUuid,
   onClose,
+  onRemoved,
 }: {
   termUuid: string;
   /** Closes the dialog, before a jump to a passage. */
   onClose: () => void;
+  /** Called after a deletion removed at least one instance. */
+  onRemoved?: () => void;
 }) => {
   const { toh, updatePanel } = useNavigation();
   const { readOnly, dirtyStore, save, applyReplacedPassages, work } =
@@ -155,6 +158,7 @@ export const GlossaryInstancesTable = ({
         }
         setFailures(failed);
         await applyReplacedPassages(result.passages);
+        if (result.removed.length > 0) onRemoved?.();
 
         // Stay on this page, or the last one if it no longer exists.
         const remaining = (page?.totalCount ?? 0) - result.removed.length;
@@ -171,6 +175,7 @@ export const GlossaryInstancesTable = ({
       dirtyStore,
       load,
       offset,
+      onRemoved,
       page?.totalCount,
       save,
       termUuid,
@@ -322,6 +327,7 @@ export const GlossaryInstancesTable = ({
                 key={row.uuid}
                 row={row}
                 onJump={jumpTo}
+                jumpDisabled={deleting}
                 failure={failures.get(row.uuid)?.error}
                 selection={
                   canDelete
@@ -399,11 +405,14 @@ export const GlossaryInstancesTable = ({
 const InstanceRow = ({
   row,
   onJump,
+  jumpDisabled,
   failure,
   selection,
 }: {
   row: GlossaryTermInstanceRow;
   onJump: (row: GlossaryTermInstanceRow) => void;
+  /** While a deletion runs, an edit in its passages would bring it back. */
+  jumpDisabled?: boolean;
   /** Why its deletion failed, if it did. */
   failure?: string;
   /** Selection and delete controls, for a user who may delete. */
@@ -431,6 +440,7 @@ const InstanceRow = ({
       <Button
         variant="link"
         className="p-0 h-auto font-sans font-bold"
+        disabled={jumpDisabled}
         onClick={() => onJump(row)}
       >
         {labelOf(row)}
