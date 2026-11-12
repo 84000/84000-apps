@@ -1,9 +1,11 @@
+import { useContext, type ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type {
   GlossaryEntry,
   GlossaryExcerptsPage,
 } from '@eightyfourthousand/data-access';
 
+import { EditorContext } from '../editor/editor-context';
 import { GlossaryRowMenu } from './GlossaryRowMenu';
 import type { StackController } from './StackController';
 
@@ -56,7 +58,17 @@ const PAGE: GlossaryExcerptsPage = {
   hasMore: false,
 };
 
-const setup = () => {
+/** The editor as it is while a save runs. */
+const Saving = ({ children }: { children: ReactNode }) => {
+  const state = useContext(EditorContext);
+  return (
+    <EditorContext.Provider value={{ ...state, isSaving: () => true }}>
+      {children}
+    </EditorContext.Provider>
+  );
+};
+
+const setup = ({ saving = false } = {}) => {
   const remove = jest.fn().mockResolvedValue({ deleted: true });
   const controller = {
     getMeta: (uuid: string) => ({ uuid, label: 'g.4', type: 'glossary' }),
@@ -71,6 +83,7 @@ const setup = () => {
       target={target}
       onClose={onClose}
     />,
+    saving ? { wrapper: Saving } : undefined,
   );
   // Opening the dialog closes the menu, which the stack does by clearing it.
   const openDialog = async () => {
@@ -149,6 +162,33 @@ describe('GlossaryRowMenu', () => {
       expect.objectContaining({ passages: [] }),
     );
     expect(screen.queryByText('Delete g.4 Indra')).toBeNull();
+  });
+
+  it('waits for a running save before deleting', async () => {
+    mockExcerpts.mockResolvedValue(PAGE);
+    const { remove, openDialog } = setup({ saving: true });
+    await openDialog();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    });
+    expect(remove).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toContain('save is running');
+    expect(screen.getByText('Delete g.4 Indra')).toBeTruthy();
+  });
+
+  it('keeps the dialog open when the delete throws', async () => {
+    mockExcerpts.mockResolvedValue(PAGE);
+    const { remove, openDialog } = setup();
+    remove.mockRejectedValue(new Error('offline'));
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    await openDialog();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    });
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Delete' }).hasAttribute('disabled'),
+    ).toBe(false);
   });
 
   it('keeps the dialog open with the reason when the delete is refused', async () => {

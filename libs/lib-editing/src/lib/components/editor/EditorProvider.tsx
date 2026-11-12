@@ -179,6 +179,7 @@ const EditorSession = ({
         endnoteLabels,
         registerEndnoteLabels,
         save,
+        isSaving: () => isSavingRef.current,
         registerSaveHandler,
       }}
     >

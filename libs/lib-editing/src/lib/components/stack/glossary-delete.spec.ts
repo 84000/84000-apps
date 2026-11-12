@@ -193,6 +193,7 @@ describe('deleteGlossaryRow', () => {
     mockDelete.mockResolvedValue(deleted('t2'));
     await deleteGlossaryRow({ glossary, uuid: 't2', client, passages: [] });
     expect(glossary.work.store.isDirty).toBe(false);
+    expect(glossary.work.store.peek('t2')).toBeNull();
     expect(glossary.conflicts.get('t2')).toBeNull();
   });
 

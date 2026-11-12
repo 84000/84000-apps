@@ -25,6 +25,7 @@ import {
 } from '@eightyfourthousand/design-system';
 import { CopyIcon, Trash2Icon } from 'lucide-react';
 
+import { useEditorState } from '../editor/EditorProvider';
 import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 import { englishNameOf } from './glossary-row';
@@ -59,6 +60,7 @@ export const GlossaryRowMenu = ({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stack = useStackWork();
+  const { isSaving } = useEditorState();
 
   const meta = target ? controller.getMeta(target.uuid) : null;
   const uuid = meta?.uuid ?? '';
@@ -128,19 +130,30 @@ export const GlossaryRowMenu = ({
 
   const handleDelete = useCallback(async () => {
     if (!deleting) return;
+    // A save in flight could write back the instances the delete removes.
+    if (isSaving()) {
+      setError('a save is running. Try again once it is done.');
+      return;
+    }
     setPending(true);
     setError(null);
-    const result = await controller.deleteGlossaryEntry(deleting.uuid, {
-      client: createBrowserClient(),
-      passages: stack ? [stack.work] : [],
-    });
-    setPending(false);
-    if (result.deleted) {
-      setDeleting(null);
-    } else {
-      setError(result.error);
+    try {
+      const result = await controller.deleteGlossaryEntry(deleting.uuid, {
+        client: createBrowserClient(),
+        passages: stack ? [stack.work] : [],
+      });
+      if (result.deleted) {
+        setDeleting(null);
+      } else {
+        setError(result.error);
+      }
+    } catch (cause) {
+      console.error('Failed to delete glossary entry:', cause);
+      setError('something went wrong.');
+    } finally {
+      setPending(false);
     }
-  }, [controller, deleting, stack]);
+  }, [controller, deleting, stack, isSaving]);
 
   const rect = target?.rect;
 

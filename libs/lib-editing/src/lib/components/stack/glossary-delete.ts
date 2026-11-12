@@ -3,33 +3,28 @@ import {
   getGlossaryEntry,
   type DataClient,
 } from '@eightyfourthousand/data-access';
-import { mapMarks, type WorkDocument } from '@eightyfourthousand/lib-doc-model';
+import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
 import type { GlossaryWork } from './glossary-work';
+import { dropHeldMarks } from './held-marks';
 
 /**
  * Take a deleted entry's instances out of the passages a work holds. The
  * server deleted their annotations with the entry, so this is not an edit:
  * a clean passage stays clean. Passages not held are read without them.
  */
-export const removeGlossaryInstances = (work: WorkDocument, entry: string) => {
-  work.store.held().forEach((uuid) => {
-    const doc = work.store.peek(uuid);
-    if (!doc) return;
-    const json = mapMarks(doc.toJSON(), (mark) =>
-      mark.type === 'glossaryInstance' && mark.attrs?.glossary === entry
-        ? null
-        : mark,
-    );
-    if (json) doc.adjust(json);
-  });
-};
+export const removeGlossaryInstances = (work: WorkDocument, entry: string) =>
+  dropHeldMarks(
+    work,
+    (mark) =>
+      mark.type === 'glossaryInstance' && mark.attrs?.glossary === entry,
+    'adjustment',
+  );
 
 /**
  * Take a row whose entry was deleted on the server out of the glossary,
  * renumbering the rows after it, and its instances out of `passages`. Its
- * document is left for the window to release, so an editor still bound to it
- * unmounts first.
+ * document is released, its edits with it.
  */
 export const forgetGlossaryRow = (
   glossary: GlossaryWork,
@@ -38,10 +33,11 @@ export const forgetGlossaryRow = (
 ) => {
   const { work, feed, entries, conflicts } = glossary;
   feed.forget(uuid);
-  work.store.peek(uuid)?.markSynced();
   entries.delete(uuid);
   conflicts.delete(uuid);
   work.spine.remove([uuid]);
+  work.store.peek(uuid)?.markSynced();
+  work.store.release(uuid);
   passages.forEach((each) => removeGlossaryInstances(each, uuid));
 };
 
