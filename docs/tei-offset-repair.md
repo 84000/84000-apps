@@ -36,8 +36,8 @@ revert, that line takes the run id instead.
 2. **Apply.** Run the apply with the same `@param` value. Run the whole
    snippet at once. It either repairs every row the report listed or, if a
    check fails, raises an error and writes nothing. While it runs, editors'
-   saves wait. If another write holds the tables for more than 10 seconds, it
-   stops with a lock timeout and writes nothing: run it again. If it hits the
+   saves wait. If other writes keep the tables busy for 10 seconds, it stops
+   with an error saying so and writes nothing: run it again. If it hits the
    SQL editor's time limit with a `NULL` `@param`, nothing is written either:
    run it one work at a time. It returns one row.
    **Write down its `run_id`**, with the date and the work, for example in the
