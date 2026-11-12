@@ -3,6 +3,7 @@ import { canonicalToh, type DataClient } from '../types';
 
 /** Instances listed per page of the editor's instance table. */
 export const GLOSSARY_INSTANCES_PAGE_SIZE = 50;
+/** The most instances one page may hold. */
 export const MAX_GLOSSARY_INSTANCES_LIMIT = 100;
 
 /** Words of passage text shown on each side of an instance. */
@@ -37,6 +38,7 @@ export type GlossaryTermInstanceRow = GlossaryInstanceContext & {
   end: number;
 };
 
+/** One page of an entry's instances, with the total across all pages. */
 export type GlossaryTermInstancesPage = {
   items: GlossaryTermInstanceRow[];
   /** Instances listed for the entry in all, across every page. */

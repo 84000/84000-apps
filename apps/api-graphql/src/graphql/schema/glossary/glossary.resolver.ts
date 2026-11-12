@@ -72,12 +72,12 @@ export const glossaryTermExcerptsResolver = async (
   };
 };
 
+/** A page of an entry's instances, for the editor only. */
 export const glossaryTermInstancesResolver = async (
   _parent: unknown,
   args: { uuid: string; toh?: string; first?: number; offset?: number },
   ctx: GraphQLContext,
 ) => {
-  // The editor's table: drafts are never read for a published-content caller.
   if (ctx.source !== 'draft') return null;
 
   return getGlossaryTermInstances({

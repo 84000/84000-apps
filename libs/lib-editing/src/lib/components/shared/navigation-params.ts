@@ -68,3 +68,21 @@ export const parseHighlight = (
   }
   return { start, end };
 };
+
+/**
+ * Writes a highlight range to the `start`/`end` query parameters, or clears
+ * them, leaving the rest of the URL as it is. The provider reads it back.
+ */
+export const writeHighlight = (range?: {
+  start: string | number;
+  end: string | number;
+}) => {
+  const query = new URLSearchParams(window.location.search);
+  query.delete('start');
+  query.delete('end');
+  if (range) {
+    query.set('start', String(range.start));
+    query.set('end', String(range.end));
+  }
+  window.history.replaceState(null, '', `?${query.toString()}`);
+};

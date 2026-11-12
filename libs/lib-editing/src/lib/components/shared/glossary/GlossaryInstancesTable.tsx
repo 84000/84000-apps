@@ -6,6 +6,7 @@ import {
   type GlossaryTermInstanceRow,
   type GlossaryTermInstancesPage,
 } from '@eightyfourthousand/client-graphql';
+import { GLOSSARY_INSTANCES_PAGE_SIZE } from '@eightyfourthousand/data-access';
 import {
   Button,
   Table,
@@ -18,10 +19,8 @@ import {
 import { TriangleAlertIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from '../NavigationContext';
+import { writeHighlight } from '../navigation-params';
 import { locationForPassageType } from '../types';
-
-/** Instances shown per page. */
-export const GLOSSARY_INSTANCES_PAGE_SIZE = 50;
 
 type LoadState = 'loading' | 'loaded' | 'error';
 
@@ -48,7 +47,6 @@ export const GlossaryInstancesTable = ({
     (at: number) => {
       const read = ++readRef.current;
       setState('loading');
-      setOffset(at);
       getGlossaryTermInstances({
         client: createGraphQLClient(),
         uuid: termUuid,
@@ -62,6 +60,7 @@ export const GlossaryInstancesTable = ({
           return;
         }
         setPage(result);
+        setOffset(at);
         setState('loaded');
       });
     },
@@ -78,15 +77,7 @@ export const GlossaryInstancesTable = ({
   const jumpTo = useCallback(
     (row: GlossaryTermInstanceRow) => {
       onClose();
-      // The provider reads the highlight range back off the URL.
-      const query = new URLSearchParams(window.location.search);
-      query.delete('start');
-      query.delete('end');
-      if (!row.outOfRange) {
-        query.set('start', String(row.start));
-        query.set('end', String(row.end));
-      }
-      window.history.replaceState(null, '', `?${query.toString()}`);
+      writeHighlight(row.outOfRange ? undefined : row);
       const { panel, tab } = locationForPassageType(row.passageType);
       updatePanel({
         name: panel,
