@@ -78,6 +78,17 @@ const dialogPassages = async (
   }
 };
 
+/** Rows in passage order, then by start within a passage. */
+const inOrder = (rows: Row[]) =>
+  rows.every((row, i) => {
+    const prev = rows[i - 1];
+    if (!prev) return true;
+    if (row.passageSort !== prev.passageSort)
+      return row.passageSort > prev.passageSort;
+    if (row.passageUuid === prev.passageUuid) return row.start >= prev.start;
+    return true;
+  });
+
 /** Every page of a term's instances, in the order the read returns them. */
 const allInstances = async (
   db: DataClient,
@@ -147,6 +158,7 @@ describeLive('glossary term instances against a local database', () => {
       expect(totalCount).toBe(expected.length);
       expect(new Set(rows.map((row) => row.uuid)).size).toBe(rows.length);
       expect([...actual].sort()).toEqual([...expected].sort());
+      expect(inOrder(rows)).toBe(true);
 
       const passageOrder: string[] = [];
       for (const row of rows) {

@@ -96,6 +96,29 @@ describe('GlossaryInstancesTable', () => {
     expect(screen.getByText('1 instance')).toBeTruthy();
   });
 
+  it('shows one page for fewer instances than a page, and a passage without a label by its uuid', async () => {
+    mockGetGlossaryTermInstances.mockResolvedValue(
+      page(
+        [
+          row(1, { passageLabel: null, passageUuid: 'abcdef123456' }),
+          ...[2, 3, 4, 5, 6, 7].map((n) => row(n)),
+        ],
+        7,
+      ),
+    );
+
+    renderTable();
+
+    expect(await screen.findByRole('button', { name: 'abcdef' })).toBeTruthy();
+    expect(screen.getByText('Page 1 of 1')).toBeTruthy();
+    expect(screen.getByText('7 instances')).toBeTruthy();
+    for (const name of ['First', 'Previous', 'Next', 'Last']) {
+      expect(
+        screen.getByRole('button', { name }).hasAttribute('disabled'),
+      ).toBe(true);
+    }
+  });
+
   it('pages 50 at a time, straight to the last page', async () => {
     mockGetGlossaryTermInstances
       .mockResolvedValueOnce(page([row(1)], 18697))
