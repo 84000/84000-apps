@@ -16,6 +16,7 @@
     "src/**/*.spec.js",
     "src/**/*.test.jsx",
     "src/**/*.spec.jsx",
+    "src/**/*.fixture.ts",
     "src/**/*.d.ts"
   ]
 }

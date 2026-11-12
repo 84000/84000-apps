@@ -5,9 +5,15 @@
 // depends on, and what the database stores. Skipped unless
 // DATA_ACCESS_LIVE=1, with SUPABASE_URL (a local URL),
 // SUPABASE_SERVICE_ROLE_KEY and, for the permission test, SUPABASE_ANON_KEY.
-import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
-
+import {
+  Scratch,
+  anonClient,
+  check,
+  describeLive,
+  select,
+  serviceClient,
+  uid,
+} from '../../../live.fixture';
 import type { DataClient } from '../../types';
 import { getGlossaryEntries, getGlossaryEntry } from './read';
 import {
@@ -28,13 +34,7 @@ import {
   type GlossarySaveResult,
 } from './types';
 
-const LIVE = process.env['DATA_ACCESS_LIVE'] === '1';
-const describeLive = LIVE ? describe : describe.skip;
-
-type Row = Record<string, unknown>;
 type SaveOk = Extract<GlossarySaveResult, { success: true }>;
-
-const uid = (): string => uuidv4();
 
 const ZERO = {
   glossaries: { inserted: 0, updated: 0, deleted: 0 },
@@ -42,243 +42,6 @@ const ZERO = {
   names: { inserted: 0, updated: 0 },
   annotations: { deleted: 0 },
 };
-
-const clientOptions = {
-  auth: { persistSession: false, autoRefreshToken: false },
-};
-
-/** The service and anon clients, refusing anything but a local Supabase. */
-const liveClients = (): { db: DataClient; anon: DataClient | null } => {
-  const url = process.env['SUPABASE_URL'] ?? '';
-  const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
-  const anonKey = process.env['SUPABASE_ANON_KEY'];
-  const host = URL.canParse(url) ? new URL(url).hostname : '';
-  if (host !== '127.0.0.1' && host !== 'localhost') {
-    throw new Error('SUPABASE_URL must be a local Supabase (127.0.0.1)');
-  }
-  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
-  return {
-    db: createClient(url, serviceKey, clientOptions),
-    anon: anonKey ? createClient(url, anonKey, clientOptions) : null,
-  };
-};
-
-const check = (error: { message: string } | null, what: string) => {
-  if (error) throw new Error(`${what}: ${error.message}`);
-};
-
-const select = async (
-  db: DataClient,
-  table: string,
-  column: string,
-  values: readonly string[],
-  columns = '*',
-): Promise<Row[]> => {
-  if (!values.length) return [];
-  const { data, error } = await db
-    .from(table)
-    .select(columns)
-    .in(column, values);
-  check(error, `select ${table}`);
-  return ((data ?? []) as unknown as Row[]).sort((a, b) =>
-    JSON.stringify(a) < JSON.stringify(b) ? -1 : 1,
-  );
-};
-
-/**
- * What one spec writes: scratch works, authorities, names, rows, creators,
- * passages and annotations, removed again by `cleanup`.
- */
-class Scratch {
-  readonly tag = uid().slice(0, 8);
-  readonly works: string[] = [];
-  readonly authorities: string[] = [];
-  private seq = 0;
-
-  constructor(readonly db: DataClient) {}
-
-  async work(): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db
-      .from('works')
-      .insert({ uuid, title: `data-access scratch ${this.tag}-${++this.seq}` });
-    check(error, 'insert work');
-    this.works.push(uuid);
-    return uuid;
-  }
-
-  async authority(): Promise<string> {
-    const uuid = uid();
-    const n = ++this.seq;
-    const { error } = await this.db.from('authorities').insert({
-      uuid,
-      xmlId: `data-access-${this.tag}-${n}`,
-      headword: `data-access scratch authority ${this.tag}-${n}`,
-    });
-    check(error, 'insert authority');
-    this.authorities.push(uuid);
-    return uuid;
-  }
-
-  async name(args: {
-    authorityUuid: string;
-    language: string;
-    content: string;
-    contentTransformed?: string | null;
-    internal?: boolean | null;
-  }): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db.from('names').insert({
-      uuid,
-      authority_uuid: args.authorityUuid,
-      language: args.language,
-      content: args.content,
-      content_transformed: args.contentTransformed ?? null,
-      internal: args.internal ?? null,
-    });
-    check(error, 'insert name');
-    return uuid;
-  }
-
-  async creator(args: {
-    workUuid: string;
-    authorityUuid: string;
-    nameUuid: string;
-  }): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db.from('creators').insert({
-      uuid,
-      authority_uuid: args.authorityUuid,
-      work_uuid: args.workUuid,
-      type: 'translator',
-      name_uuid: args.nameUuid,
-    });
-    check(error, 'insert creator');
-    return uuid;
-  }
-
-  /** A `glossaries` row with its edge: from `rootUuid`, or a self-edge. */
-  async row(args: {
-    workUuid: string;
-    authorityUuid: string;
-    nameUuid: string;
-    rootUuid?: string;
-    termType?: string | null;
-    attestation?: string | null;
-  }): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db.from('glossaries').insert({
-      uuid,
-      work_uuid: args.workUuid,
-      authority_uuid: args.authorityUuid,
-      name_uuid: args.nameUuid,
-      termType: args.termType ?? null,
-      attestation: args.attestation ?? null,
-    });
-    check(error, 'insert glossaries row');
-    const edge = await this.db
-      .from('glossary_edges')
-      .insert({ parent_uuid: args.rootUuid ?? uuid, child_uuid: uuid });
-    check(edge.error, 'insert glossary_edges row');
-    return uuid;
-  }
-
-  async passage(workUuid: string): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db.from('passages').insert({
-      uuid,
-      work_uuid: workUuid,
-      label: `data-access-${++this.seq}`,
-      sort: this.seq,
-      type: 'translation',
-      content: 'scratch',
-    });
-    check(error, 'insert passage');
-    return uuid;
-  }
-
-  /** A `glossary-instance` annotation citing the given rows, as real ones do. */
-  async annotation(passageUuid: string, ...rowUuids: string[]) {
-    const uuid = uid();
-    const { error } = await this.db.from('passage_annotations').insert({
-      uuid,
-      passage_uuid: passageUuid,
-      type: 'glossary-instance',
-      content: [
-        { type: 'glossary' },
-        ...rowUuids.map((u) => ({ uuid: u })),
-        { authority: uid() },
-      ],
-      start: 0,
-      end: 3,
-    });
-    check(error, 'insert annotation');
-    return uuid;
-  }
-
-  /** The scratch works' glossary rows and the scratch authorities' names. */
-  async snapshot() {
-    const glossaries = await select(
-      this.db,
-      'glossaries',
-      'work_uuid',
-      this.works,
-    );
-    return {
-      glossaries,
-      edges: await select(
-        this.db,
-        'glossary_edges',
-        'child_uuid',
-        glossaries.map((g) => g['uuid'] as string),
-      ),
-      names: await select(this.db, 'names', 'authority_uuid', this.authorities),
-    };
-  }
-
-  async cleanup(): Promise<void> {
-    const db = this.db;
-    const passages = (
-      await select(db, 'passages', 'work_uuid', this.works, 'uuid')
-    ).map((p) => p['uuid'] as string);
-    const steps: [
-      string,
-      () => PromiseLike<{ error: { message: string } | null }>,
-    ][] = [
-      [
-        'annotations',
-        () =>
-          db.from('passage_annotations').delete().in('passage_uuid', passages),
-      ],
-      [
-        'passages',
-        () => db.from('passages').delete().in('work_uuid', this.works),
-      ],
-      [
-        'creators',
-        () => db.from('creators').delete().in('work_uuid', this.works),
-      ],
-      // Edges go with their rows.
-      [
-        'glossaries',
-        () => db.from('glossaries').delete().in('work_uuid', this.works),
-      ],
-      [
-        'names',
-        () => db.from('names').delete().in('authority_uuid', this.authorities),
-      ],
-      [
-        'authorities',
-        () => db.from('authorities').delete().in('uuid', this.authorities),
-      ],
-      ['works', () => db.from('works').delete().in('uuid', this.works)],
-    ];
-    for (const [what, run] of steps) {
-      const { error } = await run();
-      if (error) console.warn(`scratch cleanup (${what}): ${error.message}`);
-    }
-  }
-}
 
 const en = (
   content: string,
@@ -363,7 +126,8 @@ describeLive('glossary entry saves against the database', () => {
   let authC: string;
 
   beforeAll(async () => {
-    ({ db, anon } = liveClients());
+    db = serviceClient();
+    anon = anonClient();
     s = new Scratch(db);
     workA = await s.work();
     workB = await s.work();

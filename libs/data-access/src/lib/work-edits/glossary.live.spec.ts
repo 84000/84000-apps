@@ -11,15 +11,14 @@ import { getGlossaryEntry } from '../glossary/entry/read';
 import type { DataClient } from '../types';
 import { applyWorkEdits } from './apply-work-edits';
 import {
-  LIVE,
   Scratch,
-  liveClients,
+  anonClient,
+  describeLive,
   select,
+  serviceClient,
+  signedInClient,
   uid,
-  type LiveClients,
-} from './glossary.live.acceptance-fixture';
-
-const describeLive = LIVE ? describe : describe.skip;
+} from '../../live.fixture';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -49,15 +48,24 @@ const ZERO = {
 
 const ENTITY_ID = /^entity-\d+$/;
 
+type Clients = Record<'db' | 'editor' | 'manager' | 'anon', DataClient>;
+
 describeLive('glossary ops in applyWorkEdits against the database', () => {
-  let c: LiveClients;
+  let c: Clients;
   let db: DataClient;
   let s: Scratch;
   let workA: string;
   let workB: string;
 
   beforeAll(async () => {
-    c = liveClients();
+    const anon = anonClient();
+    if (!anon) throw new Error('SUPABASE_ANON_KEY is not set');
+    c = {
+      db: serviceClient(),
+      editor: signedInClient('editor'),
+      manager: signedInClient('manager'),
+      anon,
+    };
     db = c.db;
     s = new Scratch(db);
     workA = await s.work();
@@ -236,10 +244,10 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
       entry = await makeEntry({
         workUuid: workA,
         authorityUuid: authority,
-        root: { language: 'en', content: s.label('ac2 root') },
+        root: { language: 'en', content: s.label('stale root') },
         others: [
-          { language: 'Bo-Ltn', content: s.label('ac2 wylie') },
-          { language: 'en', content: s.label('ac2 alternative') },
+          { language: 'Bo-Ltn', content: s.label('stale wylie') },
+          { language: 'en', content: s.label('stale alternative') },
         ],
         definition: 'Original.',
       });
@@ -256,7 +264,7 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
     });
 
     it('writes nothing from the rest of the call when one op is stale', async () => {
-      const n = newEntryOp('ac2 mixed');
+      const n = newEntryOp('stale mixed');
       const before = await s.snapshot();
       const res = await run([
         n.op,
@@ -330,7 +338,7 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
     };
 
     it('leaves the other work’s entry unchanged', async () => {
-      const w = await world('ac3 patch');
+      const w = await world('rename');
       const theirsBefore = await read(workB, w.theirs.uuid);
       const res = await run([
         {
@@ -341,12 +349,12 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
               {
                 glossaryUuid: w.mine.uuid,
                 language: 'en',
-                content: s.label('ac3 patch renamed'),
+                content: s.label('rename renamed'),
               },
             ],
           },
           expect: {
-            names: [{ language: 'en', content: s.label('ac3 patch shared') }],
+            names: [{ language: 'en', content: s.label('rename shared') }],
           },
         },
       ]);
@@ -366,7 +374,7 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
     it.each(accounts)(
       'is refused by the database for %s, writing neither row',
       async (_name, client) => {
-        const n = newEntryOp('ac4');
+        const n = newEntryOp('no edit');
         const before = await s.snapshot();
         const res = await run([n.op], { client: client() });
         expectRefused(res);
@@ -376,7 +384,7 @@ describeLive('glossary ops in applyWorkEdits against the database', () => {
         const after = await s.snapshot();
         expect(after).toEqual(before);
         // Even the derived-uuid form leaves no authority behind.
-        const derived = newEntryOp('ac4 derived');
+        const derived = newEntryOp('no edit derived');
         delete derived.op.entry.uuid;
         delete derived.op.entry.authority.new.uuid;
         const res2 = await run([derived.op], { client: client() });

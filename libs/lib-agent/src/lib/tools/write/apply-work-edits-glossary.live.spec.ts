@@ -13,15 +13,13 @@ import type { McpToolDefinition } from '../../types';
 import { createGetGlossaryTermTool } from '../read/get-glossary-term';
 import { createWriteTools } from './index';
 import {
-  LIVE,
   Scratch,
-  liveClients,
+  describeLive,
   select,
+  serviceClient,
+  signedInClient,
   uid,
-  type LiveClients,
-} from './apply-work-edits-glossary.live.acceptance-fixture';
-
-const describeLive = LIVE ? describe : describe.skip;
+} from '@eightyfourthousand/data-access/live-fixture';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Any = any;
@@ -29,12 +27,12 @@ type Any = any;
 const ENTITY_ID = /^entity-\d+$/;
 
 describeLive('glossary ops in the apply-work-edits tool, live', () => {
-  let c: LiveClients;
+  let c: { db: DataClient; editor: DataClient };
   let s: Scratch;
   let workUuid: string;
 
   beforeAll(async () => {
-    c = liveClients();
+    c = { db: serviceClient(), editor: signedInClient('editor') };
     s = new Scratch(c.db);
     workUuid = await s.work();
   });
@@ -134,7 +132,7 @@ describeLive('glossary ops in the apply-work-edits tool, live', () => {
   };
 
   it('creates an entry with names and a new authority, dry-runs, applies, and reads it back with get-glossary-term', async () => {
-    const n = newEntry('tool ac1');
+    const n = newEntry('create');
     const before = await s.snapshot();
 
     const dry = await edit(c.editor, [n.op], true);
@@ -188,9 +186,9 @@ describeLive('glossary ops in the apply-work-edits tool, live', () => {
       workUuid,
       definition: 'The entry definition.',
       names: {
-        english: s.label('tool ac1 root'),
-        wylie: s.label('tool ac1 wylie'),
-        alternatives: s.label('tool ac1 alternative'),
+        english: s.label('create root'),
+        wylie: s.label('create wylie'),
+        alternatives: s.label('create alternative'),
       },
     });
   });
@@ -200,7 +198,7 @@ describeLive('glossary ops in the apply-work-edits tool, live', () => {
     const nameUuid = await s.name({
       authorityUuid: authority,
       language: 'en',
-      content: s.label('tool ac2 root'),
+      content: s.label('stale root'),
     });
     const entry = await s.row({
       workUuid,

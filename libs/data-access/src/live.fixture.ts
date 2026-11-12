@@ -1,17 +1,16 @@
 /**
- * Fixtures for the glossary live acceptance spec: clients for a local
- * Supabase, and scratch rows (works, authorities, names, glossary entries)
- * that `Scratch.cleanup` removes again, including the authorities the ops
- * under test create. The data-access spec has its own copy (a lib cannot
- * import another lib's source).
+ * Helpers for live specs, which run against a local Supabase when
+ * DATA_ACCESS_LIVE=1: clients, sorted reads, and scratch rows that
+ * `Scratch.cleanup` removes again. Not part of the published library.
  *
  * Environment, from `supabase status -o env` in infra: SUPABASE_URL (local
- * only), SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY and SUPABASE_JWT_SECRET.
+ * only) and SUPABASE_SERVICE_ROLE_KEY; SUPABASE_ANON_KEY for the anon and
+ * signed-in clients, and SUPABASE_JWT_SECRET for the signed-in ones.
  */
 import { createHmac, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
-import type { DataClient } from '@eightyfourthousand/data-access';
+import type { DataClient } from './lib/types';
 
 export type Row = Record<string, unknown>;
 
@@ -20,12 +19,40 @@ export const uid = (): string => randomUUID();
 /** Set DATA_ACCESS_LIVE=1 to run the live specs. */
 export const LIVE = process.env['DATA_ACCESS_LIVE'] === '1';
 
+export const describeLive = LIVE ? describe : describe.skip;
+
 const clientOptions = {
   auth: { persistSession: false, autoRefreshToken: false },
 };
 
-/** A seeded local user whose role is `editor`. */
-const EDITOR_USER = '33333333-3333-3333-3333-333333333333';
+/** SUPABASE_URL, refusing anything but a local Supabase. */
+const localUrl = (): string => {
+  const url = process.env['SUPABASE_URL'] ?? '';
+  const host = URL.canParse(url) ? new URL(url).hostname : '';
+  if (host !== '127.0.0.1' && host !== 'localhost') {
+    throw new Error('SUPABASE_URL must be a local Supabase (127.0.0.1)');
+  }
+  return url;
+};
+
+/** The service-role client, for fixtures and checks. */
+export const serviceClient = (): DataClient => {
+  const key = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+  if (!key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  return createClient(localUrl(), key, clientOptions);
+};
+
+/** The anon client, or null when SUPABASE_ANON_KEY is not set. */
+export const anonClient = (): DataClient | null => {
+  const key = process.env['SUPABASE_ANON_KEY'];
+  return key ? createClient(localUrl(), key, clientOptions) : null;
+};
+
+/** The local seed's users, by role. */
+const SEEDED_USERS = {
+  editor: '33333333-3333-3333-3333-333333333333',
+  manager: '22222222-2222-2222-2222-222222222222',
+} as const;
 
 const b64 = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -48,50 +75,31 @@ const signJwt = (secret: string, sub: string, userRole: string): string => {
   return `${head}.${body}.${sig}`;
 };
 
-export type LiveClients = {
-  /** Service role: fixtures and checks. */
-  db: DataClient;
-  /** A signed-in user whose role has editor.edit. */
-  editor: DataClient;
-};
-
-/** The clients, refusing anything but a local Supabase. */
-export const liveClients = (): LiveClients => {
-  const url = process.env['SUPABASE_URL'] ?? '';
-  const serviceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
-  const anonKey = process.env['SUPABASE_ANON_KEY'];
+/**
+ * A client signed in as the seeded user with `role`: `editor` has
+ * editor.edit, `manager` editor.read but not editor.edit.
+ */
+export const signedInClient = (role: keyof typeof SEEDED_USERS): DataClient => {
+  const key = process.env['SUPABASE_ANON_KEY'];
   const secret = process.env['SUPABASE_JWT_SECRET'];
-  const host = URL.canParse(url) ? new URL(url).hostname : '';
-  if (host !== '127.0.0.1' && host !== 'localhost') {
-    throw new Error('SUPABASE_URL must be a local Supabase (127.0.0.1)');
-  }
-  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
-  if (!anonKey) throw new Error('SUPABASE_ANON_KEY is not set');
+  if (!key) throw new Error('SUPABASE_ANON_KEY is not set');
   if (!secret) {
     throw new Error(
       'SUPABASE_JWT_SECRET is not set (supabase status -o env, JWT_SECRET)',
     );
   }
-  const signedIn = (sub: string, role: string) =>
-    createClient(url, anonKey, {
-      ...clientOptions,
-      global: {
-        headers: { Authorization: `Bearer ${signJwt(secret, sub, role)}` },
-      },
-    });
-  return {
-    db: createClient(url, serviceKey, clientOptions),
-    editor: signedIn(EDITOR_USER, 'editor'),
-  };
+  const token = signJwt(secret, SEEDED_USERS[role], role);
+  return createClient(localUrl(), key, {
+    ...clientOptions,
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
 };
 
 export const check = (error: { message: string } | null, what: string) => {
   if (error) throw new Error(`${what}: ${error.message}`);
 };
 
-const byJson = (a: Row, b: Row) =>
-  JSON.stringify(a) < JSON.stringify(b) ? -1 : 1;
-
+/** The rows of `table` whose `column` is one of `values`, in a stable order. */
 export const select = async (
   db: DataClient,
   table: string,
@@ -105,13 +113,15 @@ export const select = async (
     .select(columns)
     .in(column, values);
   check(error, `select ${table}`);
-  return ((data ?? []) as unknown as Row[]).sort(byJson);
+  return ((data ?? []) as unknown as Row[]).sort((a, b) =>
+    JSON.stringify(a) < JSON.stringify(b) ? -1 : 1,
+  );
 };
 
 /**
- * What one spec writes. Every row carries the spec's `tag` (works by title,
- * authorities by headword), so `cleanup` also finds authorities an op created
- * that the spec never learned the uuid of.
+ * What one spec writes: works, authorities, names, glossary rows, creators,
+ * passages and annotations. Works and authorities carry the spec's `tag`, so
+ * `cleanup` also finds authorities an op created under a tagged headword.
  */
 export class Scratch {
   readonly tag = uid().slice(0, 8);
@@ -123,7 +133,7 @@ export class Scratch {
 
   /** A headword or title that carries this spec's tag. */
   label(what: string): string {
-    return `glossary-live ${this.tag} ${what}`;
+    return `live-spec ${this.tag} ${what}`;
   }
 
   async work(): Promise<string> {
@@ -136,13 +146,12 @@ export class Scratch {
     return uuid;
   }
 
-  /** An authority the spec makes itself. */
   async authority(): Promise<string> {
     const uuid = uid();
     const n = ++this.seq;
     const { error } = await this.db.from('authorities').insert({
       uuid,
-      xmlId: `glossary-live-${this.tag}-${n}`,
+      xmlId: `live-spec-${this.tag}-${n}`,
       headword: this.label(`authority ${n}`),
     });
     check(error, 'insert authority');
@@ -150,7 +159,7 @@ export class Scratch {
     return uuid;
   }
 
-  /** Registers an authority an op under test will create. */
+  /** Registers an authority that the code under test will create. */
   track(authorityUuid: string): string {
     this.authorities.push(authorityUuid);
     return authorityUuid;
@@ -161,6 +170,7 @@ export class Scratch {
     language: string;
     content: string;
     contentTransformed?: string | null;
+    internal?: boolean | null;
   }): Promise<string> {
     const uuid = uid();
     const { error } = await this.db.from('names').insert({
@@ -169,15 +179,30 @@ export class Scratch {
       language: args.language,
       content: args.content,
       content_transformed: args.contentTransformed ?? null,
+      internal: args.internal ?? null,
     });
     check(error, 'insert name');
     return uuid;
   }
 
-  /**
-   * A `glossaries` row with its edge: from `rootUuid` (a name of that entry),
-   * or a self-edge (an entry's root).
-   */
+  async creator(args: {
+    workUuid: string;
+    authorityUuid: string;
+    nameUuid: string;
+  }): Promise<string> {
+    const uuid = uid();
+    const { error } = await this.db.from('creators').insert({
+      uuid,
+      authority_uuid: args.authorityUuid,
+      work_uuid: args.workUuid,
+      type: 'translator',
+      name_uuid: args.nameUuid,
+    });
+    check(error, 'insert creator');
+    return uuid;
+  }
+
+  /** A `glossaries` row with its edge: from `rootUuid`, or a self-edge. */
   async row(args: {
     workUuid: string;
     authorityUuid: string;
@@ -210,6 +235,39 @@ export class Scratch {
     return uuid;
   }
 
+  async passage(workUuid: string): Promise<string> {
+    const uuid = uid();
+    const { error } = await this.db.from('passages').insert({
+      uuid,
+      work_uuid: workUuid,
+      label: `live-spec-${++this.seq}`,
+      sort: this.seq,
+      type: 'translation',
+      content: 'scratch',
+    });
+    check(error, 'insert passage');
+    return uuid;
+  }
+
+  /** A `glossary-instance` annotation citing the given rows, as real ones do. */
+  async annotation(passageUuid: string, ...rowUuids: string[]) {
+    const uuid = uid();
+    const { error } = await this.db.from('passage_annotations').insert({
+      uuid,
+      passage_uuid: passageUuid,
+      type: 'glossary-instance',
+      content: [
+        { type: 'glossary' },
+        ...rowUuids.map((u) => ({ uuid: u })),
+        { authority: uid() },
+      ],
+      start: 0,
+      end: 3,
+    });
+    check(error, 'insert annotation');
+    return uuid;
+  }
+
   /** The spec's authorities: the ones registered and any carrying its tag. */
   async allAuthorities(): Promise<string[]> {
     const { data, error } = await this.db
@@ -225,7 +283,7 @@ export class Scratch {
     ];
   }
 
-  /** The works' glossary rows and names, and the authorities. */
+  /** The works' glossary rows and edges, and the authorities and their names. */
   async snapshot() {
     const authorities = await this.allAuthorities();
     const glossaries = await select(
@@ -247,7 +305,7 @@ export class Scratch {
     };
   }
 
-  /** Everything the spec still holds in the database, for the final check. */
+  /** How many of the spec's rows the database still holds. */
   async leftovers(): Promise<Record<string, number>> {
     const authorities = await this.allAuthorities();
     const count = async (rows: Promise<Row[]>) => (await rows).length;
@@ -268,6 +326,9 @@ export class Scratch {
   async cleanup(): Promise<void> {
     const db = this.db;
     const authorities = await this.allAuthorities();
+    const passages = (
+      await select(db, 'passages', 'work_uuid', this.works, 'uuid')
+    ).map((p) => p['uuid'] as string);
     const glossaries = (
       await select(db, 'glossaries', 'work_uuid', this.works, 'uuid')
     ).map((g) => g['uuid'] as string);
@@ -275,6 +336,19 @@ export class Scratch {
       string,
       () => PromiseLike<{ error: { message: string } | null }>,
     ][] = [
+      [
+        'annotations',
+        () =>
+          db.from('passage_annotations').delete().in('passage_uuid', passages),
+      ],
+      [
+        'passages',
+        () => db.from('passages').delete().in('work_uuid', this.works),
+      ],
+      [
+        'creators',
+        () => db.from('creators').delete().in('work_uuid', this.works),
+      ],
       [
         'edges',
         () => db.from('glossary_edges').delete().in('child_uuid', glossaries),
