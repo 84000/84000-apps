@@ -82,7 +82,7 @@ export const glossaryPages = ({
 
 /** A row's static HTML: its definition as stored. */
 export const renderGlossaryRow = (doc: JSONContent): string =>
-  glossaryContentToDefinition(doc.content ?? []) ?? '';
+  glossaryContentToDefinition(doc.content ?? []);
 
 /**
  * A work's glossary as its own stack work, with its first page of rows.

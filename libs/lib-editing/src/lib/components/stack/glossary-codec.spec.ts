@@ -22,7 +22,7 @@ const STORED = [
   '<p>See <cite>The Sūtra of Golden Light</cite>, <ref target="https://example.org">here</ref>.</p>',
   '<p>From <foreign lang="Sa-Ltn">mahā</foreign> <em>great</em> <emph rend="bold">and</emph> <a href="https://example.org">more</a>.</p>',
   '<div><p>One.</p><p>Two.</p></div>',
-  '<p>Nested <span data-glossary-id="a">outer <span lang="bo">inner</span></span> spans.</p>',
+  '<p>Nested <span lang="bo">outer <span data-glossary-id="a">inner</span></span> spans.</p>',
   '<p>A <distinct>name</distinct> with <hi rend="italic">emphasis</hi>.</p>',
 ];
 
@@ -47,13 +47,17 @@ describe('glossaryDefinitionToContent', () => {
     ]);
   });
 
-  it('lifts paragraphs out of the wrappers around them', () => {
-    expect(
-      glossaryDefinitionToContent(STORED[1]).map((block) => block.type),
-    ).toEqual(['paragraph']);
-    expect(
-      glossaryDefinitionToContent(STORED[4]).map((block) => block.type),
-    ).toEqual(['paragraph', 'paragraph']);
+  it('keeps the wrappers around paragraphs', () => {
+    const blocks = (stored: string) =>
+      glossaryDefinitionToContent(stored).map((block) => [
+        block.type,
+        block.content?.map((child) => child.type),
+      ]);
+    expect(blocks(STORED[1])).toEqual([['definitionWrapper', ['paragraph']]]);
+    expect(blocks(STORED[4])).toEqual([
+      ['definitionWrapper', ['paragraph', 'paragraph']],
+    ]);
+    expect(roundTrip(STORED[4])).toBe(STORED[4]);
   });
 
   it('reads the editor marks it knows as themselves', () => {
@@ -67,23 +71,18 @@ describe('glossaryDefinitionToContent', () => {
   });
 
   it('reads an empty definition as no blocks of text', () => {
-    expect(glossaryContentToDefinition(glossaryDefinitionToContent(null))).toBe(
-      null,
-    );
-    expect(glossaryContentToDefinition(glossaryDefinitionToContent(''))).toBe(
-      null,
-    );
+    expect(roundTrip(null)).toBe('');
+    expect(roundTrip('')).toBe('');
   });
 });
 
 describe('glossaryContentToDefinition', () => {
   it.each(STORED)('keeps the text and inline markup of %s', (stored) => {
     const once = roundTrip(stored);
-    expect(once).not.toBeNull();
     const before = document.createElement('div');
     before.innerHTML = stored;
     const after = document.createElement('div');
-    after.innerHTML = once ?? '';
+    after.innerHTML = once;
     expect(after.textContent?.replace(/\s+/g, ' ').trim()).toBe(
       before.textContent?.replace(/\s+/g, ' ').trim(),
     );
@@ -126,16 +125,14 @@ describe('glossaryContentToDefinition', () => {
     });
   });
 
-  it('keeps nested markup of one kind nested', () => {
-    expect(roundTrip(STORED[5])).toBe(
-      '<p>Nested <span data-glossary-id="a">outer <span lang="bo">inner</span></span> spans.</p>',
-    );
+  it('keeps cross-links nested in language spans', () => {
+    expect(roundTrip(STORED[5])).toBe(STORED[5]);
   });
 
   it('writes no definition for blocks without text', () => {
     expect(
       glossaryContentToDefinition([{ type: 'paragraph', content: [] }]),
-    ).toBe(null);
+    ).toBe('');
   });
 });
 
@@ -151,7 +148,11 @@ describe('glossaryRowSource', () => {
     expect(read).toHaveBeenCalledWith(['a', 'b']);
     expect(snapshots.map(({ uuid }) => uuid)).toEqual(['a', 'b']);
     expect(snapshots[0].content).toEqual([
-      { type: 'paragraph', content: [{ type: 'text', text: 'a' }] },
+      {
+        type: 'paragraph',
+        attrs: { stored: null },
+        content: [{ type: 'text', text: 'a' }],
+      },
     ]);
   });
 

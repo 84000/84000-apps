@@ -61,7 +61,7 @@ export const storageSerializer = (schema: Schema): DOMSerializer => {
  * and a newline between two `<p>`s would otherwise become a paragraph of its
  * own. Within a block it is text, and kept.
  */
-export const dropWhitespaceBetweenBlocks = (container: HTMLElement) => {
+const dropWhitespaceBetweenBlocks = (container: HTMLElement) => {
   const hasBlocks = [...container.children].some((el) => el.tagName === 'P');
   if (!hasBlocks) return;
   [...container.childNodes].forEach((node) => {
