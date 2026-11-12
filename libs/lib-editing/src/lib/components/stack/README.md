@@ -696,14 +696,21 @@ its entry (names and all) is read with the document, through
 is checked against the entry its editor started from.
 
 `glossary-codec` reads a stored definition into paragraphs with the
-bibliography's inline marks. TEI markup they do not cover (cross-link spans,
-`cite`, `term`, `ref` and the like) is kept as `definitionMarkup`, a mark that
-holds the element and its attributes; empty elements written as XML
-(`<ptr …/>`, pending references) are read as empty, as the save reads them,
-and kept as `definitionPointer` atoms. The wrappers around paragraphs
-(`<note>`, `<div>`), paragraph classes and comments are not kept, so they are
-dropped when an entry is edited, and only then. Every seeded definition keeps
-its text and inline markup through the codec, and is stable once written.
+bibliography's inline marks; a language span (`<span lang>`) is the foreign
+mark. TEI markup they do not cover (cross-link spans, `cite`, `term`, `ref`
+and the like) is kept as `definitionMarkup`, a mark that holds the element and
+its attributes; empty elements written as XML (`<ptr …/>`, pending
+references) are read as empty, as the save reads them, and kept as
+`definitionPointer` atoms. The wrappers around paragraphs (`<note>`, `<div>`)
+are `definitionWrapper` blocks, and text no paragraph holds is read into one
+that is written back without it. Paragraphs and the editor's marks keep the
+element they were read from (`stored`), so attributes the editor does not
+model, such as `<p class="definition">` or `<em class="foreign">`, are
+written back as read; an element the editor would write the same way is not
+kept. Whitespace between blocks and comments are not kept, so an edited
+definition is written without them. The seed definitions round-trip byte for
+byte. Marks nest in schema order, which puts a cross-link inside a
+language span, as stored definitions have it.
 
 A glossary row draws its names above the definition, the English in bold and
 the others with their languages, and "Passages ›" below it, through
