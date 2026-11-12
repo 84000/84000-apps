@@ -26,10 +26,6 @@ export class GlossaryConflicts {
   get = (uuid: string): GlossaryConflict | null =>
     this.conflicts.get(uuid) ?? null;
 
-  get size() {
-    return this.conflicts.size;
-  }
-
   set(uuid: string, conflict: GlossaryConflict) {
     this.conflicts.set(uuid, conflict);
     this.notify();
@@ -58,16 +54,26 @@ type SavedGlossary = {
   conflicts: GlossaryConflicts;
 };
 
-/** A definition as the codec would write it back, unedited. */
-const unedited = (definition: string | null) =>
-  glossaryContentToDefinition(glossaryDefinitionToContent(definition));
+const uneditedDefinitions = new WeakMap<GlossaryEntry, string>();
+
+/** An entry's definition as the codec would write it back, unedited. */
+const unedited = (entry: GlossaryEntry) => {
+  let definition = uneditedDefinitions.get(entry);
+  if (definition === undefined) {
+    definition = glossaryContentToDefinition(
+      glossaryDefinitionToContent(entry.definition),
+    );
+    uneditedDefinitions.set(entry, definition);
+  }
+  return definition;
+};
 
 /** A row's definition as its document holds it, and the version read. */
-type Edit = { uuid: string; version: number; definition: string | null };
+type Edit = { uuid: string; version: number; definition: string };
 
 /**
  * The rows whose definitions differ from their entries. A row edited back to
- * what it was read as is not among them.
+ * what it was read as is not among them, nor is a row no longer in the work.
  */
 const editsOf = ({ work, entries }: SavedGlossary) => {
   const edits: Edit[] = [];
@@ -75,9 +81,9 @@ const editsOf = ({ work, entries }: SavedGlossary) => {
   for (const uuid of work.store.dirty()) {
     const doc = work.store.peek(uuid);
     const entry = entries.get(uuid);
-    if (!doc || !entry) continue;
+    if (!doc || !entry || !work.spine.meta(uuid)) continue;
     const definition = glossaryContentToDefinition(doc.toJSON().content ?? []);
-    if (definition === unedited(entry.definition)) {
+    if (definition === unedited(entry)) {
       unchanged.push({ uuid, version: doc.version });
     } else {
       edits.push({ uuid, version: doc.version, definition });
@@ -106,8 +112,8 @@ const readStored = async (
 /**
  * Write every edited definition, one entry at a time, each guarded by the
  * definition its editor read. A refused save keeps the row's text and is
- * recorded as a conflict for the row to show. False when any row was left
- * unsaved.
+ * recorded as a conflict for the row to show. A row already in conflict waits
+ * for its choice and is not sent. False when a write failed.
  */
 export const saveGlossaryWork = async (
   glossary: SavedGlossary,
@@ -123,10 +129,13 @@ export const saveGlossaryWork = async (
   });
 
   let saved = true;
+  // Deleted from the work while its save was in flight.
+  const removed = (uuid: string) => !work.spine.meta(uuid);
   for (const { uuid, version, definition } of edits) {
     const before = entries.get(uuid);
-    if (!before) continue;
+    if (!before || conflicts.get(uuid)) continue;
     const settle = (entry: GlossaryEntry) => {
+      if (removed(uuid)) return;
       entries.set(uuid, entry);
       conflicts.delete(uuid);
       work.store.peek(uuid)?.markSynced(version);
@@ -145,7 +154,9 @@ export const saveGlossaryWork = async (
     saved = false;
     if (result.reason === 'stale' || result.reason === 'not-found') {
       const theirs = await readStored(client, workUuid, uuid);
-      if (theirs !== undefined) conflicts.set(uuid, { theirs });
+      if (theirs !== undefined && !removed(uuid)) {
+        conflicts.set(uuid, { theirs });
+      }
       continue;
     }
     console.error('Failed to save glossary entry:', result.error);
@@ -170,6 +181,17 @@ export const takeTheirGlossaryEntry = (
   if (!theirs || !doc) return;
   entries.set(uuid, theirs);
   doc.reseed(glossaryDefinitionToContent(theirs.definition));
+  conflicts.delete(uuid);
+};
+
+/** Drop the row's edit to an entry deleted meanwhile; nothing is saved for it. */
+export const discardGlossaryEdit = (
+  { work, conflicts }: SavedGlossary,
+  uuid: string,
+) => {
+  const doc = work.store.peek(uuid);
+  if (!doc) return;
+  doc.markSynced(doc.version);
   conflicts.delete(uuid);
 };
 

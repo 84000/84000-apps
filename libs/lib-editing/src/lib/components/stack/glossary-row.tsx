@@ -11,7 +11,11 @@ import { Button } from '@eightyfourthousand/design-system';
 import { GlossaryPassagesLink } from '../shared/glossary/GlossaryPassagesLink';
 import type { StackController } from './StackController';
 import { glossaryDefinitionToContent } from './glossary-codec';
-import { keepMyGlossaryEntry, takeTheirGlossaryEntry } from './glossary-save';
+import {
+  discardGlossaryEdit,
+  keepMyGlossaryEntry,
+  takeTheirGlossaryEntry,
+} from './glossary-save';
 import { renderGlossaryRow, type GlossaryWork } from './glossary-work';
 
 const ALTERNATIVE = 'translationAlternative';
@@ -146,9 +150,20 @@ export const GlossaryRowConflict = ({
           </div>
         </>
       ) : (
-        <div className="font-medium">
-          This entry was deleted by someone else, so your edit was not saved.
-        </div>
+        <>
+          <div className="font-medium">
+            This entry was deleted by someone else, so your edit was not saved.
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => discardGlossaryEdit(glossary, uuid)}
+            >
+              Discard my edit
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

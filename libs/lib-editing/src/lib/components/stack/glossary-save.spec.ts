@@ -5,6 +5,7 @@ import type {
 } from '@eightyfourthousand/data-access';
 
 import {
+  discardGlossaryEdit,
   keepMyGlossaryEntry,
   saveGlossaryWork,
   takeTheirGlossaryEntry,
@@ -213,6 +214,18 @@ describe('saveGlossaryWork', () => {
     expect(glossary.conflicts.get('t2')).toBeNull();
   });
 
+  it('records no conflict for a row deleted from the work during its save', async () => {
+    edit(glossary, 't2', 'Mine.');
+    mockSave.mockImplementation(async () => {
+      glossary.work.spine.remove(['t2'], { renumber: false });
+      return refused('not-found');
+    });
+    mockRead.mockResolvedValue({ status: 'not-found' });
+    await saveGlossaryWork(glossary, client);
+    expect(glossary.conflicts.get('t2')).toBeNull();
+    expect(unsavedGlossaryChanges(glossary)).toBe(0);
+  });
+
   it('keeps an edit made while the save was in flight', async () => {
     edit(glossary, 't2', 'First.');
     mockSave.mockImplementation(async () => {
@@ -259,6 +272,25 @@ describe('resolving a conflict', () => {
         after: { definition: '<p>Mine.</p>' },
       }),
     );
+  });
+
+  it('waits for the choice: a later save does not send the row again', async () => {
+    await conflicted();
+    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(glossary.conflicts.get('t2')).not.toBeNull();
+    expect(unsavedGlossaryChanges(glossary)).toBe(1);
+  });
+
+  it('discards an edit to an entry deleted elsewhere', async () => {
+    edit(glossary, 't2', 'Mine.');
+    mockSave.mockResolvedValueOnce(refused('not-found'));
+    mockRead.mockResolvedValue({ status: 'not-found' });
+    await saveGlossaryWork(glossary, client);
+    discardGlossaryEdit(glossary, 't2');
+    expect(glossary.conflicts.get('t2')).toBeNull();
+    expect(glossary.work.store.peek('t2')?.isDirty).toBe(false);
+    expect(unsavedGlossaryChanges(glossary)).toBe(0);
   });
 
   it('tells its listeners', async () => {

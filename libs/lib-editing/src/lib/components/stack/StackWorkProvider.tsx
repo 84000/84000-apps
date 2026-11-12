@@ -150,6 +150,13 @@ export const StackWorkProvider = ({
       each.store.observe(offer),
       each.spine.observe(offer),
     ]);
+    // A conflict settled without a save, such as by taking theirs, can leave
+    // nothing to save.
+    if (glossary) {
+      stops.push(
+        glossary.conflicts.subscribe(() => dirtyStore.setDirty(isDirty())),
+      );
+    }
     return () => {
       stops.forEach((stop) => stop());
       edits.stop();

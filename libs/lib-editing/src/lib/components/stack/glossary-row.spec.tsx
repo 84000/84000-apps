@@ -173,5 +173,6 @@ describe('GlossaryRowConflict', () => {
     render(<GlossaryRowConflict glossary={glossary} uuid="e1" />);
     expect(screen.getByRole('alert').textContent).toContain('deleted');
     expect(screen.queryByText('Keep mine')).toBeNull();
+    expect(screen.getByText('Discard my edit')).toBeTruthy();
   });
 });
