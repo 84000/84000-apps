@@ -378,6 +378,17 @@ export type GlossaryExcerptsPage = {
   totalCount: Scalars['Int']['output'];
 };
 
+/** A passage whose glossary instances could not be removed */
+export type GlossaryInstanceRemovalFailure = {
+  __typename?: 'GlossaryInstanceRemovalFailure';
+  /** The instances asked for in it, none of which were removed */
+  annotationUuids: Array<Scalars['ID']['output']>;
+  error: Scalars['String']['output'];
+  passageLabel?: Maybe<Scalars['String']['output']>;
+  /** The passage, or empty for instances that were not found */
+  passageUuid: Scalars['ID']['output'];
+};
+
 /** A passage that cites a glossary term, with an excerpt around its first instance */
 export type GlossaryPassageExcerpt = {
   __typename?: 'GlossaryPassageExcerpt';
@@ -618,6 +629,13 @@ export type Mutation = {
    */
   publishWork: PublishJob;
   /**
+   * Remove glossary-instance annotations of one glossary term, leaving the
+   * passage text as it is. Each passage saves on its own, so one that fails keeps
+   * its instances while the others' removals stand.
+   * Requires editor.edit permission.
+   */
+  removeGlossaryTermInstances: RemoveGlossaryTermInstancesResult;
+  /**
    * Replace text within one or more targets.
    * Requires editor.edit permission.
    */
@@ -686,6 +704,14 @@ export type MutationPublishWorkArgs = {
   notes?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['String']['input']>;
   work: Scalars['String']['input'];
+};
+
+
+/** Root Mutation type - extend this in other schema files */
+export type MutationRemoveGlossaryTermInstancesArgs = {
+  annotationUuids: Array<Scalars['ID']['input']>;
+  termUuid: Scalars['ID']['input'];
+  workUuid: Scalars['ID']['input'];
 };
 
 
@@ -1293,6 +1319,19 @@ export type QueryWorksArgs = {
   cursor?: InputMaybe<Scalars['String']['input']>;
   filter?: InputMaybe<WorkFilter>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Result of removing glossary instances */
+export type RemoveGlossaryTermInstancesResult = {
+  __typename?: 'RemoveGlossaryTermInstancesResult';
+  /** Set when nothing was attempted, such as without permission */
+  error?: Maybe<Scalars['String']['output']>;
+  /** Passages whose instances stay, with the reason */
+  failed: Array<GlossaryInstanceRemovalFailure>;
+  /** The passages as saved, for an open editor to take in */
+  passages: Array<Passage>;
+  /** Instances removed */
+  removed: Array<Scalars['ID']['output']>;
 };
 
 /** A passage renumbered by the server during a save */
