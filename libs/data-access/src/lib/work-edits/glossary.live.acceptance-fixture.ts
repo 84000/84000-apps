@@ -1,11 +1,9 @@
 /**
- * Fixtures for the DEV-886 live acceptance specs: clients for a local
- * Supabase, and scratch rows (works, authorities, names, glossary entries,
- * creators, passages, annotations) that `Scratch.cleanup` removes again,
- * including the authorities the ops under test create.
- *
- * A copy of this file sits beside the lib-agent spec (a lib cannot import
- * another lib's source); keep them in step.
+ * Fixtures for the glossary live acceptance spec: clients for a local
+ * Supabase, and scratch rows (works, authorities, names, glossary entries)
+ * that `Scratch.cleanup` removes again, including the authorities the ops
+ * under test create. The lib-agent spec has its own copy (a lib cannot import
+ * another lib's source).
  *
  * Environment, from `supabase status -o env` in infra: SUPABASE_URL (local
  * only), SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY and SUPABASE_JWT_SECRET.
@@ -27,8 +25,8 @@ const clientOptions = {
 };
 
 /** Seeded local users: 33333333 has role `editor`, 22222222 role `manager`. */
-export const EDITOR_USER = '33333333-3333-3333-3333-333333333333';
-export const MANAGER_USER = '22222222-2222-2222-2222-222222222222';
+const EDITOR_USER = '33333333-3333-3333-3333-333333333333';
+const MANAGER_USER = '22222222-2222-2222-2222-222222222222';
 
 const b64 = (value: unknown) =>
   Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -125,14 +123,13 @@ export class Scratch {
   readonly tag = uid().slice(0, 8);
   readonly works: string[] = [];
   readonly authorities: string[] = [];
-  readonly passages: string[] = [];
   private seq = 0;
 
   constructor(readonly db: DataClient) {}
 
   /** A headword or title that carries this spec's tag. */
   label(what: string): string {
-    return `dev886 ${this.tag} ${what}`;
+    return `glossary-live ${this.tag} ${what}`;
   }
 
   async work(): Promise<string> {
@@ -151,7 +148,7 @@ export class Scratch {
     const n = ++this.seq;
     const { error } = await this.db.from('authorities').insert({
       uuid,
-      xmlId: `dev886-${this.tag}-${n}`,
+      xmlId: `glossary-live-${this.tag}-${n}`,
       headword: this.label(`authority ${n}`),
     });
     check(error, 'insert authority');
@@ -180,23 +177,6 @@ export class Scratch {
       content_transformed: args.contentTransformed ?? null,
     });
     check(error, 'insert name');
-    return uuid;
-  }
-
-  async creator(args: {
-    workUuid: string;
-    authorityUuid: string;
-    nameUuid: string;
-  }): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db.from('creators').insert({
-      uuid,
-      authority_uuid: args.authorityUuid,
-      work_uuid: args.workUuid,
-      type: 'translator',
-      name_uuid: args.nameUuid,
-    });
-    check(error, 'insert creator');
     return uuid;
   }
 
@@ -236,40 +216,6 @@ export class Scratch {
     return uuid;
   }
 
-  async passage(workUuid: string): Promise<string> {
-    const uuid = uid();
-    const { error } = await this.db.from('passages').insert({
-      uuid,
-      work_uuid: workUuid,
-      label: `dev886-${++this.seq}`,
-      sort: this.seq,
-      type: 'translation',
-      content: 'scratch',
-    });
-    check(error, 'insert passage');
-    this.passages.push(uuid);
-    return uuid;
-  }
-
-  /** A `glossary-instance` annotation citing the given rows, as real ones do. */
-  async annotation(passageUuid: string, ...rowUuids: string[]) {
-    const uuid = uid();
-    const { error } = await this.db.from('passage_annotations').insert({
-      uuid,
-      passage_uuid: passageUuid,
-      type: 'glossary-instance',
-      content: [
-        { type: 'glossary' },
-        ...rowUuids.map((u) => ({ uuid: u })),
-        { authority: uid() },
-      ],
-      start: 0,
-      end: 3,
-    });
-    check(error, 'insert annotation');
-    return uuid;
-  }
-
   /** The spec's authorities: the ones registered and any carrying its tag. */
   async allAuthorities(): Promise<string[]> {
     const { data, error } = await this.db
@@ -285,7 +231,7 @@ export class Scratch {
     ];
   }
 
-  /** The works' glossary rows, annotations and names, and the authorities. */
+  /** The works' glossary rows and names, and the authorities. */
   async snapshot() {
     const authorities = await this.allAuthorities();
     const glossaries = await select(
@@ -304,12 +250,6 @@ export class Scratch {
         glossaries.map((g) => g['uuid'] as string),
       ),
       names: await select(this.db, 'names', 'authority_uuid', authorities),
-      annotations: await select(
-        this.db,
-        'passage_annotations',
-        'passage_uuid',
-        this.passages,
-      ),
     };
   }
 
@@ -328,12 +268,6 @@ export class Scratch {
       glossaries: await count(
         select(this.db, 'glossaries', 'work_uuid', this.works),
       ),
-      passages: await count(
-        select(this.db, 'passages', 'work_uuid', this.works),
-      ),
-      creators: await count(
-        select(this.db, 'creators', 'work_uuid', this.works),
-      ),
     };
   }
 
@@ -347,22 +281,6 @@ export class Scratch {
       string,
       () => PromiseLike<{ error: { message: string } | null }>,
     ][] = [
-      [
-        'annotations',
-        () =>
-          db
-            .from('passage_annotations')
-            .delete()
-            .in('passage_uuid', this.passages),
-      ],
-      [
-        'passages',
-        () => db.from('passages').delete().in('work_uuid', this.works),
-      ],
-      [
-        'creators',
-        () => db.from('creators').delete().in('work_uuid', this.works),
-      ],
       [
         'edges',
         () => db.from('glossary_edges').delete().in('child_uuid', glossaries),
