@@ -197,6 +197,22 @@ describe('deleteGlossaryRow', () => {
     expect(glossary.conflicts.get('t2')).toBeNull();
   });
 
+  it("lets go of the row's editors before its document is released", async () => {
+    mockDelete.mockResolvedValue(deleted('t2'));
+    const held: unknown[] = [];
+    const letGo = jest.fn(() => held.push(glossary.work.store.peek('t2')));
+    await deleteGlossaryRow({
+      glossary,
+      uuid: 't2',
+      client,
+      passages: [],
+      letGo,
+    });
+    expect(letGo).toHaveBeenCalledTimes(1);
+    expect(held[0]).toBeTruthy();
+    expect(glossary.work.store.peek('t2')).toBeNull();
+  });
+
   it('keeps reading past a deleted last row from the row before it', async () => {
     mockDelete.mockResolvedValue(deleted('t3'));
     await deleteGlossaryRow({ glossary, uuid: 't3', client, passages: [] });
@@ -222,6 +238,7 @@ describe('deleteGlossaryRow', () => {
       passages: [work],
     });
     expect(result).toEqual({ deleted: false, error: 'refused: forbidden' });
+    expect(glossary.work.store.peek('t2')).toBeTruthy();
     expect(labels(glossary)).toEqual(['t1:g.1', 't2:g.2', 't3:g.3']);
     expect(glossary.entries.has('t2')).toBe(true);
     expect(instancesIn(work, 'p2')).toEqual(['t2']);

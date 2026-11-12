@@ -748,8 +748,8 @@ and how many each has (`getGlossaryTermExcerpts` on the draft), with the
 number of passages. Unlike a bibliography row, an entry is deleted straight
 away rather than at the next save, since the server deletes its instances
 with it (`glossary-delete`). The row then leaves the spine without being
-recorded for a save, its document is released, and the rows after it are
-renumbered. A cursor on the row
+recorded for a save, the editors are let go if the row has one, its document
+is released, and the rows after it are renumbered. A cursor on the row
 moves to its neighbour, so the feed keeps reading. The entry's instance marks
 come out of the passages loaded in the editor as an adjustment, not an edit,
 so a clean passage stays clean. Cancelling changes nothing. Delete waits while

@@ -24,12 +24,14 @@ export const removeGlossaryInstances = (work: WorkDocument, entry: string) =>
 /**
  * Take a row whose entry was deleted on the server out of the glossary,
  * renumbering the rows after it, and its instances out of `passages`. Its
- * document is released, its edits with it.
+ * document is released, its edits with it, after `letGo` has let go of any
+ * editor bound to it.
  */
 export const forgetGlossaryRow = (
   glossary: GlossaryWork,
   uuid: string,
   passages: WorkDocument[],
+  letGo: () => void = () => undefined,
 ) => {
   const { work, feed, entries, conflicts } = glossary;
   feed.forget(uuid);
@@ -37,6 +39,7 @@ export const forgetGlossaryRow = (
   conflicts.delete(uuid);
   work.spine.remove([uuid]);
   work.store.peek(uuid)?.markSynced();
+  letGo();
   work.store.release(uuid);
   passages.forEach((each) => removeGlossaryInstances(each, uuid));
 };
@@ -56,12 +59,15 @@ export const deleteGlossaryRow = async ({
   uuid,
   client,
   passages,
+  letGo,
 }: {
   glossary: GlossaryWork;
   uuid: string;
   client: DataClient;
   /** The works whose loaded passages may hold the entry's instances. */
   passages: WorkDocument[];
+  /** Let go of any editor bound to the row, before its document goes. */
+  letGo?: () => void;
 }): Promise<GlossaryRowDelete> => {
   const { workUuid } = glossary.work;
   const result = await deleteGlossaryEntry({ client, workUuid, uuid });
@@ -76,6 +82,6 @@ export const deleteGlossaryRow = async ({
       error: result.success ? 'The entry was not deleted.' : result.error,
     };
   }
-  forgetGlossaryRow(glossary, uuid, passages);
+  forgetGlossaryRow(glossary, uuid, passages, letGo);
   return { deleted: true };
 };

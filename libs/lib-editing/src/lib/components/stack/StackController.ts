@@ -313,14 +313,13 @@ export class StackController {
     if (!glossary || this.readOnly) {
       return { deleted: false, error: 'The glossary cannot be edited here.' };
     }
-    const result = await deleteGlossaryRow({
+    return deleteGlossaryRow({
       glossary,
       uuid,
       client,
       passages,
+      letGo: () => this.releaseEditorsOf(uuid),
     });
-    if (result.deleted) this.releaseFocusFrom(uuid);
-    return result;
   };
 
   /**
@@ -329,13 +328,19 @@ export class StackController {
    */
   forgetGlossaryRow = (uuid: string, passages: WorkDocument[]) => {
     if (!this.glossary || this.readOnly) return;
-    forgetGlossaryRow(this.glossary, uuid, passages);
-    this.releaseFocusFrom(uuid);
+    forgetGlossaryRow(this.glossary, uuid, passages, () =>
+      this.releaseEditorsOf(uuid),
+    );
   };
 
-  /** Let go of the editors when focus is on a row that has left the spine. */
-  private releaseFocusFrom(uuid: string) {
-    if (this.getFocusedUuid() !== uuid) return;
+  /**
+   * Let go of the editors when a row leaving the spine has one, focused or
+   * mounted beside the focus, before its document is released.
+   */
+  private releaseEditorsOf(uuid: string) {
+    if (this.getFocusedUuid() !== uuid && !this.live.getLiveUuids().has(uuid)) {
+      return;
+    }
     this.live.release();
     this.bump();
   }

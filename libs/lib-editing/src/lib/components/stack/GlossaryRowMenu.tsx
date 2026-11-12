@@ -123,6 +123,7 @@ export const GlossaryRowMenu = ({
   const close = useCallback(() => {
     if (pending) return;
     setDeleting(null);
+    setRead(null);
     setError(null);
   }, [pending]);
 
@@ -142,6 +143,7 @@ export const GlossaryRowMenu = ({
       });
       if (result.deleted) {
         setDeleting(null);
+        setRead(null);
       } else {
         setError(result.error);
       }
