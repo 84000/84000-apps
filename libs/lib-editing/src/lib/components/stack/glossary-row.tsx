@@ -7,7 +7,6 @@ import type {
 } from '@eightyfourthousand/data-access';
 
 import { GlossaryPassagesLink } from '../shared/glossary/GlossaryPassagesLink';
-import { TITLE_LANGUAGE_LABELS } from '../shared/titles/TitleForm';
 import type { StackController } from './StackController';
 
 const ALTERNATIVE = 'translationAlternative';
@@ -20,11 +19,27 @@ export const englishNameOf = (
   return english.find(({ termType }) => termType !== ALTERNATIVE) ?? english[0];
 };
 
+/**
+ * A name's language without its script: a row draws a Tibetan name in both
+ * Unicode and Wylie, so "Tibetan (Wylie)" would describe only half of it.
+ */
+const NAME_LANGUAGE_LABELS: Record<ExtendedTranslationLanguage, string> = {
+  en: 'English',
+  bo: 'Tibetan',
+  'Bo-Ltn': 'Tibetan',
+  'Sa-Ltn': 'Sanskrit',
+  zh: 'Chinese',
+  'Zh-Ltn': 'Chinese',
+  ja: 'Japanese',
+  'Mt-Ltn': 'Mongolian',
+  'Pi-Ltn': 'Pali',
+};
+
 const languageLabel = ({ language, termType }: GlossaryEntryName) => {
   if (language === 'en' && termType === ALTERNATIVE) return 'Alternative';
   if (!language) return 'Unknown language';
   return (
-    TITLE_LANGUAGE_LABELS[language as ExtendedTranslationLanguage] ?? language
+    NAME_LANGUAGE_LABELS[language as ExtendedTranslationLanguage] ?? language
   );
 };
 

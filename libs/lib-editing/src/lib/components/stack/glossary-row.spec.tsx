@@ -72,14 +72,36 @@ describe('GlossaryRowNames', () => {
   it('shows the English name and the others with their languages', () => {
     render(<GlossaryRowNames entry={ENTRY} />);
     expect(screen.getByText('Indra').className).toContain('font-bold');
-    expect(screen.getByText('Tibetan (Wylie)')).toBeTruthy();
+    expect(screen.getByText('Tibetan')).toBeTruthy();
     expect(screen.getByText('བརྒྱ་བྱིན།')).toBeTruthy();
     expect(screen.getByText('brgya byin')).toBeTruthy();
-    expect(screen.getByText('Sanskrit (Latin)')).toBeTruthy();
+    expect(screen.getByText('Sanskrit')).toBeTruthy();
     expect(screen.getByText('indra')).toBeTruthy();
     expect(screen.getByText('Alternative')).toBeTruthy();
     expect(screen.getByText('Śakra')).toBeTruthy();
     expect(screen.getByText('Unknown language')).toBeTruthy();
+  });
+
+  it('labels each name with its language alone, not its script', () => {
+    const names = [
+      name('n1', 'en', 'Indra'),
+      name('n6', 'zh', '帝釋'),
+      name('n7', 'Zh-Ltn', 'dìshì'),
+      name('n8', 'ja', 'たいしゃく'),
+      name('n9', 'Mt-Ltn', 'qurmusta'),
+      name('n10', 'Pi-Ltn', 'sakka'),
+    ];
+    render(<GlossaryRowNames entry={{ ...ENTRY, names }} />);
+    const labels = [...document.querySelectorAll('li > span:first-child')].map(
+      (label) => label.textContent,
+    );
+    expect(labels).toEqual([
+      'Chinese',
+      'Chinese',
+      'Japanese',
+      'Mongolian',
+      'Pali',
+    ]);
   });
 
   it('draws nothing an editor could type into', () => {

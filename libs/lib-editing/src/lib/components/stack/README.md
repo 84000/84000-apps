@@ -713,7 +713,8 @@ byte. Marks nest in schema order, which puts a cross-link inside a
 language span, as stored definitions have it.
 
 A glossary row draws its names above the definition, the English in bold and
-the others with their languages, and "Passages ›" below it, through
+the others with their languages (the language alone, not its script: a
+Tibetan name shows in Unicode and Wylie), and "Passages ›" below it, through
 `StackRow`'s `header` and `footer`, outside the editor. The host draws the
 tab's title, `g.` Glossary, above the stack, and falls back to the read-only
 list when the glossary cannot be read. The view is read-only: its controller
