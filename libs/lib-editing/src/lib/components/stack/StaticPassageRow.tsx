@@ -4,6 +4,7 @@ import { memo } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import type { StackController } from './StackController';
+import { glossaryRowChrome } from './glossary-row';
 import { PassageSkeleton } from './PassageSkeleton';
 import { StackRow } from './StackRow';
 import { StaticPassageHTML } from './StaticPassage';
@@ -53,6 +54,7 @@ export const StaticPassageRow = memo(
         references={controller.getReferences(meta.uuid)}
         className={look.className}
         contentStyle={look.style}
+        {...glossaryRowChrome(controller, meta.uuid)}
       >
         {html === null ? (
           <PassageSkeleton

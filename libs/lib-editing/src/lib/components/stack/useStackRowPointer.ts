@@ -16,6 +16,9 @@ import { inCompareSource } from './useStackSelection';
 /** How far the pointer may travel and still count as a click, not a drag. */
 const CLICK_SLOP_PX = 5;
 
+/** Controls drawn in a row's chrome, which a press must not focus past. */
+const ROW_CONTROL_SELECTOR = 'button, input, select, textarea, [role="button"]';
+
 /**
  * Delegated pointer handling over a stack's rows: back-references, the label
  * menu, content links on static rows, and click-to-focus.
@@ -106,6 +109,9 @@ export const useStackRowPointer = ({
 
       if (target?.closest?.('[contenteditable="true"]')) return; // live editors handle their own caret
       if (inCompareSource(target)) return;
+      // A control in a row's header or footer takes its own click: focusing
+      // the row would swap it for an editor and drop the control first.
+      if (target?.closest?.(ROW_CONTROL_SELECTOR)) return;
 
       // Content links, before the focus branch below claims the press. A
       // mounted editor handles these from its own mark and node views; a

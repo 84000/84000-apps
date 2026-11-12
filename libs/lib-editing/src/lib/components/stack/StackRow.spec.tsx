@@ -37,3 +37,43 @@ describe('StackRow Compare column', () => {
     expect(column(container)?.classList).not.toContain('md:mt-5');
   });
 });
+
+describe('StackRow header and footer', () => {
+  it('draws them around the content, outside it and not editable', () => {
+    const { container } = render(
+      <StackRow
+        uuid="p0"
+        label="1"
+        header={<span data-testid="header">names</span>}
+        footer={<span data-testid="footer">link</span>}
+      >
+        <p data-testid="content">text</p>
+      </StackRow>,
+    );
+    const content = container.querySelector('.passage');
+    const header = container.querySelector('[data-testid="header"]');
+    const footer = container.querySelector('[data-testid="footer"]');
+    expect(content?.contains(header)).toBe(false);
+    expect(content?.contains(footer)).toBe(false);
+    expect(header && content && header.compareDocumentPosition(content)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(footer && content && footer.compareDocumentPosition(content)).toBe(
+      Node.DOCUMENT_POSITION_PRECEDING,
+    );
+    expect(header?.parentElement?.getAttribute('contenteditable')).toBe(
+      'false',
+    );
+  });
+
+  it('draws neither when none is given', () => {
+    const { container } = render(
+      <StackRow uuid="p0" label="1">
+        <p>text</p>
+      </StackRow>,
+    );
+    expect(
+      container.querySelectorAll('[contenteditable="false"]'),
+    ).toHaveLength(0);
+  });
+});

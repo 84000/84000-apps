@@ -7,6 +7,8 @@ export { useStackDeepLink } from './useStackDeepLink';
 export * from './bibliography-codec';
 export * from './bibliography-extensions';
 export * from './bibliography-editor-extensions';
+export * from './glossary-codec';
+export * from './glossary-extensions';
 export * from './passage-source';
 export * from './spine-feed';
 export * from './PassageStack';

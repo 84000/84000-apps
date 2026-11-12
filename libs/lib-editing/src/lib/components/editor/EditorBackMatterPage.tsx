@@ -11,6 +11,11 @@ import type { BibliographyEntries } from '@eightyfourthousand/data-access';
 import { BackMatterPanel } from '../shared/BackMatterPanel';
 import { BibliographyList } from '../shared/bibliography';
 import { BibliographyTitle } from '../shared/bibliography/BibliographyTitle';
+import {
+  GlossaryPaginationProvider,
+  GlossaryTermList,
+} from '../shared/glossary';
+import { GlossaryTitle } from '../shared/glossary/GlossaryTitle';
 import { TranslationRenderer } from '../shared/types';
 import { useEditorState } from './EditorProvider';
 import dynamic from 'next/dynamic';
@@ -109,6 +114,29 @@ export const EditorBackMatterPage = () => {
     [bibliography],
   );
 
+  // The read-only list when the stack could not read the entries.
+  const renderGlossary = useCallback(
+    () => (
+      <StackTab
+        tab="glossary"
+        className="block mt-3"
+        title={<GlossaryTitle className="mt-2" />}
+        fallback={
+          glossary && (
+            <GlossaryPaginationProvider
+              workUuid={work.uuid}
+              initialPage={glossary}
+              withAttestations={withAttestations}
+            >
+              <GlossaryTermList isEditor />
+            </GlossaryPaginationProvider>
+          )
+        }
+      />
+    ),
+    [glossary, work.uuid, withAttestations],
+  );
+
   if (!glossary || !bibliography || !hasTabs) {
     return <TranslationSkeleton />;
   }
@@ -122,6 +150,7 @@ export const EditorBackMatterPage = () => {
       hasAbbreviations={hasTabs.abbreviations}
       renderTranslation={renderTranslation}
       renderBibliography={renderBibliography}
+      renderGlossary={renderGlossary}
       withAttestations={withAttestations}
       isEditor={true}
     />

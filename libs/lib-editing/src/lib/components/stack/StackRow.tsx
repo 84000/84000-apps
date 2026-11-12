@@ -12,6 +12,9 @@ import {
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 import { COMPARE_LEAD_DEFAULT } from '../editor/extensions/Passage/passage-chrome';
 
+/** A row's header and footer sit in the content's column. */
+const PASSAGE_CHROME_CLASS = 'pl-6 @c/sidebar:pl-4';
+
 /**
  * The shared frame of one stack row: the label gutter and the content column.
  *
@@ -30,6 +33,8 @@ export const StackRow = ({
   tibetanLead = COMPARE_LEAD_DEFAULT,
   className,
   contentStyle,
+  header,
+  footer,
   children,
 }: {
   uuid: string;
@@ -49,6 +54,10 @@ export const StackRow = ({
   className?: string;
   /** Inline style for the content column, such as a nesting indent. */
   contentStyle?: CSSProperties;
+  /** Drawn above the content, outside it: what a row shows but doesn't edit. */
+  header?: ReactNode;
+  /** Drawn below the content and its references. */
+  footer?: ReactNode;
   children: ReactNode;
 }) => (
   <div
@@ -92,6 +101,11 @@ export const StackRow = ({
       )}
     >
       <div className="w-full">
+        {header && (
+          <div className={PASSAGE_CHROME_CLASS} contentEditable={false}>
+            {header}
+          </div>
+        )}
         <div
           // Positioned, so it paints over the highlight drawn before it.
           className={cn(
@@ -120,6 +134,11 @@ export const StackRow = ({
                 </a>
               </span>
             ))}
+          </div>
+        )}
+        {footer && (
+          <div className={PASSAGE_CHROME_CLASS} contentEditable={false}>
+            {footer}
           </div>
         )}
       </div>

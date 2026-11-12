@@ -38,7 +38,7 @@ const serializers = new WeakMap<Schema, DOMSerializer>();
  * bare `<p>` and a link a bare `<a href>`, which is what stored entries hold
  * and what the reader styles. Everything else renders as the editor does.
  */
-const storageSerializer = (schema: Schema): DOMSerializer => {
+export const storageSerializer = (schema: Schema): DOMSerializer => {
   const cached = serializers.get(schema);
   if (cached) return cached;
   const base = DOMSerializer.fromSchema(schema);

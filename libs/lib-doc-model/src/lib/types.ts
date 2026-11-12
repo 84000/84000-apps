@@ -35,12 +35,17 @@ export const BIBLIOGRAPHY_ROW_TYPES = [
 
 export type BibliographyRowType = (typeof BIBLIOGRAPHY_ROW_TYPES)[number];
 
+/** The row type of a glossary: one entry per row, with no headings. */
+export const GLOSSARY_ROW_TYPE = 'glossary';
+
+export type GlossaryRowType = typeof GLOSSARY_ROW_TYPE;
+
 /**
  * What a spine row is: a passage's body item type, or another entity's row
  * type. The `*Header` convention holds for both, so placement and kind are
  * derived the same way.
  */
-export type StackRowType = BodyItemType | BibliographyRowType;
+export type StackRowType = BodyItemType | BibliographyRowType | GlossaryRowType;
 
 /** Whether a row heads a section or sits under one. */
 export type StackRowKind = 'heading' | 'entry';

@@ -31,7 +31,11 @@ export const StackTab = ({
   useStackOuterContent(tab === 'front' ? controller : null);
 
   if (!controller) {
-    return stack && fallback ? fallback : <TranslationSkeleton />;
+    return stack && fallback && !stack.reading?.(tab) ? (
+      fallback
+    ) : (
+      <TranslationSkeleton />
+    );
   }
 
   return (

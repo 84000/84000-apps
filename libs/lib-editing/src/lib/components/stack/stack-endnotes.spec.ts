@@ -131,6 +131,7 @@ const build = (
   const stack: StackWork = {
     work,
     bibliography: null,
+    glossary: null,
     controllerFor: (tab) => (tab === 'endnotes' ? endnotes : viewOf(tab)),
     readOnly: false,
   };

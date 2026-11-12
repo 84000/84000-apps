@@ -41,6 +41,7 @@ export const BackMatterPanel = ({
   withAttestations = false,
   renderTranslation,
   renderBibliography,
+  renderGlossary,
 }: {
   workUuid: string;
   /** Omitted when `renderTranslation` reads the endnotes itself. */
@@ -65,6 +66,8 @@ export const BackMatterPanel = ({
   ) => ReactElement<TranslationRenderer>;
   /** Draws the bibliography tab in place of the read-only list. */
   renderBibliography?: () => ReactElement;
+  /** Draws the glossary tab in place of the read-only list. */
+  renderGlossary?: () => ReactElement;
 }) => {
   const { panels, updatePanel } = useNavigation();
   const isMobile = useIsMobile();
@@ -156,13 +159,15 @@ export const BackMatterPanel = ({
                 forceMount
                 className="pb-8 data-[state=inactive]:hidden"
               >
-                <GlossaryPaginationProvider
-                  workUuid={workUuid}
-                  initialPage={glossary}
-                  withAttestations={withAttestations}
-                >
-                  <GlossaryTermList isEditor={isEditor} />
-                </GlossaryPaginationProvider>
+                {renderGlossary?.() ?? (
+                  <GlossaryPaginationProvider
+                    workUuid={workUuid}
+                    initialPage={glossary}
+                    withAttestations={withAttestations}
+                  >
+                    <GlossaryTermList isEditor={isEditor} />
+                  </GlossaryPaginationProvider>
+                )}
               </TabsContent>
             )}
             {hasBibliography && (

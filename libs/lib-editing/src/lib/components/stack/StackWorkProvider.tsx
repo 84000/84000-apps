@@ -216,6 +216,7 @@ export const StackWorkProvider = ({
     stack,
     setStack,
     createView: createEditingView,
+    withGlossary: true,
   });
 
   return (

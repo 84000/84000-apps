@@ -609,7 +609,7 @@ The spine, feed and loader are not tied to passages. A second entity brings
 three things:
 
 - **Row types.** `PassageMeta.type` is a `StackRowType`, which adds
-  `bibliographyHeader` and `bibliography` to the body item types. Placement
+  `bibliographyHeader`, `bibliography` and `glossary` to the body item types. Placement
   folds `*Header` into its section as before, so both land in the
   `bibliography` tab, and `rowKindOf` reads heading or entry the same way.
   `parent` and `depth` carry nesting, and are stored only when set.
@@ -683,3 +683,40 @@ then reports a failure, and those rows count as unsaved. When a save's
 outcome is unknown the rows are read back. When the passages' outcome is
 unknown, unsaved rows count among the changes a reload would discard. When
 the rows cannot be read, the tab falls back to the read-only list.
+
+#### The glossary tab
+
+The glossary is a third `WorkDocument` (`glossary-work`), one row per entry of
+the work. Unlike the bibliography it is read a page at a time: a `RowFeed`
+over the draft glossary page, so the largest works open without reading every
+entry, and a deep link reads the page around its row. Rows are labelled `g.N`
+and ordered as the readers number them. A row's document is its definition;
+its entry (names and all) is read with the document, through
+`getGlossaryEntries`, and kept as read while the document is held, so a save
+is checked against the entry its editor started from.
+
+`glossary-codec` reads a stored definition into paragraphs with the
+bibliography's inline marks; a language span (`<span lang>`) is the foreign
+mark. TEI markup they do not cover (cross-link spans, `cite`, `term`, `ref`
+and the like) is kept as `definitionMarkup`, a mark that holds the element and
+its attributes; empty elements written as XML (`<ptr …/>`, pending
+references) are read as empty, as the save reads them, and kept as
+`definitionPointer` atoms, as are line breaks (`<br>`). The wrappers around paragraphs (`<note>`, `<div>`)
+are `definitionWrapper` blocks, and text no paragraph holds is read into one
+that is written back without it. Paragraphs and the editor's marks keep the
+element they were read from (`stored`), so attributes the editor does not
+model, such as `<p class="definition">` or `<em class="foreign">`, are
+written back as read; an element the editor would write the same way is not
+kept. Whitespace between blocks and comments are not kept, so an edited
+definition is written without them. The seed definitions round-trip byte for
+byte. Marks nest in schema order, which puts a cross-link inside a
+language span, as stored definitions have it.
+
+A glossary row draws its names above the definition, the English in bold and
+the others with their languages (the language alone, not its script: a
+Tibetan name shows in Unicode and Wylie), and "Passages ›" below it, through
+`StackRow`'s `header` and `footer`, outside the editor. The host draws the
+tab's title, `g.` Glossary, above the stack, and falls back to the read-only
+list when the glossary cannot be read. The view is read-only: its controller
+is a plain `StackController`, whose rows are drawn by `renderGlossaryRow`
+through the codec, since the reader's static HTML would drop the kept markup.

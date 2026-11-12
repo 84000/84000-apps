@@ -30,6 +30,9 @@ export const FIRST_PAGE = 100;
 /** The tab the bibliography is drawn in, from its own work. */
 export const BIBLIOGRAPHY_TAB = 'bibliography';
 
+/** The tab the glossary is drawn in, from its own work. */
+export const GLOSSARY_TAB = 'glossary';
+
 /** A passage's content as the stack stores it, with its row data. */
 export type StackSeedPassage = {
   uuid: string;
