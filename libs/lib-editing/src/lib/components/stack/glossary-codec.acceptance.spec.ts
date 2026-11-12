@@ -248,31 +248,44 @@ describe('criterion 5: unedited definitions round-trip', () => {
     },
   );
 
-  // TEI-ish wrappers, as converted definitions can carry them. Whitespace
-  // between the wrapper's tags is not text, so it is compared without.
+  // TEI-ish wrappers, as converted definitions can carry them. A wrapper holds
+  // only blocks, so whitespace between its tags is not content: the text is
+  // compared paragraph by paragraph, in document order, wherever the
+  // paragraphs sit, and the whitespace between wrapper tags is dropped when
+  // the written definition is compared.
   const compact = (html: string) => html.replace(/>\s+</g, '><').trim();
-  const WRAPPED: [string, string][] = [
+  const paragraphTexts = (blocks: JSONContent[]): string[] =>
+    blocks.flatMap((block) =>
+      block.type === 'paragraph'
+        ? [textOf([block])]
+        : paragraphTexts(block.content ?? []),
+    );
+  const WRAPPED: [string, string, string[]][] = [
     [
       'a note wrapper around a paragraph',
       '<note type="definition"> <p>A term meaning <em>acceptance</em> or patience.</p> </note>',
+      ['A term meaning acceptance or patience.'],
     ],
     [
       'a note wrapper around several paragraphs',
       '<note type="definition" rend="x">\n<p>One.</p>\n<p>Two with <span lang="sa-LATN">k</span>.</p>\n</note>',
+      ['One.', 'Two with k.'],
     ],
     [
       'a division holding a note',
       '<div type="section" place="end"><note type="definition">A note</note></div>',
+      ['A note'],
     ],
   ];
 
-  it.each(WRAPPED)('criterion 5: %s keeps its text', (_name, html) => {
-    const content = glossaryDefinitionToContent(html);
-
-    expect(textOf(content).replace(/\s+/g, ' ').trim()).toBe(
-      plain(html).replace(/\s+/g, ' ').trim(),
-    );
-  });
+  it.each(WRAPPED)(
+    'criterion 5: %s keeps its text',
+    (_name, html, paragraphs) => {
+      expect(paragraphTexts(glossaryDefinitionToContent(html))).toEqual(
+        paragraphs,
+      );
+    },
+  );
 
   it.each(WRAPPED)(
     'criterion 5: %s reads and writes back as the same definition',
