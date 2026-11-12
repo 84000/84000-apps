@@ -89,7 +89,7 @@ const lowerUuids = (op: GlossaryOp): GlossaryOp => {
         ...op,
         uuid: lower(op.uuid),
         authority: lower(op.authority),
-        expect: { authority: lower(op.expect.authority) },
+        expect: op.expect && { authority: lower(op.expect.authority) },
       };
     case 'delete-glossary-entry':
       return { ...op, uuid: lower(op.uuid), expect: lowerExpect(op.expect) };

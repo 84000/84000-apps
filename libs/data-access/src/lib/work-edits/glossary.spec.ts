@@ -246,6 +246,16 @@ describe('planGlossary', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('refuses a relink without expect rather than throwing', async () => {
+    const result = await plan({
+      op: 'relink-glossary-entry',
+      uuid: E,
+      authority: B,
+    } as unknown as GlossaryOp);
+    expect(errorOf(result)).toMatch(/needs expect\.authority/);
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it('reads uuids given in uppercase as the stored ones', async () => {
     const ex = 'abcdef00-0000-4000-8000-00000000000a';
     const ax = 'abcdef00-0000-4000-8000-00000000000b';
