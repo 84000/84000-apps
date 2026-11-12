@@ -1,6 +1,7 @@
 import { isUuid } from '@eightyfourthousand/lib-utils';
 
 import {
+  checkInput,
   planSave,
   type NameRow,
   type PlanFailure,
@@ -13,6 +14,7 @@ import type {
   GlossaryEntryName,
   GlossaryEntryNameInput,
   GlossaryEntrySave,
+  GlossaryNewAuthority,
 } from './types';
 
 const W = '10000000-0000-4000-8000-000000000001';
@@ -1352,5 +1354,167 @@ describe('planSave', () => {
       [r(2), 'alpha'],
       [expect.any(String), 'b'],
     ]);
+  });
+
+  describe('new authorities', () => {
+    const NEW = '30000000-0000-4000-8000-0000000000a1';
+    const NEW2 = '30000000-0000-4000-8000-0000000000a2';
+    const authority = (
+      o: Partial<GlossaryNewAuthority> = {},
+    ): GlossaryNewAuthority => ({
+      uuid: NEW,
+      headword: ' bodhicitta ',
+      headwordLanguage: 'Sa-Ltn',
+      definition: 'The <em>mind</em> of awakening.<script>x</script>',
+      ...o,
+    });
+    const create = (
+      uuid: string,
+      authorityUuid: string,
+    ): GlossaryEntrySave => ({
+      uuid,
+      create: true,
+      change: { authorityUuid, names: [input(`root of ${uuid}`)] },
+    });
+
+    it('creates one a create or relink uses, apart from the plan, and lets several saves share it', () => {
+      const e = mind();
+      const result = planSave(
+        W,
+        [
+          create(E2, NEW),
+          create(E3, NEW),
+          {
+            uuid: E1,
+            change: { authorityUuid: NEW2 },
+            expect: { authorityUuid: A },
+          },
+        ],
+        [],
+        stateOf([e]),
+        [authority(), authority({ uuid: NEW2, definition: null })],
+      ) as PlannedSave;
+      expect(result.authorities).toEqual([
+        {
+          uuid: NEW,
+          headword: 'bodhicitta',
+          headword_language: 'Sa-Ltn',
+          definition: 'The <em>mind</em> of awakening.',
+        },
+        {
+          uuid: NEW2,
+          headword: 'bodhicitta',
+          headword_language: 'Sa-Ltn',
+          definition: null,
+        },
+      ]);
+      expect(Object.keys(result.plan)).not.toContain('p_authorities_insert');
+      expect(result.entries.map((x) => x.authorityUuid)).toEqual([
+        NEW,
+        NEW,
+        NEW2,
+      ]);
+      expect(result.writes).toBe(true);
+    });
+
+    it('leaves one that exists as it is, and still links to it', () => {
+      const result = planSave(
+        W,
+        [create(E2, NEW)],
+        [],
+        stateOf([], {
+          authorities: new Set([A, NEW]),
+        }),
+        [authority()],
+      ) as PlannedSave;
+      expect(result.authorities).toEqual([]);
+      expect(result.entries[0].authorityUuid).toBe(NEW);
+    });
+
+    it('refuses one no saved entry uses', () => {
+      expect(
+        planSave(W, [create(E2, A)], [], stateOf([]), [authority()]),
+      ).toMatchObject({ reason: 'invalid', field: 'authorities' });
+    });
+
+    it('refuses an authority neither stored nor created', () => {
+      expect(
+        planSave(W, [create(E2, NEW2)], [], stateOf([]), [authority()]),
+      ).toMatchObject({ reason: 'invalid', field: 'authorityUuid' });
+    });
+
+    it('checks its input: a uuid, given once, with a headword and its language', () => {
+      for (const [list, field] of [
+        [[authority({ uuid: 'nope' })], 'authorities[0].uuid'],
+        [[authority(), authority()], 'authorities[1].uuid'],
+        [[authority({ headword: ' ' })], 'authorities[0].headword'],
+        [
+          [authority({ headwordLanguage: '' })],
+          'authorities[0].headwordLanguage',
+        ],
+      ] as const) {
+        expect(checkInput([create(E2, NEW)], [], list)).toMatchObject({
+          reason: 'invalid',
+          field,
+        });
+      }
+      expect(checkInput([create(E2, NEW)], [], [authority()])).toBeNull();
+    });
+  });
+
+  describe('names rows report', () => {
+    it('reports relink moves and copies once per names row', () => {
+      const e = entry({
+        names: [
+          stored(E1, n(1), 'rel root'),
+          stored(r(1), n(2), 'rel shared'),
+          stored(r(2), n(2), 'rel shared'),
+          stored(r(3), n(3), 'rel creator'),
+          stored(r(4), n(4), 'rel already', { nameAuthorityUuid: C }),
+        ],
+      });
+      const result = plan(
+        stateOf([e], {
+          usedOutside: new Set([`${E1}>${n(2)}`]),
+          creatorNames: new Set([n(3)]),
+        }),
+        [
+          {
+            uuid: E1,
+            change: { authorityUuid: C },
+            expect: { authorityUuid: A },
+          },
+        ],
+      );
+      expect(result.nameRows).toEqual([
+        { entryUuid: E1, nameUuid: n(1), action: 'moved' },
+        { entryUuid: E1, nameUuid: n(2), action: 'copied' },
+        { entryUuid: E1, nameUuid: n(3), action: 'copied' },
+      ]);
+    });
+
+    it('reports a shared name whose text changes as copied, and an unshared one not at all', () => {
+      const e = entry({
+        names: [stored(E1, n(1), 'own'), stored(r(1), n(2), 'shared')],
+      });
+      const result = plan(
+        stateOf([e], { usedOutside: new Set([`${E1}>${n(2)}`]) }),
+        [
+          {
+            uuid: E1,
+            change: {
+              names: [
+                { ...e.names[0], content: 'own edited' },
+                { ...e.names[1], content: 'shared edited' },
+              ],
+            },
+            expect: { names: e.names },
+          },
+        ],
+      );
+      expect(result.nameRows).toEqual([
+        { entryUuid: E1, nameUuid: n(2), action: 'copied' },
+      ]);
+    });
   });
 });

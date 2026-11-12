@@ -949,3 +949,93 @@ describe('single-entry wrappers', () => {
     expect(applies).toEqual([]);
   });
 });
+
+describe('new authorities', () => {
+  const NEW = '30000000-0000-4000-8000-0000000000a1';
+  const newAuthority = {
+    uuid: NEW,
+    headword: 'bodhicitta',
+    headwordLanguage: 'Sa-Ltn',
+    definition: 'Awakening mind.',
+  };
+  const createWithNew = {
+    uuid: E2,
+    create: true,
+    change: { authorityUuid: NEW, names: [input('new root')] },
+  };
+
+  it('reports a dry run’s authority with no xmlId, and applies nothing', async () => {
+    const { client, applies } = fakeClient({ entries: [] });
+    const result = succeeded(
+      await saveGlossaryEntries({
+        client,
+        workUuid: W,
+        saves: [createWithNew],
+        authorities: [newAuthority],
+        dryRun: true,
+      }),
+    );
+    expect(result.authorities).toEqual([{ ...newAuthority, xmlId: null }]);
+    expect(result.entries[0].authorityUuid).toBe(NEW);
+    expect(applies).toEqual([]);
+  });
+
+  it('sends the authority with the save and reports the xmlId it was given', async () => {
+    const { client, applies } = fakeClient(
+      { entries: [] },
+      {
+        apply: () => ({
+          data: {
+            entries: [],
+            deleted: [],
+            changes: {
+              glossaries: ZERO.glossaries,
+              glossary_edges: ZERO.glossaryEdges,
+              names: ZERO.names,
+              annotations: ZERO.annotations,
+            },
+            authorities: [{ uuid: NEW, xmlId: 'entity-50695' }],
+          },
+          error: null,
+        }),
+      },
+    );
+    const result = succeeded(
+      await saveGlossaryEntries({
+        client,
+        workUuid: W,
+        saves: [createWithNew],
+        authorities: [newAuthority],
+      }),
+    );
+    expect(applies[0].p_authorities_insert).toEqual([
+      {
+        uuid: NEW,
+        headword: 'bodhicitta',
+        headword_language: 'Sa-Ltn',
+        definition: 'Awakening mind.',
+      },
+    ]);
+    expect(result.authorities).toEqual([
+      { ...newAuthority, xmlId: 'entity-50695' },
+    ]);
+  });
+
+  it('calls the database as before when the save creates no authority', async () => {
+    const { client, applies } = fakeClient({
+      entries: [],
+      authorities: [A, NEW],
+    });
+    const result = succeeded(
+      await saveGlossaryEntries({
+        client,
+        workUuid: W,
+        saves: [createWithNew],
+        authorities: [newAuthority],
+      }),
+    );
+    expect(applies).toHaveLength(1);
+    expect(applies[0]).not.toHaveProperty('p_authorities_insert');
+    expect(result).not.toHaveProperty('authorities');
+  });
+});
