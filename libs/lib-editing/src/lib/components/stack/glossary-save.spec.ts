@@ -257,7 +257,7 @@ describe('saveGlossaryWork', () => {
     Object.keys(SEEDS).forEach((uuid) =>
       glossary.work.store.peek(uuid)?.markDirty(),
     );
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('none');
     expect(mockSave).not.toHaveBeenCalled();
     expect(glossary.work.store.isDirty).toBe(false);
   });
@@ -278,25 +278,32 @@ describe('saveGlossaryWork', () => {
   });
 
   it('saves the other rows when one is refused', async () => {
-    edit(glossary, 't1', 'First, edited.');
-    edit(glossary, 't2', 'Mine.');
+    edit(glossary, 't1', 'Mine.');
+    edit(glossary, 't2', 'Second, edited.');
     mockSave.mockImplementation(
       async ({ before }: { before: GlossaryEntry }) =>
-        before.uuid === 't2'
+        before.uuid === 't1'
           ? refused('stale')
-          : saved(entry('t1', '<p>First, edited.</p>')),
+          : saved(entry('t2', '<p>Second, edited.</p>')),
     );
     mockRead.mockResolvedValue({
       status: 'found',
-      entry: entry('t2', '<p>Theirs.</p>'),
+      entry: entry('t1', '<p>Theirs.</p>'),
     });
-    expect(await saveGlossaryWork(glossary, client)).toBe(false);
-    expect(glossary.entries.get('t1')?.definition).toBe(
-      '<p>First, edited.</p>',
+    expect(await saveGlossaryWork(glossary, client)).toBe('failed');
+    expect(mockSave.mock.calls.map(([call]) => call.before.uuid)).toEqual([
+      't1',
+      't2',
+    ]);
+    expect(mockSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        before: entry('t2'),
+        after: { definition: '<p>Second, edited.</p>' },
+      }),
     );
-    expect(glossary.work.store.peek('t1')?.isDirty).toBe(false);
-    expect(glossary.conflicts.get('t1')).toBeNull();
-    expect(glossary.conflicts.get('t2')).not.toBeNull();
+    expect(glossary.work.store.peek('t2')?.isDirty).toBe(false);
+    expect(glossary.conflicts.get('t2')).toBeNull();
+    expect(glossary.conflicts.get('t1')).not.toBeNull();
   });
 
   it('keeps an edit made while the save was in flight', async () => {

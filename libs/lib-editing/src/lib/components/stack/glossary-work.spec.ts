@@ -204,18 +204,30 @@ describe('loadGlossaryWork', () => {
     expect(glossary.feed.hasMore).toBe(true);
     expect(glossary.work.spine.entries().length).toBeLessThanOrEqual(200);
 
-    while (glossary.work.spine.entries().length < 300) {
+    for (
+      let tries = 0;
+      tries < 20 && glossary.work.spine.entries().length < 300;
+      tries++
+    ) {
       await glossary.feed.extend?.();
     }
+    expect(glossary.work.spine.entries().length).toBeGreaterThanOrEqual(300);
     const rows = glossary.work.spine.entries().map((row) => row.uuid);
     await glossary.work.hydrateWindow({ start: 0, end: 10 });
 
     const asked = new Set(
       mockEntries.mock.calls.flatMap(([{ uuids }]) => uuids as string[]),
     );
-    rows.slice(0, 10).forEach((uuid) => expect(asked).toContain(uuid));
+    rows.slice(0, 10).forEach((uuid) => {
+      expect(asked).toContain(uuid);
+      expect(glossary.work.store.peek(uuid)).not.toBeNull();
+    });
     expect(asked.size).toBeLessThanOrEqual(100);
-    expect(glossary.work.store.held().length).toBeLessThanOrEqual(100);
+    [...asked].forEach((uuid) => expect(rows).toContain(uuid));
+    const held = glossary.work.store.held();
+    expect(held.length).toBeGreaterThanOrEqual(10);
+    expect(held.length).toBeLessThanOrEqual(100);
+    held.forEach((uuid) => expect(rows).toContain(uuid));
     expect(glossary.work.store.peek(rows[rows.length - 1])).toBeNull();
     glossary.work.destroy();
   });
