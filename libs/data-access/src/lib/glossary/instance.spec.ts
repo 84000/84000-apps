@@ -137,3 +137,130 @@ describe('getGlossaryInstance', () => {
     expect(result).toBeUndefined();
   });
 });
+
+describe('getGlossaryInstance, draft source', () => {
+  const expected = {
+    uuid: 'parent-uuid',
+    authority: 'authority-uuid',
+    workUuid: 'work-uuid',
+    definition: 'a definition',
+    termNumber: 0,
+    names: {
+      english: 'English',
+      tibetan: 'tibetan',
+      sanskrit: 'sanskrit',
+      pali: 'pali',
+      chinese: 'chinese',
+      wylie: 'wylie',
+      alternatives: 'alt',
+    },
+  };
+
+  /** glossary_term_by_uuid answers from `rows` by uuid; glossary_edges answers `edge`. */
+  const createDraftClient = ({
+    rows,
+    rpcError = null,
+    edge = null,
+  }: {
+    rows: Record<string, unknown>;
+    rpcError?: unknown;
+    edge?: { parent_uuid: string } | null;
+  }) => {
+    const rpcCalls: Array<{ fn: string; args: Record<string, unknown> }> = [];
+    const fromCalls: string[] = [];
+    const client = {
+      rpc: jest.fn((fn: string, args: Record<string, unknown>) => {
+        rpcCalls.push({ fn, args });
+        const uuid = args['p_glossary_uuid'] as string;
+        return {
+          maybeSingle: () =>
+            Promise.resolve(
+              fn === 'glossary_term_by_uuid' && !rpcError
+                ? { data: rows[uuid] ?? null, error: null }
+                : { data: null, error: rpcError ?? { message: fn } },
+            ),
+        };
+      }),
+      from: jest.fn((table: string) => {
+        fromCalls.push(table);
+        const builder: MockQueryBuilder = {
+          select: jest.fn(() => builder),
+          eq: jest.fn(() => builder),
+          limit: jest.fn(() => builder),
+          maybeSingle: jest.fn(() =>
+            Promise.resolve(
+              table === 'glossary_edges'
+                ? { data: edge, error: null }
+                : { data: null, error: { message: `unexpected ${table}` } },
+            ),
+          ),
+        };
+        return builder;
+      }),
+    };
+    return { client: client as unknown as DataClient, rpcCalls, fromCalls };
+  };
+
+  const termRow = {
+    ...indexRow,
+    sanskrit_attested: 'attested',
+    term_number: null,
+  };
+
+  it('reads the term through glossary_term_by_uuid and no relation', async () => {
+    const { client, rpcCalls, fromCalls } = createDraftClient({
+      rows: { 'parent-uuid': termRow },
+    });
+
+    const result = await getGlossaryInstance({
+      client,
+      uuid: 'parent-uuid',
+      source: 'draft',
+    });
+
+    expect(result).toEqual(expected);
+    expect(rpcCalls).toEqual([
+      { fn: 'glossary_term_by_uuid', args: { p_glossary_uuid: 'parent-uuid' } },
+    ]);
+    expect(fromCalls).toEqual([]);
+  });
+
+  it('falls back to glossary_edges and retries the function with the parent uuid', async () => {
+    const { client, rpcCalls, fromCalls } = createDraftClient({
+      rows: { 'parent-uuid': termRow },
+      edge: { parent_uuid: 'parent-uuid' },
+    });
+
+    const result = await getGlossaryInstance({
+      client,
+      uuid: 'child-uuid',
+      source: 'draft',
+    });
+
+    expect(result).toEqual(expected);
+    expect(rpcCalls.map((call) => call.args['p_glossary_uuid'])).toEqual([
+      'child-uuid',
+      'parent-uuid',
+    ]);
+    expect(fromCalls).toEqual(['glossary_edges']);
+  });
+
+  it('returns undefined, without throwing, when the function fails', async () => {
+    const spy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const { client } = createDraftClient({
+      rows: { 'parent-uuid': termRow },
+      rpcError: { message: 'boom' },
+    });
+
+    const result = await getGlossaryInstance({
+      client,
+      uuid: 'parent-uuid',
+      source: 'draft',
+    });
+
+    expect(result).toBeUndefined();
+    spy.mockRestore();
+  });
+});

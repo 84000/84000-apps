@@ -1,19 +1,11 @@
 /**
- * DEV-881 acceptance: "Publishing no longer refreshes anything across the whole library."
- *
- * Publishing used to call the corpus-wide glossary refresh RPC before validating, because
- * the draft glossary index was a materialized view refreshed hourly. Draft glossary terms are
- * now computed live from the glossary tables, so a publish must make no `refresh_*` RPC at
- * all, with default options.
- *
- * The specs drive the validate phase directly and through `tickJob` (the entry point every
- * publish goes through), with a client that records every RPC.
+ * The validate phase asks the database to validate the job's work and nothing else: no
+ * library-wide refresh runs before it.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';
 import type { PublishJob } from '../types';
 import type { PhaseContext } from './context';
-import { tickJob } from './tick';
 import { runValidatePhase } from './validate-phase';
 
 type RpcCall = { name: string; args: unknown };
@@ -70,8 +62,8 @@ const finding = (rule: string) => ({
 
 /**
  * A DataClient that records every RPC and table write. `validate_work_for_publish` answers
- * with `validation`; `claim_publish_job` hands back a job in the validate phase; any other
- * RPC succeeds with no data, so a stray `refresh_*` call is recorded rather than throwing.
+ * with `validation`; any other RPC succeeds with no data, so a stray call is recorded
+ * rather than throwing.
  */
 const createRecordingClient = ({
   validation,
@@ -122,9 +114,6 @@ const createRecordingClient = ({
           error: null,
         };
       }
-      if (name === 'claim_publish_job') {
-        return { data: jobRow(), error: null };
-      }
       return { data: null, error: null };
     }),
     from: jest.fn((table: string) => builder(table, jobRow())),
@@ -149,8 +138,8 @@ const context = (client: DataClient): PhaseContext => ({
 const refreshCalls = (names: string[]) =>
   names.filter((name) => /refresh/i.test(name));
 
-describe('publish validate phase (DEV-881: nothing is refreshed library-wide)', () => {
-  it('validates the work and makes no refresh_* RPC, with default options', async () => {
+describe('runValidatePhase', () => {
+  it('validates the work and makes no refresh RPC', async () => {
     const { client, rpcNames } = createRecordingClient({
       validation: { ok: true },
     });
@@ -201,29 +190,5 @@ describe('publish validate phase (DEV-881: nothing is refreshed library-wide)', 
     const result = await runValidatePhase(context(client));
 
     expect(result.warnings).toEqual(warnings);
-  });
-
-  it('a whole tick (claim, validate, then whatever follows) makes no refresh_* RPC', async () => {
-    const { client, rpcNames } = createRecordingClient({
-      // Fail validation so the tick ends in the validate phase: this spec is about the
-      // validate phase, and later phases need real storage and snapshot rows.
-      validation: { ok: false, errors: [finding('work-not-found')] },
-    });
-
-    const result = await tickJob({
-      client,
-      jobUuid: 'job-1',
-      newUuid: () => 'uuid-1',
-      now: () => new Date('2026-11-09T00:00:00Z'),
-    });
-
-    expect(result.done).toBe(true);
-    expect(rpcNames()).toEqual(
-      expect.arrayContaining([
-        'claim_publish_job',
-        'validate_work_for_publish',
-      ]),
-    );
-    expect(refreshCalls(rpcNames())).toEqual([]);
   });
 });

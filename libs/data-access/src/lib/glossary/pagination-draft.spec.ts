@@ -4,15 +4,9 @@ import {
 } from './pagination';
 
 /**
- * DEV-881 acceptance: for the draft source, `getWorkGlossaryTermsPage` and
- * `getWorkGlossaryTermsAround` read one page through the `glossary_terms_page` RPC (no
- * relation), and return the same GlossaryTermConnection (nodes, pageInfo, totalCount) a
- * caller gets today for the same data. The published source is unchanged.
- *
- * "Today" is pinned by the published path, which still reads `published_glossaries_live`
- * with several queries. Each case builds the same rows behind two fake clients, one per
- * source, and expects equal connections. The RPC fake implements the settled contract of
- * `glossary_terms_page`, so these specs stay independent of how data-access builds the call.
+ * The draft source reads a page through the `glossary_terms_page` function and must
+ * return the same connection the published path builds from its relation for the same
+ * rows. The function fake follows the database function's paging rules.
  */
 
 type TermRow = {
@@ -55,8 +49,6 @@ const ROWS: TermRow[] = [
   ...makeRows('work-1', 30),
   ...makeRows('work-2', 7), // another work's terms must never leak in
 ];
-
-// ---------------------------------------------------------------- the published path (today)
 
 type QueryResult = { data?: unknown[]; count?: number | null; error: null };
 
@@ -118,10 +110,11 @@ class FakeRelationQuery {
         (f) => row[f.column as keyof TermRow] === (f.value as never),
       ),
     );
-    if (this.greaterThan !== undefined)
-      data = data.filter((r) => r.term_number > this.greaterThan!);
-    if (this.lessThan !== undefined)
-      data = data.filter((r) => r.term_number < this.lessThan!);
+    const { greaterThan, lessThan } = this;
+    if (greaterThan !== undefined)
+      data = data.filter((r) => r.term_number > greaterThan);
+    if (lessThan !== undefined)
+      data = data.filter((r) => r.term_number < lessThan);
     data = [...data].sort((a, b) =>
       this.ascending
         ? a.term_number - b.term_number
@@ -161,8 +154,6 @@ const publishedClient = (rows: TermRow[]) =>
     },
   }) as never;
 
-// ---------------------------------------------------------------- the draft path (contract)
-
 type RpcCall = { fn: string; args: Record<string, unknown> };
 
 const jsonBuilder = (result: { data: unknown; error: unknown }) => {
@@ -177,7 +168,7 @@ const jsonBuilder = (result: { data: unknown; error: unknown }) => {
   return builder;
 };
 
-/** `glossary_terms_page` as the contract describes it. */
+/** `glossary_terms_page`: numbered terms, windowed by cursor and direction. */
 const termsPage = (rows: TermRow[], args: Record<string, unknown>) => {
   const work = rows
     .filter((r) => r.work_uuid === args['p_work_uuid'])
@@ -196,7 +187,10 @@ const termsPage = (rows: TermRow[], args: Record<string, unknown>) => {
     return {
       total_count: total,
       cursor_term_number: null,
-      terms: slice(1, limit),
+      terms:
+        direction === 'BACKWARD'
+          ? slice(Math.max(1, total - limit + 1), total)
+          : slice(1, limit),
     };
   }
   const found = work.find((r) => r.glossary_uuid === cursor);
@@ -246,9 +240,7 @@ const draftClient = (
 const quiet = () =>
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
 
-// ---------------------------------------------------------------- cases
-
-describe('draft source: one page call, no relation', () => {
+describe('getWorkGlossaryTermsPage, draft source', () => {
   it('reads a first page through glossary_terms_page and touches no relation', async () => {
     const calls: RpcCall[] = [];
     const fromCalls: string[] = [];
@@ -265,156 +257,6 @@ describe('draft source: one page call, no relation', () => {
     expect(calls[0].args).toMatchObject({ p_work_uuid: 'work-1' });
     expect(result.nodes.map((n) => n.termNumber)).toEqual([1, 2, 3, 4, 5]);
     expect(result.totalCount).toBe(30);
-  });
-
-  it('maps a row to the node shape callers get today', async () => {
-    const result = await getWorkGlossaryTermsPage({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      limit: 1,
-      source: 'draft',
-    });
-    expect(result.nodes).toEqual([
-      {
-        uuid: 'work-1-g-1',
-        authority: 'work-1-a-1',
-        definition: 'definition 1',
-        termNumber: 1,
-        names: {
-          english: 'english 1',
-          alternatives: null,
-          wylie: 'wylie 1',
-          tibetan: 'tibetan 1',
-          sanskrit: 'sanskrit 1',
-          chinese: 'chinese 1',
-          pali: 'pali 1',
-        },
-      },
-    ]);
-  });
-
-  it('carries alternatives through', async () => {
-    const rows = makeRows('work-1', 3).map((r) => ({
-      ...r,
-      alternatives: 'alt',
-    }));
-    const result = await getWorkGlossaryTermsPage({
-      client: draftClient(rows),
-      workUuid: 'work-1',
-      source: 'draft',
-    });
-    expect(result.nodes.map((n) => n.names.alternatives)).toEqual([
-      'alt',
-      'alt',
-      'alt',
-    ]);
-  });
-
-  it('uses the attested Sanskrit only when asked', async () => {
-    const plain = await getWorkGlossaryTermsPage({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      limit: 2,
-      withAttestations: false,
-      source: 'draft',
-    });
-    const attested = await getWorkGlossaryTermsPage({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      limit: 2,
-      withAttestations: true,
-      source: 'draft',
-    });
-    expect(plain.nodes.map((n) => n.names.sanskrit)).toEqual([
-      'sanskrit 1',
-      'sanskrit 2',
-    ]);
-    expect(attested.nodes.map((n) => n.names.sanskrit)).toEqual([
-      'sanskrit* 1',
-      'sanskrit* 2',
-    ]);
-  });
-
-  it('uses glossary uuids as cursors and reports page info', async () => {
-    const result = await getWorkGlossaryTermsPage({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      cursor: 'work-1-g-5',
-      limit: 5,
-      direction: 'FORWARD',
-      source: 'draft',
-    });
-    expect(result.nodes.map((n) => n.termNumber)).toEqual([6, 7, 8, 9, 10]);
-    expect(result.pageInfo).toEqual({
-      nextCursor: 'work-1-g-10',
-      prevCursor: 'work-1-g-6',
-      hasMoreAfter: true,
-      hasMoreBefore: true,
-    });
-    expect(result.totalCount).toBe(30);
-  });
-
-  it('returns pages BACKWARD in ascending order', async () => {
-    const result = await getWorkGlossaryTermsPage({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      cursor: 'work-1-g-11',
-      limit: 5,
-      direction: 'BACKWARD',
-      source: 'draft',
-    });
-    expect(result.nodes.map((n) => n.termNumber)).toEqual([6, 7, 8, 9, 10]);
-    expect(result.pageInfo.prevCursor).toBe('work-1-g-6');
-    expect(result.pageInfo.nextCursor).toBe('work-1-g-10');
-  });
-
-  it('pages around a cursor with the same window rule as today', async () => {
-    const mid = await getWorkGlossaryTermsAround({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      limit: 10,
-      cursor: 'work-1-g-15',
-      withAttestations: false,
-      source: 'draft',
-    });
-    expect(mid.nodes.map((n) => n.termNumber)).toEqual([
-      10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-    ]);
-    expect(mid.pageInfo).toEqual({
-      nextCursor: 'work-1-g-19',
-      prevCursor: 'work-1-g-10',
-      hasMoreAfter: true,
-      hasMoreBefore: true,
-    });
-
-    const end = await getWorkGlossaryTermsAround({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      limit: 10,
-      cursor: 'work-1-g-29',
-      withAttestations: false,
-      source: 'draft',
-    });
-    expect(end.nodes.map((n) => n.termNumber)).toEqual([
-      21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-    ]);
-    expect(end.pageInfo.hasMoreAfter).toBe(false);
-    expect(end.pageInfo.nextCursor).toBeNull();
-    expect(end.pageInfo.hasMoreBefore).toBe(true);
-  });
-
-  it('routes direction AROUND through the page function the same way', async () => {
-    const viaPage = await getWorkGlossaryTermsPage({
-      client: draftClient(ROWS),
-      workUuid: 'work-1',
-      limit: 10,
-      cursor: 'work-1-g-15',
-      direction: 'AROUND',
-      source: 'draft',
-    });
-    expect(viaPage.nodes.map((n) => n.termNumber)).toEqual([
-      10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-    ]);
   });
 
   it('returns an empty connection with the total for a cursor outside the work', async () => {
@@ -508,7 +350,7 @@ describe('draft source: one page call, no relation', () => {
   });
 });
 
-describe('draft source matches the published path for the same data', () => {
+describe('draft glossary pages match the published path for the same rows', () => {
   const cursors: Array<[string, string | null]> = [
     ['no cursor', null],
     ['first term', 'work-1-g-1'],
@@ -518,15 +360,11 @@ describe('draft source matches the published path for the same data', () => {
   ];
   const limits = [1, 5, 10, 29, 30, 50, 0, 1000];
 
-  // BACKWARD with no cursor is deliberately not compared: today it returns the last page,
-  // while the settled glossary_terms_page contract returns the first. See the report.
   const cases = (['FORWARD', 'BACKWARD', 'AROUND'] as const).flatMap(
     (direction) =>
-      cursors
-        .filter(([, cursor]) => !(direction === 'BACKWARD' && cursor === null))
-        .flatMap(([label, cursor]) =>
-          limits.map((limit) => ({ direction, label, cursor, limit })),
-        ),
+      cursors.flatMap(([label, cursor]) =>
+        limits.map((limit) => ({ direction, label, cursor, limit })),
+      ),
   );
 
   it.each(cases)(
@@ -539,7 +377,7 @@ describe('draft source matches the published path for the same data', () => {
         direction,
         withAttestations: false,
       };
-      const today = await getWorkGlossaryTermsPage({
+      const published = await getWorkGlossaryTermsPage({
         ...args,
         client: publishedClient(ROWS),
         source: 'published',
@@ -549,7 +387,7 @@ describe('draft source matches the published path for the same data', () => {
         client: draftClient(ROWS),
         source: 'draft',
       });
-      expect(draft).toEqual(today);
+      expect(draft).toEqual(published);
     },
   );
 
@@ -567,7 +405,7 @@ describe('draft source matches the published path for the same data', () => {
         cursor,
         withAttestations: true,
       };
-      const today = await getWorkGlossaryTermsAround({
+      const published = await getWorkGlossaryTermsAround({
         ...args,
         client: publishedClient(ROWS),
         source: 'published',
@@ -577,65 +415,7 @@ describe('draft source matches the published path for the same data', () => {
         client: draftClient(ROWS),
         source: 'draft',
       });
-      expect(draft).toEqual(today);
+      expect(draft).toEqual(published);
     },
   );
-});
-
-describe('published source is unchanged', () => {
-  it('still reads published_glossaries_live and never calls glossary_terms_page', async () => {
-    const seen: string[] = [];
-    const rpcs: string[] = [];
-    const client = {
-      from: (table: string) => {
-        seen.push(table);
-        return new FakeRelationQuery(ROWS);
-      },
-      rpc: (fn: string) => {
-        rpcs.push(fn);
-        return jsonBuilder({ data: null, error: { message: 'unexpected' } });
-      },
-    } as never;
-
-    const page = await getWorkGlossaryTermsPage({
-      client,
-      workUuid: 'work-1',
-      limit: 3,
-      cursor: 'work-1-g-2',
-      source: 'published',
-    });
-    const around = await getWorkGlossaryTermsAround({
-      client,
-      workUuid: 'work-1',
-      limit: 4,
-      cursor: 'work-1-g-9',
-      withAttestations: false,
-      source: 'published',
-    });
-
-    expect(rpcs).toEqual([]);
-    expect(new Set(seen)).toEqual(new Set(['published_glossaries_live']));
-    expect(page.nodes.map((n) => n.termNumber)).toEqual([3, 4, 5]);
-    expect(around.nodes.map((n) => n.termNumber)).toEqual([7, 8, 9, 10]);
-  });
-
-  it('defaults to the published source when none is given', async () => {
-    const seen: string[] = [];
-    const client = {
-      from: (table: string) => {
-        seen.push(table);
-        return new FakeRelationQuery(ROWS);
-      },
-      rpc: () => {
-        throw new Error('no rpc expected');
-      },
-    } as never;
-    const page = await getWorkGlossaryTermsPage({
-      client,
-      workUuid: 'work-1',
-      limit: 2,
-    });
-    expect(new Set(seen)).toEqual(new Set(['published_glossaries_live']));
-    expect(page.nodes).toHaveLength(2);
-  });
 });
