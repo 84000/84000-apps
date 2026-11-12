@@ -267,6 +267,7 @@ describe('removeGlossaryTermInstances through the passage save', () => {
 
   it('saves each passage once, with only its own instances, and writes no table directly', async () => {
     const tables = fixture();
+    const text = tables.passages.map((p) => p.content);
 
     const { result, log } = await remove(tables, ['a1', 'a2', 'b1', 'c2']);
 
@@ -276,6 +277,9 @@ describe('removeGlossaryTermInstances through the passage save', () => {
     expect(log.saves).toHaveLength(3);
     expect(log.directWrites).toEqual([]);
     expect([...result.removed].sort()).toEqual(['a1', 'a2', 'b1', 'c2']);
+    expect(result.failed).toEqual([]);
+    expect(stored(tables)).toEqual(['o1', 's1', 'b2', 's2', 'c1', 's3'].sort());
+    expect(tables.passages.map((p) => p.content)).toEqual(text);
     expect(result.passages.map((p) => p.uuid).sort()).toEqual([
       'p1',
       'p2',

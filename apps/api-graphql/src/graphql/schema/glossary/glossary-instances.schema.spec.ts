@@ -91,7 +91,12 @@ const ctx = (source: 'draft' | 'published', signedIn = true): GraphQLContext =>
   ({
     source,
     supabase: { marker: 'client' },
-    loaders: {},
+    // A saved passage's json reads its annotations; these have none.
+    loaders: {
+      annotationsByPassageUuid: { load: async () => [] },
+      alignmentsByPassageUuid: { load: async () => [] },
+      passageReferencesByPassageUuid: { load: async () => [] },
+    },
     session: signedIn
       ? { userId: 'u1', email: 'e@x.org', claims: { role: 'editor' } }
       : null,
@@ -179,6 +184,16 @@ describe('glossaryTermInstances', () => {
 });
 
 describe('removeGlossaryTermInstances', () => {
+  const rewritten = (uuid: string) => ({
+    uuid,
+    workUuid: 'work-1',
+    content: 'text',
+    label: '1.1',
+    sort: 1,
+    type: 'translation',
+    annotations: [],
+  });
+
   const remove = (signedIn = true) =>
     removeInstances({
       client: clientFor(ctx('draft', signedIn)) as never,
@@ -198,7 +213,7 @@ describe('removeGlossaryTermInstances', () => {
           error: 'deadlock detected',
         },
       ],
-      passages: [],
+      passages: [rewritten('p-1')],
     });
 
     const result = await remove();
@@ -216,8 +231,16 @@ describe('removeGlossaryTermInstances', () => {
     );
     expect(result).toMatchObject({
       removed: ['a-1'],
-      failed: [{ passageUuid: 'p-2', passageLabel: '1.2' }],
+      failed: [
+        {
+          passageUuid: 'p-2',
+          passageLabel: '1.2',
+          annotationUuids: ['b-1'],
+          error: 'deadlock detected',
+        },
+      ],
     });
+    expect(result.passages.map((passage) => passage.uuid)).toEqual(['p-1']);
   });
 
   it.each([
