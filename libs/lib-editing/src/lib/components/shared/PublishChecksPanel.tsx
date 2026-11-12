@@ -15,7 +15,6 @@ import {
   getFindingLocations,
   getPublishReadiness,
   getPublishStatus,
-  isReadinessUndetermined,
   type FindingLocation,
   type PublishFinding,
   type PublishReadiness,
@@ -48,11 +47,6 @@ import {
 export interface PublishVerdict {
   /** No blocking findings, so validation would not refuse a publish. */
   ok: boolean;
-  /**
-   * The rules could not be evaluated — the glossary index is unpopulated — so `ok` carries
-   * no information about the work. Treat as unknown, not as failure.
-   */
-  undetermined: boolean;
   /** When the verdict was recorded. */
   checkedAt: string | null;
 }
@@ -63,11 +57,8 @@ export interface PublishVerdict {
  * Runs the same SQL rule set the publish pipeline runs, so this cannot tell an editor a
  * work is fine and then have the publish fail on a rule this never mentioned.
  *
- * Three presentational rules the data makes easy to get wrong, all deliberate here:
- * errors and warnings are visually distinct and warnings never claim to block publishing;
- * an unpopulated glossary index is reported as "could not check" rather than as a fault in
- * the work; and occurrence counts are the true totals, with subject lists paginated rather
- * than silently cut off.
+ * Errors and warnings are visually distinct and warnings never claim to block publishing.
+ * Occurrence counts are the true totals, with subject lists paginated rather than cut off.
  */
 export const PublishChecksPanel = ({
   workUuid,
@@ -148,7 +139,10 @@ export const PublishChecksPanel = ({
           warnings: status.warnings,
         });
         setCheckedAt(status.checkedAt);
-        await applyFindings([...status.errors, ...status.warnings], isCancelled);
+        await applyFindings(
+          [...status.errors, ...status.warnings],
+          isCancelled,
+        );
         if (cancelled) {
           return;
         }
@@ -206,7 +200,6 @@ export const PublishChecksPanel = ({
       readiness
         ? {
             ok: readiness.errors.length === 0,
-            undetermined: isReadinessUndetermined(readiness),
             checkedAt,
           }
         : null,
@@ -233,22 +226,17 @@ export const PublishChecksPanel = ({
     (total, finding) => total + finding.count,
     0,
   );
-  const undetermined = !!readiness && isReadinessUndetermined(readiness);
 
   /**
    * The at-a-glance verdict, shown on the header so it survives collapsing.
    *
-   * Five outcomes, and the three that are not verdicts stay visibly distinct from the two
-   * that are: "could not run" (the request failed), "not checked" (nothing has been looked
-   * at), and "could not check" (the rules could not be evaluated) are all muted, because
-   * none of them says anything about the work. Only a real pass or a real block is coloured.
+   * "Could not run" (the request failed) and "not checked" are muted, because neither says
+   * anything about the work. Only a real pass or a real block is coloured.
    */
   const statusIcon = loading ? null : failed ? (
     <CircleHelpIcon className="size-4 shrink-0 text-muted-foreground" />
   ) : !readiness ? (
     <CircleDashedIcon className="size-4 shrink-0 text-muted-foreground" />
-  ) : undetermined ? (
-    <CircleHelpIcon className="size-4 shrink-0 text-muted-foreground" />
   ) : errors.length === 0 ? (
     <CircleCheckIcon className="size-4 shrink-0 text-success" />
   ) : (
@@ -331,27 +319,6 @@ export const PublishChecksPanel = ({
               onClick={runCheck}
             >
               {checking ? 'Checking…' : 'Run check'}
-            </Button>
-          </div>
-        ) : undetermined ? (
-          // Not "this work is invalid": two glossary rules could not be evaluated because the
-          // glossary index is unpopulated, which is the normal state of a fresh local stack and
-          // of every preview branch. Only the publish path can refresh it.
-          <div className="mt-3">
-            <span className="text-sm font-semibold">{'Could not check'}</span>
-            <MutedText className="mt-2 block text-sm">
-              {
-                'The glossary index is not populated, so glossary references cannot be verified. This says nothing about whether the work is publishable — it is the check that is unavailable, not the work that is broken.'
-              }
-            </MutedText>
-            <Button
-              size="sm"
-              variant="outline"
-              className="mt-3"
-              disabled={checking}
-              onClick={runCheck}
-            >
-              {checking ? 'Checking…' : 'Check again'}
             </Button>
           </div>
         ) : (

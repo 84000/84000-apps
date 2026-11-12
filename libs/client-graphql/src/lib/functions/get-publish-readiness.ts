@@ -70,14 +70,3 @@ export async function getPublishReadiness({
     return null;
   }
 }
-
-/**
- * True when the glossary rules could not be evaluated, so the result means "could not
- * determine" rather than "broken work".
- */
-export const isReadinessUndetermined = (
-  readiness: PublishReadiness | null,
-): boolean =>
-  !!readiness?.errors.some(
-    (finding) => finding.rule === 'glossary-index-unavailable',
-  );

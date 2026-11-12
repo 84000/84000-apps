@@ -36,7 +36,6 @@ const job = (overrides: Partial<PublishJob> = {}): PublishJob => ({
 
 const CLEAN: PublishVerdict = {
   ok: true,
-  undetermined: false,
   checkedAt: '2026-08-04T10:00:00.000Z',
 };
 
@@ -110,7 +109,7 @@ describe('PublishDialog', () => {
 
   it('refuses to publish a work with blocking findings', async () => {
     renderDialog({
-      verdict: { ok: false, undetermined: false, checkedAt: CLEAN.checkedAt },
+      verdict: { ok: false, checkedAt: CLEAN.checkedAt },
     });
 
     expect(publishButton().disabled).toBe(true);
@@ -127,15 +126,6 @@ describe('PublishDialog', () => {
     expect(publishButton().disabled).toBe(true);
     expect(screen.getByText(/has not been checked/)).toBeTruthy();
     expect(screen.queryByText(/findings that block publication/)).toBeNull();
-  });
-
-  it('refuses to publish when the checks could not be evaluated', async () => {
-    renderDialog({
-      verdict: { ok: false, undetermined: true, checkedAt: null },
-    });
-
-    expect(publishButton().disabled).toBe(true);
-    expect(screen.getByText(/could not be evaluated/)).toBeTruthy();
   });
 
   it('reports a refusal from the server without claiming anything was published', async () => {

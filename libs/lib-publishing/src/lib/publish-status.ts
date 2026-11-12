@@ -124,10 +124,6 @@ export const readPublishStatus = async ({
  * This is `validateWork` plus a write: the rules are still `validate_work_for_publish`, so
  * the diagnostics view and the publish gate resolve to one implementation and cannot
  * drift apart.
- *
- * A `glossary-index-unavailable` result is returned but deliberately NOT cached — it means
- * the check could not run, which must stay distinguishable from a work that was checked
- * and found sound.
  */
 export const validateAndRecordWork = async ({
   client,
@@ -181,7 +177,7 @@ export interface FindingLocation {
   annotationType: string | null;
 }
 
-const chunk = <T,>(items: T[], size: number): T[][] => {
+const chunk = <T>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) {
     chunks.push(items.slice(i, i + size));
@@ -212,7 +208,10 @@ export const readFindingLocations = async ({
   }
 
   const annotations = new Map<string, { passageUuid: string; type: string }>();
-  const passages = new Map<string, { label: string | null; type: string | null }>();
+  const passages = new Map<
+    string,
+    { label: string | null; type: string | null }
+  >();
   const bibliographies = new Set<string>();
 
   try {

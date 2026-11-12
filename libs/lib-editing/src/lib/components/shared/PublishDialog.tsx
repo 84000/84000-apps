@@ -240,11 +240,9 @@ export const PublishDialog = ({
   // versus fix the findings — so they are never collapsed into one disabled button.
   const blockedReason = !verdict
     ? 'This work has not been checked since it was last edited. Run the check in the Publishing tab first.'
-    : verdict.undetermined
-      ? 'The publish checks could not be evaluated, so whether this work is publishable is unknown.'
-      : !verdict.ok
-        ? 'This work has findings that block publication. Fix them and re-check.'
-        : null;
+    : !verdict.ok
+      ? 'This work has findings that block publication. Fix them and re-check.'
+      : null;
 
   const canSubmit =
     !blockedReason && !submitting && !running && (!job || retryable);
@@ -306,7 +304,7 @@ export const PublishDialog = ({
               />
             </div>
 
-            {verdict?.ok && !verdict.undetermined && (
+            {verdict?.ok && (
               <div className="flex items-start gap-2 text-sm">
                 <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-success" />
                 <span>

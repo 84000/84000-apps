@@ -7,9 +7,7 @@ const mockGetPublishReadiness = jest.fn();
 const mockGetFindingLocations = jest.fn();
 const mockGetPublishStatus = jest.fn();
 
-// Only the network functions are stubbed. isReadinessUndetermined is deliberately left as
-// the real implementation: it encodes the "could not check" rule this suite is testing, so
-// mocking it would test nothing.
+// Only the network functions are stubbed.
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   ...jest.requireActual('@eightyfourthousand/client-graphql'),
   createGraphQLClient: () => ({}),
@@ -71,34 +69,6 @@ const renderPanel = async () => {
 };
 
 describe('PublishChecksPanel', () => {
-  it('reports an unpopulated glossary index as "could not check", not as a broken work', async () => {
-    // The rule fires as an ERROR, so anything keying off severity alone would render this
-    // as a validation failure. It means two glossary rules went unevaluated.
-    seed(
-      readiness({
-        ok: false,
-        errors: [
-          {
-            rule: 'glossary-index-unavailable',
-            severity: 'error',
-            message: 'Glossary references could not be validated.',
-            subjects: [],
-            count: 0,
-          },
-        ],
-      }),
-    );
-
-    await renderPanel();
-
-    expect(await screen.findByText('Could not check')).toBeTruthy();
-    expect(
-      screen.getByText(/it is the check that is unavailable/i),
-    ).toBeTruthy();
-    // Must not claim anything about publishability either way.
-    expect(screen.queryByText(/blocking publication/i)).toBeNull();
-  });
-
   // The rule id falls back to itself when unlabelled, so a new SQL rule that reaches the UI
   // without an entry here shows as raw kebab-case. This is the guard for that.
   it('gives bibliography-entry-misplaced a readable title and an explanation', async () => {
