@@ -1,8 +1,12 @@
+import type { JSONContent } from '@tiptap/core';
+
 import {
   glossaryContentToDefinition,
   glossaryDefinitionToContent,
   glossaryRowSource,
+  glossarySchema,
 } from './glossary-codec';
+import { GLOSSARY_SEED_DEFINITIONS } from './glossary-seed.fixture';
 
 // See PassageStackController.spec.ts — building the schema reaches
 // `data-access/ssr` through two client barrels that leak it.
@@ -137,6 +141,147 @@ describe('glossaryContentToDefinition', () => {
     expect(
       glossaryContentToDefinition([{ type: 'paragraph', content: [] }]),
     ).toBe('');
+  });
+});
+
+/** The text of each paragraph, in order, wherever it sits. */
+const paragraphTexts = (blocks: JSONContent[]): string[] =>
+  blocks.flatMap((block) =>
+    block.type === 'paragraph'
+      ? [(block.content ?? []).map((child) => child.text ?? '').join('')]
+      : paragraphTexts(block.content ?? []),
+  );
+
+describe('an unedited definition', () => {
+  it.each(GLOSSARY_SEED_DEFINITIONS)(
+    'writes back byte for byte: seed %s',
+    (_name, stored) => {
+      expect(roundTrip(stored)).toBe(stored);
+    },
+  );
+
+  it.each(GLOSSARY_SEED_DEFINITIONS)(
+    'keeps its text and identifiers through the document: seed %s',
+    (_name, stored) => {
+      const content = glossaryDefinitionToContent(stored);
+      const text = (node: JSONContent): string =>
+        node.text ?? (node.content ?? []).map(text).join('');
+      expect(content.map(text).join('')).toBe(stored.replace(/<[^>]+>/g, ''));
+      const written = glossaryContentToDefinition(content);
+      for (const [attribute] of stored.matchAll(
+        /(data-glossary-id|href|data-pointer-type|lang)="[^"]*"/g,
+      )) {
+        expect(written).toContain(attribute);
+      }
+    },
+  );
+
+  it.each([
+    [
+      'inline marks and an external link',
+      '<p>The <em>karma</em> of <strong>actions</strong> and <u>u</u>; see <a href="https://example.org/a">the page</a>.</p>',
+    ],
+    [
+      'language spans with classes',
+      '<p>Sanskrit <span class="foreign break text-sa" lang="sa-LATN">dharmakṣānti</span> (Tibetan <span class="foreign text-wy" lang="bo-LATN">chos la bzod pa</span>).</p>',
+    ],
+    [
+      'a passage pointer',
+      '<p>See <a href="/entity/passage/5db608d7-2b91-447d-abb7-785dce7868b6" data-pointer-type="id">n.112</a>.</p>',
+    ],
+    [
+      'paragraph classes',
+      '<p class="definition">First.</p><p class="definition">Second, with <em>emphasis</em>.</p>',
+    ],
+    ['soft hyphens', '<p>Prajñā­pāramitā­sūtra.</p>'],
+    [
+      'a trailing space',
+      '<p>Indian beech tree (<em>pongamia glabra</em>); used medicinally. </p>',
+    ],
+    [
+      'Tibetan script',
+      '<p>Tibetan <span lang="bo">སེམས་བསྐྱེད།</span> here.</p>',
+    ],
+  ])('writes back byte for byte: %s', (_name, stored) => {
+    expect(roundTrip(stored)).toBe(stored);
+  });
+
+  it.each([
+    [
+      'a note around a paragraph',
+      '<note type="definition"> <p>A term meaning <em>acceptance</em> or patience.</p> </note>',
+      ['A term meaning acceptance or patience.'],
+    ],
+    [
+      'a note around several paragraphs',
+      '<note type="definition" rend="x">\n<p>One.</p>\n<p>Two with <span lang="sa-LATN">k</span>.</p>\n</note>',
+      ['One.', 'Two with k.'],
+    ],
+    [
+      'a division holding a bare note',
+      '<div type="section" place="end"><note type="definition">A note</note></div>',
+      ['A note'],
+    ],
+  ])(
+    'keeps its wrappers, losing only the whitespace between them: %s',
+    (_name, stored, paragraphs) => {
+      expect(paragraphTexts(glossaryDefinitionToContent(stored))).toEqual(
+        paragraphs,
+      );
+      const compact = (html: string) => html.replace(/>\s+</g, '><').trim();
+      expect(compact(roundTrip(stored))).toBe(compact(stored));
+    },
+  );
+
+  it('reads a language span as the foreign mark, with its language', () => {
+    const [paragraph] = glossaryDefinitionToContent(
+      '<p>Sanskrit <span class="foreign break text-sa" lang="sa-LATN">dharmakṣānti</span>.</p>',
+    );
+    const word = paragraph.content?.find(
+      (node) => node.text === 'dharmakṣānti',
+    );
+    expect(word?.marks).toEqual([
+      expect.objectContaining({
+        type: 'foreign',
+        attrs: expect.objectContaining({ lang: 'sa-LATN' }),
+      }),
+    ]);
+  });
+});
+
+describe('a definition the editor wrote', () => {
+  const text = (value: string, marks: JSONContent['marks']) => ({
+    type: 'paragraph',
+    content: [{ type: 'text', text: value, marks }],
+  });
+  const MARKS: [string, JSONContent][] = [
+    ['bold', text('hello', [{ type: 'bold' }])],
+    ['italic', text('hello', [{ type: 'italic' }])],
+    ['underline', text('hello', [{ type: 'underline' }])],
+    ['subscript', text('hello', [{ type: 'subscript' }])],
+    ['superscript', text('hello', [{ type: 'superscript' }])],
+    [
+      'smallCaps',
+      text('hello', [
+        { type: 'smallCaps', attrs: { textStyle: 'small-caps' } },
+      ]),
+    ],
+    [
+      'foreign',
+      text('hello', [{ type: 'foreign', attrs: { lang: 'Bo-Ltn' } }]),
+    ],
+    [
+      'link',
+      text('hello', [{ type: 'link', attrs: { href: 'https://e.com' } }]),
+    ],
+  ];
+
+  it.each(MARKS)('reads back as written: %s', (_name, block) => {
+    const written = [glossarySchema().nodeFromJSON(block).toJSON()];
+    expect(written).toMatchObject([block]);
+    expect(
+      glossaryDefinitionToContent(glossaryContentToDefinition([block])),
+    ).toEqual(written);
   });
 });
 

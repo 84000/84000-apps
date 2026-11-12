@@ -11,6 +11,7 @@ import {
   takeTheirGlossaryEntry,
   unsavedGlossaryChanges,
 } from './glossary-save';
+import { GLOSSARY_SEED_DEFINITIONS } from './glossary-seed.fixture';
 import { loadGlossaryWork, type GlossaryWork } from './glossary-work';
 
 // See PassageStackController.spec.ts — building the schema reaches
@@ -51,12 +52,12 @@ const entry = (uuid: string, definition = STORED[uuid]): GlossaryEntry => ({
   names: [],
 });
 
-const node = (uuid: string, termNumber: number) =>
+const node = (uuid: string, termNumber: number, stored = STORED) =>
   ({
     uuid,
     authority: `a-${uuid}`,
     termNumber,
-    definition: STORED[uuid],
+    definition: stored[uuid],
     names: { english: uuid },
   }) as GlossaryTermNode;
 
@@ -75,14 +76,15 @@ const refused = (reason: string, outcomeUnknown = false) => ({
   outcomeUnknown,
 });
 
-const loaded = async () => {
+const loaded = async (stored = STORED) => {
+  const uuids = Object.keys(stored);
   mockPage.mockResolvedValue({
-    nodes: [node('t1', 1), node('t2', 2)],
+    nodes: uuids.map((uuid, i) => node(uuid, i + 1, stored)),
     pageInfo: { hasMoreAfter: false, hasMoreBefore: false },
-    totalCount: 2,
+    totalCount: uuids.length,
   });
   mockEntries.mockImplementation(async ({ uuids }: { uuids: string[] }) =>
-    uuids.map((uuid) => entry(uuid)),
+    uuids.map((uuid) => entry(uuid, stored[uuid])),
   );
   const glossary = await loadGlossaryWork({
     workUuid: WORK,
@@ -90,9 +92,17 @@ const loaded = async () => {
     graphql: {} as never,
   });
   if (!glossary) throw new Error('not loaded');
-  await glossary.work.hydrateWindow({ start: 0, end: 2 });
+  await glossary.work.hydrateWindow({ start: 0, end: uuids.length });
   return glossary;
 };
+
+/** Every seed definition, as one work's glossary. */
+const SEEDS: Record<string, string> = Object.fromEntries(
+  GLOSSARY_SEED_DEFINITIONS.map(([, definition], i) => [
+    `s${i + 1}`,
+    definition,
+  ]),
+);
 
 /** Write `html`'s paragraph over a row, as an editor would. */
 const edit = (glossary: GlossaryWork, uuid: string, text: string) => {
@@ -239,6 +249,54 @@ describe('saveGlossaryWork', () => {
     await saveGlossaryWork(glossary, client);
     expect(glossary.conflicts.get('t2')).toBeNull();
     expect(unsavedGlossaryChanges(glossary)).toBe(0);
+  });
+
+  it('sends nothing for seed definitions marked edited without a change', async () => {
+    glossary.work.destroy();
+    glossary = await loaded(SEEDS);
+    Object.keys(SEEDS).forEach((uuid) =>
+      glossary.work.store.peek(uuid)?.markDirty(),
+    );
+    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(glossary.work.store.isDirty).toBe(false);
+  });
+
+  it('sends only the edited seed definition', async () => {
+    glossary.work.destroy();
+    glossary = await loaded(SEEDS);
+    edit(glossary, 's1', 'Only this one changed.');
+    mockSave.mockResolvedValue(
+      saved(entry('s1', '<p>Only this one changed.</p>')),
+    );
+    await saveGlossaryWork(glossary, client);
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(mockSave.mock.calls[0][0]).toMatchObject({
+      before: { uuid: 's1' },
+      after: { definition: '<p>Only this one changed.</p>' },
+    });
+  });
+
+  it('saves the other rows when one is refused', async () => {
+    edit(glossary, 't1', 'First, edited.');
+    edit(glossary, 't2', 'Mine.');
+    mockSave.mockImplementation(
+      async ({ before }: { before: GlossaryEntry }) =>
+        before.uuid === 't2'
+          ? refused('stale')
+          : saved(entry('t1', '<p>First, edited.</p>')),
+    );
+    mockRead.mockResolvedValue({
+      status: 'found',
+      entry: entry('t2', '<p>Theirs.</p>'),
+    });
+    expect(await saveGlossaryWork(glossary, client)).toBe(false);
+    expect(glossary.entries.get('t1')?.definition).toBe(
+      '<p>First, edited.</p>',
+    );
+    expect(glossary.work.store.peek('t1')?.isDirty).toBe(false);
+    expect(glossary.conflicts.get('t1')).toBeNull();
+    expect(glossary.conflicts.get('t2')).not.toBeNull();
   });
 
   it('keeps an edit made while the save was in flight', async () => {

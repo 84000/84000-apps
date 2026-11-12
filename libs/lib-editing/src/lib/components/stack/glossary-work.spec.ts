@@ -174,6 +174,52 @@ describe('loadGlossaryWork', () => {
     glossary.work.destroy();
   });
 
+  it('opens the largest glossary a page at a time, reading entries only for a window', async () => {
+    const nodes = Array.from({ length: 9342 }, (_, i) =>
+      node(`t${i + 1}`, i + 1),
+    );
+    mockPage.mockImplementation(
+      async ({ cursor, limit }: { cursor?: string; limit: number }) => {
+        const start = cursor
+          ? nodes.findIndex((n) => n.uuid === cursor) + 1
+          : 0;
+        const slice = nodes.slice(start, start + limit);
+        const more = start + limit < nodes.length;
+        return page(slice, {
+          ...(more ? { nextCursor: slice[slice.length - 1].uuid } : {}),
+          hasMoreAfter: more,
+        });
+      },
+    );
+    mockEntries.mockImplementation(async ({ uuids }: { uuids: string[] }) =>
+      uuids.map((uuid) => entry(uuid)),
+    );
+    const glossary = await loadGlossaryWork({
+      workUuid: WORK,
+      client,
+      graphql: {} as never,
+    });
+    if (!glossary) throw new Error('not loaded');
+    expect(mockPage).toHaveBeenCalledTimes(1);
+    expect(glossary.feed.hasMore).toBe(true);
+    expect(glossary.work.spine.entries().length).toBeLessThanOrEqual(200);
+
+    while (glossary.work.spine.entries().length < 300) {
+      await glossary.feed.extend?.();
+    }
+    const rows = glossary.work.spine.entries().map((row) => row.uuid);
+    await glossary.work.hydrateWindow({ start: 0, end: 10 });
+
+    const asked = new Set(
+      mockEntries.mock.calls.flatMap(([{ uuids }]) => uuids as string[]),
+    );
+    rows.slice(0, 10).forEach((uuid) => expect(asked).toContain(uuid));
+    expect(asked.size).toBeLessThanOrEqual(100);
+    expect(glossary.work.store.held().length).toBeLessThanOrEqual(100);
+    expect(glossary.work.store.peek(rows[rows.length - 1])).toBeNull();
+    glossary.work.destroy();
+  });
+
   it('is null for a work without entries', async () => {
     mockPage.mockResolvedValue(page([]));
     expect(
