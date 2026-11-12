@@ -13,7 +13,7 @@ The tool is **`apply-work-edits`**, and an import sends it:
 Emit the ops in source order: an omitted `sort` is assigned in the order the
 `upsert-passage` ops arrive. The work-metadata ops (`update-work`,
 `upsert-title`, `upsert-folio-annotation`) are written first, then the
-passages. It requires `editor.edit`.
+passages, then the glossary entries. It requires `editor.edit`.
 
 `dryRun: true` plans every op against what is stored and returns the planned
 changes without writing: the work fields with their stored values, each title
@@ -52,6 +52,10 @@ read, by field, e.g. `"expect": { "toh": "toh1" }`. If any differs the whole
 call is refused and nothing is written. Send it when you change a value that
 is already set. When re-running an import whose work-metadata group was
 already written, drop the guards: they hold the values that run replaced.
+
+The same tool writes the work's glossary entries (`upsert-glossary-entry`,
+`patch-glossary-entry`, `relink-glossary-entry`, `delete-glossary-entry`), in
+their own `glossary` group: see `glossary.md`.
 
 `upsert-passage` cannot be mixed with the passage edit ops (`delete-text` and
 the rest, in `passage-editing/saving.md`) in one call.
