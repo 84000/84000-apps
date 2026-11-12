@@ -113,7 +113,7 @@ npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts \
 ```
 
 The timestamp is the start of the run being resumed, not a date to publish "since" — an
-older timestamp skips *more*, not less, because more works have been published after it.
+older timestamp skips _more_, not less, because more works have been published after it.
 
 `--skip-published-since` reads `work_versions.published_at` rather than a progress file, so
 it cannot disagree with reality. It also gets the ambiguous case right: if a work died after

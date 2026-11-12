@@ -26,7 +26,6 @@ import { runValidatePhase } from './validate-phase';
  */
 export const DEFAULT_TICK_BUDGET_MS = 20_000;
 
-
 /**
  * Phase order, as a lookup rather than a switch.
  *
@@ -151,4 +150,3 @@ export const tickJob = async ({
     }
   }
 };
-

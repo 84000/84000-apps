@@ -48,7 +48,12 @@ export type PublishJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 
 /** Which artifact section the `artifact` phase is serializing, and how far it got. */
 export interface ArtifactCursor {
-  section: 'passages' | 'annotations' | 'glossary' | 'bibliography' | 'alignments';
+  section:
+    | 'passages'
+    | 'annotations'
+    | 'glossary'
+    | 'bibliography'
+    | 'alignments';
   /** Rows already written for this section. */
   offset: number;
   /** Next chunk number for this section (1-based). */

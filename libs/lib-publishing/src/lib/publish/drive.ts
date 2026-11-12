@@ -93,5 +93,8 @@ export const drivePublish = async ({
 
   // Re-read rather than trusting the last tick's copy: the flip phase writes the final
   // status, counts, and version onto the row after the tick that advanced into it.
-  return { ok: true, job: (await getJob({ client, jobUuid: job.uuid })) ?? job };
+  return {
+    ok: true,
+    job: (await getJob({ client, jobUuid: job.uuid })) ?? job,
+  };
 };

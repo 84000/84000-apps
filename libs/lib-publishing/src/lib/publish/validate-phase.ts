@@ -41,6 +41,10 @@ export const runValidatePhase: PhaseRunner = async ({ client, job }) => {
     };
   }
 
-  await checkpointJob({ client, jobUuid: job.uuid, patch: { phase: 'snapshot' } });
+  await checkpointJob({
+    client,
+    jobUuid: job.uuid,
+    patch: { phase: 'snapshot' },
+  });
   return { ...job, phase: 'snapshot', warnings: validation.warnings };
 };
