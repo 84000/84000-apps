@@ -136,6 +136,20 @@ export class RowFeed implements StackRowFeed {
   /** Characters of text in a passage, when a page has reported it. */
   contentLength = (uuid: string): number | undefined => this.lengths.get(uuid);
 
+  /**
+   * Let go of a row deleted on the server, before it leaves the spine. A page
+   * read from a cursor the server no longer has comes back empty, which would
+   * end the feed, so a cursor on the row moves to its neighbour.
+   */
+  forget(uuid: string) {
+    const run = this.runEntries().map((entry) => entry.uuid);
+    const index = run.indexOf(uuid);
+    if (index < 0) return;
+    if (this.endCursor === uuid) this.endCursor = run[index - 1];
+    if (this.startCursor === uuid) this.startCursor = run[index + 1];
+    this.lengths.delete(uuid);
+  }
+
   /** Whether the work has passages after the ones this spine holds. */
   get hasMore(): boolean {
     return !this.noneAfter;

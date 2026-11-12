@@ -108,6 +108,8 @@ export interface EditorContextState {
    */
   registerEndnoteLabels: (labels: EndnoteLabels | null) => void;
   save: () => Promise<void>;
+  /** Whether a save is running. */
+  isSaving: () => boolean;
   /**
    * Register what a save writes, or stop with null.
    *
@@ -148,6 +150,7 @@ export const EditorContext = createContext<EditorContextState>({
   setReadOnlyChosen: async () => {
     // No-op when outside provider (reader mode)
   },
+  isSaving: () => false,
   registerSaveHandler: () => {
     // No-op when outside provider (reader mode)
   },
