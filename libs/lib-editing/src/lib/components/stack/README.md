@@ -741,3 +741,30 @@ HTML takes only the editor's own marks: no stored elements, kept markup,
 pointers or wrappers. A slice copied, cut or dragged from a definition is
 pasted as it was, so a moved cross-link keeps its link; it is recognized by
 its text.
+
+The label menu of a glossary row is `GlossaryRowMenu`: "Copy Link" and
+"Delete". Delete asks first, listing the passages with instances of the entry
+and how many each has (`getGlossaryTermExcerpts` on the draft), with the
+number of passages. Unlike a bibliography row, an entry is deleted straight
+away rather than at the next save, since the server deletes its instances
+with it (`glossary-delete`). The row then leaves the spine without being
+recorded for a save, and the rows after it are renumbered. A cursor on the row
+moves to its neighbour, so the feed keeps reading. The entry's instance marks
+come out of the passages loaded in the editor as an adjustment, not an edit,
+so a clean passage stays clean. Cancelling changes nothing. A row whose entry
+was deleted elsewhere shows that in place of a conflict, with "Remove it",
+which does the same without the request.
+
+What later glossary work builds on:
+
+- **Names, attestations, alternatives, matching mode and authority.** The
+  row's header (`glossaryRowChrome`), where `GlossaryRowNames` draws them
+  read-only. The entry they would save from is `glossary.entries`, already
+  the guard for `saveGlossaryEntry`.
+- **Creating an entry, and copying one from another work.** Items in
+  `GlossaryRowMenu`, beside "Delete", that put a row into the spine. That row
+  has no entry and no sort yet.
+- **Comments.** The row's footer, beside "Passages ›", and the same actions
+  area of the header.
+- **Reviewing and deleting instances.** "Passages ›" in the footer opens the
+  shared passages dialog, which this stack does not change.

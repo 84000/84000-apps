@@ -6,6 +6,7 @@ import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
 import { BibliographyBubbleMenu, TranslationBubbleMenu } from '../editor/menus';
 import { BibliographyRowMenu } from './BibliographyRowMenu';
+import { GlossaryRowMenu } from './GlossaryRowMenu';
 import { StackPassageEditor } from './StackPassageEditor';
 import { StackPassageMenu } from './StackPassageMenu';
 import { buildBibliographyEditorExtensions } from './bibliography-editor-extensions';
@@ -53,6 +54,13 @@ const StackEditingMenus = ({
       )}
       {controller.editsOutline() && (
         <BibliographyRowMenu
+          controller={controller}
+          target={target}
+          onClose={onClose}
+        />
+      )}
+      {controller.getRows() === 'glossary' && (
+        <GlossaryRowMenu
           controller={controller}
           target={target}
           onClose={onClose}

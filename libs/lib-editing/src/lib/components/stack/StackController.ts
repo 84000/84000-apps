@@ -2,6 +2,7 @@ import { Editor, Extensions } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/core';
 import {
   getBookmarks,
+  type DataClient,
   type GlossaryEntry,
 } from '@eightyfourthousand/data-access';
 import {
@@ -14,6 +15,11 @@ import {
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import * as bibliography from './bibliography-structure';
+import {
+  deleteGlossaryRow,
+  forgetGlossaryRow,
+  type GlossaryRowDelete,
+} from './glossary-delete';
 import type { GlossaryWork } from './glossary-work';
 import { bibliographyRowStyle, type StackRowStyle } from './row-classes';
 import { StackHydration } from './stack-hydration';
@@ -294,6 +300,45 @@ export class StackController {
   /** A glossary row's entry, once its row has been read. */
   getGlossaryEntry = (uuid: string): GlossaryEntry | null =>
     this.glossary?.entries.get(uuid) ?? null;
+
+  /**
+   * Delete a glossary row's entry, and its instances in `passages`. Its row
+   * leaves the view, and focus with it.
+   */
+  deleteGlossaryEntry = async (
+    uuid: string,
+    { client, passages }: { client: DataClient; passages: WorkDocument[] },
+  ): Promise<GlossaryRowDelete> => {
+    const glossary = this.glossary;
+    if (!glossary || this.readOnly) {
+      return { deleted: false, error: 'The glossary cannot be edited here.' };
+    }
+    const result = await deleteGlossaryRow({
+      glossary,
+      uuid,
+      client,
+      passages,
+    });
+    if (result.deleted) this.releaseFocusFrom(uuid);
+    return result;
+  };
+
+  /**
+   * Take out a glossary row whose entry was deleted elsewhere, with its
+   * instances in `passages`.
+   */
+  forgetGlossaryRow = (uuid: string, passages: WorkDocument[]) => {
+    if (!this.glossary || this.readOnly) return;
+    forgetGlossaryRow(this.glossary, uuid, passages);
+    this.releaseFocusFrom(uuid);
+  };
+
+  /** Let go of the editors when focus is on a row that has left the spine. */
+  private releaseFocusFrom(uuid: string) {
+    if (this.getFocusedUuid() !== uuid) return;
+    this.live.release();
+    this.bump();
+  }
 
   /** Whether a row shows the bookmark indicator. */
   showsBookmark = (uuid: string) => this.readOnly && this.bookmarks.has(uuid);

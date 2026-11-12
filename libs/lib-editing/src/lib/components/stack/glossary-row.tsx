@@ -9,6 +9,7 @@ import type {
 import { Button } from '@eightyfourthousand/design-system';
 
 import { GlossaryPassagesLink } from '../shared/glossary/GlossaryPassagesLink';
+import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 import type { StackController } from './StackController';
 import { glossaryDefinitionToContent } from './glossary-codec';
 import {
@@ -17,6 +18,7 @@ import {
   takeTheirGlossaryEntry,
 } from './glossary-save';
 import { renderGlossaryRow, type GlossaryWork } from './glossary-work';
+import { useStackWork } from './stack-work-context';
 
 const ALTERNATIVE = 'translationAlternative';
 
@@ -97,11 +99,15 @@ export const GlossaryRowNames = ({ entry }: { entry: GlossaryEntry }) => {
 export const GlossaryRowConflict = ({
   glossary,
   uuid,
+  onRemove,
 }: {
   glossary: GlossaryWork;
   uuid: string;
+  /** Take out a row whose entry was deleted, with its instances in `passages`. */
+  onRemove?: (passages: WorkDocument[]) => void;
 }) => {
   const { conflicts } = glossary;
+  const stack = useStackWork();
   const conflict = useSyncExternalStore(
     conflicts.subscribe,
     () => conflicts.get(uuid),
@@ -155,6 +161,15 @@ export const GlossaryRowConflict = ({
             This entry was deleted by someone else, so your edit was not saved.
           </div>
           <div className="flex gap-2">
+            {onRemove && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onRemove(stack ? [stack.work] : [])}
+              >
+                Remove it
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
@@ -185,7 +200,11 @@ export const glossaryRowChrome = (
     header: (
       <>
         <GlossaryRowNames entry={entry} />
-        <GlossaryRowConflict glossary={glossary} uuid={uuid} />
+        <GlossaryRowConflict
+          glossary={glossary}
+          uuid={uuid}
+          onRemove={(passages) => controller.forgetGlossaryRow(uuid, passages)}
+        />
       </>
     ),
     footer: (

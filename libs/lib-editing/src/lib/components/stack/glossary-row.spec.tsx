@@ -175,4 +175,15 @@ describe('GlossaryRowConflict', () => {
     expect(screen.queryByText('Keep mine')).toBeNull();
     expect(screen.getByText('Discard my edit')).toBeTruthy();
   });
+
+  it('removes a row whose entry was deleted elsewhere, when asked', () => {
+    const glossary = glossaryWith();
+    glossary.conflicts.set('e1', { theirs: null });
+    const onRemove = jest.fn();
+    render(
+      <GlossaryRowConflict glossary={glossary} uuid="e1" onRemove={onRemove} />,
+    );
+    fireEvent.click(screen.getByText('Remove it'));
+    expect(onRemove).toHaveBeenCalledWith([]);
+  });
 });
