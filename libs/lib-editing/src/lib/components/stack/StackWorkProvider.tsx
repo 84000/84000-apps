@@ -22,6 +22,7 @@ import {
   saveBibliographyWork,
   unsavedBibliographyChanges,
 } from './bibliography-work';
+import { saveGlossaryWork, unsavedGlossaryChanges } from './glossary-save';
 import {
   applyServerPassages,
   hasUnsavedStackChanges,
@@ -91,14 +92,20 @@ export const StackWorkProvider = ({
   // it registers its own save to run alongside.
   useEffect(() => {
     if (!stack) return;
-    const { work, bibliography } = stack;
+    const { work, bibliography, glossary } = stack;
     const unsavedRows = () =>
       bibliography ? unsavedBibliographyChanges(bibliography) : 0;
-    const isDirty = () => hasUnsavedStackChanges(work) || unsavedRows() > 0;
-    const edits = trackEdits(bibliography ? [work, bibliography.work] : [work]);
+    const unsavedEntries = () =>
+      glossary ? unsavedGlossaryChanges(glossary) : 0;
+    const unsavedOthers = () => unsavedRows() + unsavedEntries();
+    const isDirty = () => hasUnsavedStackChanges(work) || unsavedOthers() > 0;
+    const works = [work, bibliography?.work, glossary?.work].flatMap((each) =>
+      each ? [each] : [],
+    );
+    const edits = trackEdits(works);
     registerSaveHandler({
-      // One save for both works. Each writes on its own, so one failing does
-      // not hold back the other.
+      // One save for every work. Each writes on its own, so one failing does
+      // not hold back the others.
       save: async () => {
         const passages: SaveReport = hasUnsavedStackChanges(work)
           ? await saveStackWork(work)
@@ -109,36 +116,45 @@ export const StackWorkProvider = ({
             : (await saveBibliographyWork(bibliography, createBrowserClient()))
               ? 'saved'
               : 'failed';
-        const outcome = combineSaveOutcomes([passages.outcome, rows]);
+        const entries: SaveOutcome = !glossary?.work.store.isDirty
+          ? 'none'
+          : await saveGlossaryWork(glossary, createBrowserClient());
+        const outcome = combineSaveOutcomes([passages.outcome, rows, entries]);
         const { unconfirmed } = passages;
         if (!unconfirmed) return { outcome };
-        // A reload would discard the rows too.
+        // A reload would discard the rows and entries too.
         return {
           outcome,
           unconfirmed: {
             ...unconfirmed,
-            newerChanges: () => unconfirmed.newerChanges() + unsavedRows(),
+            newerChanges: () => unconfirmed.newerChanges() + unsavedOthers(),
           },
         };
       },
       isDirty,
-      unsavedChanges: () => unsavedStackChanges(work) + unsavedRows(),
+      unsavedChanges: () => unsavedStackChanges(work) + unsavedOthers(),
       revision: edits.revision,
       applyReplaced: (passages) => applyServerPassages(work, passages),
       deleteEndnote: (endNote) => deleteStackEndnote({ stack, endNote }),
       removeCommentAnchors: (comment) =>
-        [work, bibliography?.work].forEach(
-          (each) => each && removeStackCommentAnchors(each, comment),
-        ),
+        works.forEach((each) => removeStackCommentAnchors(each, comment)),
     });
     // Offer the save as soon as there is something to save. Clearing it is
     // the save's job, which knows about the paginated editors too.
     const offer = () => {
       if (isDirty()) dirtyStore.setDirty(true);
     };
-    const stops = [work, bibliography?.work].flatMap((each) =>
-      each ? [each.store.observe(offer), each.spine.observe(offer)] : [],
-    );
+    const stops = works.flatMap((each) => [
+      each.store.observe(offer),
+      each.spine.observe(offer),
+    ]);
+    // A conflict settled without a save, such as by taking theirs, can leave
+    // nothing to save.
+    if (glossary) {
+      stops.push(
+        glossary.conflicts.subscribe(() => dirtyStore.setDirty(isDirty())),
+      );
+    }
     return () => {
       stops.forEach((stop) => stop());
       edits.stop();
@@ -159,8 +175,8 @@ export const StackWorkProvider = ({
         ?.getAttribute('data-stack-passage');
       if (!uuid) return;
       activeWork.current =
-        [stack.work, stack.bibliography?.work].find((each) =>
-          each?.spine.meta(uuid),
+        [stack.work, stack.bibliography?.work, stack.glossary?.work].find(
+          (each) => each?.spine.meta(uuid),
         ) ?? activeWork.current;
     };
     document.addEventListener('focusin', onEnter);

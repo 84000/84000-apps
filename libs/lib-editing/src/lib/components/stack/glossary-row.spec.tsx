@@ -1,15 +1,18 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type {
   GlossaryEntry,
   GlossaryEntryName,
 } from '@eightyfourthousand/data-access';
 
 import {
+  GlossaryRowConflict,
   GlossaryRowNames,
   englishNameOf,
   glossaryRowChrome,
 } from './glossary-row';
 import type { StackController } from './StackController';
+import { GlossaryConflicts } from './glossary-save';
+import type { GlossaryWork } from './glossary-work';
 
 // See PassageStackController.spec.ts — the stack's barrels reach
 // `data-access/ssr`, which leaks these.
@@ -116,6 +119,7 @@ describe('glossaryRowChrome', () => {
   const controller = (rows: string, entry: GlossaryEntry | null) =>
     ({
       getRows: () => rows,
+      getGlossary: () => ({ conflicts: new GlossaryConflicts() }),
       getGlossaryEntry: () => entry,
     }) as unknown as StackController;
 
@@ -127,5 +131,48 @@ describe('glossaryRowChrome', () => {
   it('draws nothing around other rows, or an entry not read yet', () => {
     expect(glossaryRowChrome(controller('passages', ENTRY), 'e1')).toEqual({});
     expect(glossaryRowChrome(controller('glossary', null), 'e1')).toEqual({});
+  });
+});
+
+describe('GlossaryRowConflict', () => {
+  const glossaryWith = () => {
+    const conflicts = new GlossaryConflicts();
+    const entries = new Map([['e1', ENTRY]]);
+    return { conflicts, entries } as unknown as GlossaryWork;
+  };
+
+  it('draws nothing until a save is refused, then the stored text', () => {
+    const glossary = glossaryWith();
+    const { container } = render(
+      <GlossaryRowConflict glossary={glossary} uuid="e1" />,
+    );
+    expect(container.innerHTML).toBe('');
+    act(() =>
+      glossary.conflicts.set('e1', {
+        theirs: { ...ENTRY, definition: '<p>Their <em>text</em>.</p>' },
+      }),
+    );
+    expect(screen.getByRole('alert').textContent).toContain('Their text.');
+    expect(screen.getByText('Use theirs')).toBeTruthy();
+    expect(screen.getByText('Keep mine')).toBeTruthy();
+  });
+
+  it('keeps mine: the conflict clears and the stored entry guards the next save', () => {
+    const glossary = glossaryWith();
+    const theirs = { ...ENTRY, definition: '<p>Theirs.</p>' };
+    glossary.conflicts.set('e1', { theirs });
+    render(<GlossaryRowConflict glossary={glossary} uuid="e1" />);
+    fireEvent.click(screen.getByText('Keep mine'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(glossary.entries.get('e1')).toBe(theirs);
+  });
+
+  it('says so when the entry was deleted elsewhere', () => {
+    const glossary = glossaryWith();
+    glossary.conflicts.set('e1', { theirs: null });
+    render(<GlossaryRowConflict glossary={glossary} uuid="e1" />);
+    expect(screen.getByRole('alert').textContent).toContain('deleted');
+    expect(screen.queryByText('Keep mine')).toBeNull();
+    expect(screen.getByText('Discard my edit')).toBeTruthy();
   });
 });

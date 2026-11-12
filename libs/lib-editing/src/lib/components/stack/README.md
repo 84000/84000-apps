@@ -717,6 +717,27 @@ the others with their languages (the language alone, not its script: a
 Tibetan name shows in Unicode and Wylie), and "Passages ›" below it, through
 `StackRow`'s `header` and `footer`, outside the editor. The host draws the
 tab's title, `g.` Glossary, above the stack, and falls back to the read-only
-list when the glossary cannot be read. The view is read-only: its controller
-is a plain `StackController`, whose rows are drawn by `renderGlossaryRow`
-through the codec, since the reader's static HTML would drop the kept markup.
+list when the glossary cannot be read. Static rows are drawn by
+`renderGlossaryRow` through the codec, since the reader's static HTML would
+drop the kept markup.
+
+Its controller is built with `rows: 'glossary'`. A definition is edited in
+place with the bibliography's inline marks and bubble menu: rows are never
+split, merged or started from it, and the names are not editable here. The
+one registered save writes the glossary alongside the passages and the
+bibliography (`glossary-save`): each edited definition is saved on its own
+through `saveGlossaryEntry`, guarded by the entry its document was read
+from. A row whose definition reads back as it was read sends nothing, so an
+unedited entry is never rewritten. A refused save (the entry changed or was
+deleted since) keeps the row's text and dirty state and records a conflict,
+which the row shows above its definition with the entry as stored now: "Use
+theirs" reseeds the row from it, "Keep mine" makes it the guard, so the next
+save writes over it. For an entry deleted since, "Discard my edit" puts the
+row back as it was read. Until the choice is made, later saves leave the row
+out, and it still counts as unsaved; a save that sends nothing reports
+nothing, so it does not say "Content saved". When a save's answer is lost, the entry is read
+back, and the row settles only if what is stored is what was sent. Pasted
+HTML takes only the editor's own marks: no stored elements, kept markup,
+pointers or wrappers. A slice copied, cut or dragged from a definition is
+pasted as it was, so a moved cross-link keeps its link; it is recognized by
+its text.

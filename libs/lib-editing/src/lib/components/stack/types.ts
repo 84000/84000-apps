@@ -244,6 +244,7 @@ export type StackEditing = {
       outline?: BibliographyOutlineDelegate;
     },
   ) => Extensions;
+  glossaryExtensions: (binding: StackEditorBinding) => Extensions;
   PassageEditor: ComponentType<StackPassageEditorProps>;
   Menus: ComponentType<StackEditingMenusProps>;
 };

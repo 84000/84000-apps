@@ -18,7 +18,7 @@ import type {
 } from '@eightyfourthousand/lib-doc-model';
 import type { GraphQLClient } from 'graphql-request';
 
-import { StackController } from './StackController';
+import type { StackController } from './StackController';
 import {
   loadBibliographyWork,
   readerBibliographyWork,
@@ -202,18 +202,6 @@ export const seedStackWork = ({
     return loadedFrom(views, views.bibliography ?? null);
   })();
 
-/** A glossary's view: read-only, its rows drawn as the readers draw them. */
-const glossaryView = (glossary: GlossaryWork) =>
-  new StackController({
-    work: glossary.work,
-    tab: GLOSSARY_TAB,
-    rows: 'glossary',
-    spineFeed: glossary.feed,
-    glossary,
-    renderRow: renderGlossaryRow,
-    readOnly: true,
-  });
-
 /**
  * Load a work's sections, bibliography and glossary into views, and keep the
  * views in the mode asked for.
@@ -367,7 +355,20 @@ export const useStackWorkLoad = ({
       }
       const glossary = await readingGlossary;
       if (cancelled) return;
-      if (glossary) controllers.set(GLOSSARY_TAB, glossaryView(glossary));
+      if (glossary) {
+        controllers.set(
+          GLOSSARY_TAB,
+          createView({
+            work: glossary.work,
+            tab: GLOSSARY_TAB,
+            rows: 'glossary',
+            spineFeed: glossary.feed,
+            glossary,
+            renderRow: renderGlossaryRow,
+            readOnly: readOnlyRef.current,
+          }),
+        );
+      }
       if (withGlossary) setStack(loadedFrom(views, bibliography, glossary));
     })();
 

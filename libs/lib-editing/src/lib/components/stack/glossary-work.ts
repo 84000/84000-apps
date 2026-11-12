@@ -18,6 +18,7 @@ import {
   glossaryRowSource,
 } from './glossary-codec';
 import { buildGlossarySchemaExtensions } from './glossary-extensions';
+import { GlossaryConflicts } from './glossary-save';
 import { RowFeed, type RowMeta, type RowPages } from './spine-feed';
 import { createStackWork } from './stack-work';
 
@@ -40,6 +41,8 @@ export type GlossaryWork = {
   feed: RowFeed;
   /** The entries as read, by uuid, for rows whose documents are held. */
   entries: Map<string, GlossaryEntry>;
+  /** Rows whose last save was refused. */
+  conflicts: GlossaryConflicts;
 };
 
 /** A term as a row: labelled and ordered as the readers number it. */
@@ -132,5 +135,5 @@ export const loadGlossaryWork = async ({
     work.destroy();
     return null;
   }
-  return { work, feed, entries };
+  return { work, feed, entries, conflicts: new GlossaryConflicts() };
 };

@@ -288,6 +288,9 @@ export class StackController {
   rowStyle = (meta: PassageMeta): StackRowStyle =>
     this.rows === 'bibliography' ? bibliographyRowStyle(meta) : {};
 
+  /** The glossary the rows are entries of, for glossary rows. */
+  getGlossary = () => this.glossary ?? null;
+
   /** A glossary row's entry, once its row has been read. */
   getGlossaryEntry = (uuid: string): GlossaryEntry | null =>
     this.glossary?.entries.get(uuid) ?? null;
@@ -413,6 +416,9 @@ export class StackController {
         kind: meta ? rowKindOf(meta.type) : 'entry',
         ...(this.editsOutline() ? { outline: this } : {}),
       });
+    }
+    if (this.rows === 'glossary') {
+      return this.editing.glossaryExtensions(binding);
     }
     return this.editing.passageExtensions(binding);
   }
