@@ -717,6 +717,20 @@ the others with their languages (the language alone, not its script: a
 Tibetan name shows in Unicode and Wylie), and "Passages ›" below it, through
 `StackRow`'s `header` and `footer`, outside the editor. The host draws the
 tab's title, `g.` Glossary, above the stack, and falls back to the read-only
-list when the glossary cannot be read. The view is read-only: its controller
-is a plain `StackController`, whose rows are drawn by `renderGlossaryRow`
-through the codec, since the reader's static HTML would drop the kept markup.
+list when the glossary cannot be read. Static rows are drawn by
+`renderGlossaryRow` through the codec, since the reader's static HTML would
+drop the kept markup.
+
+Its controller is built with `rows: 'glossary'`. A definition is edited in
+place with the bibliography's inline marks and bubble menu: rows are never
+split, merged or started from it, and the names are not editable here. The
+one registered save writes the glossary alongside the passages and the
+bibliography (`glossary-save`): each edited definition is saved on its own
+through `saveGlossaryEntry`, guarded by the entry its document was read
+from. A row whose definition reads back as it was read sends nothing, so an
+unedited entry is never rewritten. A refused save (the entry changed or was
+deleted since) keeps the row's text and dirty state and records a conflict,
+which the row shows above its definition with the entry as stored now: "Use
+theirs" reseeds the row from it, "Keep mine" makes it the guard, so the next
+save writes over it. When a save's answer is lost, the entry is read back,
+and the row settles only if what is stored is what was sent.

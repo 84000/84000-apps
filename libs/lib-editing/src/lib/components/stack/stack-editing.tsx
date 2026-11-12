@@ -9,6 +9,7 @@ import { BibliographyRowMenu } from './BibliographyRowMenu';
 import { StackPassageEditor } from './StackPassageEditor';
 import { StackPassageMenu } from './StackPassageMenu';
 import { buildBibliographyEditorExtensions } from './bibliography-editor-extensions';
+import { buildGlossaryEditorExtensions } from './glossary-editor-extensions';
 import { buildStackEditorExtensions } from './stack-editor-extensions';
 import type { StackEditing, StackEditingMenusProps } from './types';
 
@@ -37,6 +38,9 @@ const StackEditingMenus = ({
           key={`bubble-${focused}`}
           editor={focusedKind === 'entry' ? editor : null}
         />
+      ) : controller.getRows() === 'glossary' ? (
+        // A definition has the bibliography's inline marks.
+        <BibliographyBubbleMenu key={`bubble-${focused}`} editor={editor} />
       ) : (
         <TranslationBubbleMenu key={`bubble-${focused}`} editor={editor} />
       )}
@@ -66,6 +70,7 @@ export const stackEditing: StackEditing = {
   textOrigin: ySyncPluginKey,
   passageExtensions: buildStackEditorExtensions,
   bibliographyExtensions: buildBibliographyEditorExtensions,
+  glossaryExtensions: buildGlossaryEditorExtensions,
   PassageEditor: StackPassageEditor,
   Menus: StackEditingMenus,
 };

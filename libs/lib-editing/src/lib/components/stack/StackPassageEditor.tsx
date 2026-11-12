@@ -5,6 +5,7 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import type { PassageMeta } from '@eightyfourthousand/lib-doc-model';
 
 import type { StackController } from './StackController';
+import { glossaryRowChrome } from './glossary-row';
 import { PassageSkeleton } from './PassageSkeleton';
 import { rowContentClass } from './row-classes';
 import { StackRow } from './StackRow';
@@ -98,6 +99,7 @@ export const StackPassageEditor = memo(
         references={controller.getReferences(uuid)}
         className={look.className}
         contentStyle={look.style}
+        {...glossaryRowChrome(controller, uuid)}
       >
         {/*
           `immediatelyRender` is off, so there is a frame or more with no

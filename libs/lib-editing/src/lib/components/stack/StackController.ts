@@ -414,6 +414,9 @@ export class StackController {
         ...(this.editsOutline() ? { outline: this } : {}),
       });
     }
+    if (this.rows === 'glossary') {
+      return this.editing.glossaryExtensions(binding);
+    }
     return this.editing.passageExtensions(binding);
   }
 
