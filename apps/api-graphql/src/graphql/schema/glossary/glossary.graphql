@@ -160,6 +160,105 @@ extend type Query {
     """
     after: String
   ): GlossaryExcerptsPage
+
+  """
+  The glossary-instance annotations that cite a glossary term, one per
+  instance, in passage order and then by offset. Draft content only: null for
+  a published-content request, or when the read fails.
+  """
+  glossaryTermInstances(
+    """
+    The glossary term UUID
+    """
+    uuid: ID!
+
+    """
+    List only the instances in this Toh's passages and the shared ones
+    """
+    toh: String
+
+    """
+    Number of instances per page (default: 50, max: 100)
+    """
+    first: Int
+
+    """
+    Where the page starts among the instances (default: 0)
+    """
+    offset: Int
+  ): GlossaryTermInstancesPage
+}
+
+"""
+One glossary-instance annotation citing a glossary term, with the text it covers
+"""
+type GlossaryTermInstanceRow {
+  """
+  Annotation UUID
+  """
+  uuid: ID!
+
+  passageUuid: ID!
+  passageLabel: String
+  passageType: String!
+  passageSort: Int!
+
+  """
+  Start offset in the passage text, in UTF-16 code units
+  """
+  start: Int!
+
+  """
+  End offset in the passage text, in UTF-16 code units
+  """
+  end: Int!
+
+  """
+  Up to five words of passage text before the instance
+  """
+  before: String!
+
+  """
+  The text the instance covers
+  """
+  text: String!
+
+  """
+  Up to five words of passage text after the instance
+  """
+  after: String!
+
+  """
+  Whether passage text before `before` was left out
+  """
+  truncatedStart: Boolean!
+
+  """
+  Whether passage text after `after` was left out
+  """
+  truncatedEnd: Boolean!
+
+  """
+  The offsets fall outside the passage text, so no text could be cut
+  """
+  outOfRange: Boolean!
+}
+
+"""
+A page of the instances that cite a glossary term
+"""
+type GlossaryTermInstancesPage {
+  items: [GlossaryTermInstanceRow!]!
+
+  """
+  Number of instances listed for the term across every page
+  """
+  totalCount: Int!
+
+  """
+  Where this page starts among them
+  """
+  offset: Int!
 }
 
 """

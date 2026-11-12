@@ -72,6 +72,7 @@ export const NavigationProvider = ({
   hoverCards = editable,
   commentsPanel = editable,
   withImprint = true,
+  glossaryInstances = false,
   children,
 }: {
   /** The studio rather than the reader. Defaults to the reader. */
@@ -91,6 +92,8 @@ export const NavigationProvider = ({
    * serve, whose details are not shown. Defaults to true.
    */
   withImprint?: boolean;
+  /** Whether the glossary passages dialog lists each instance too. */
+  glossaryInstances?: boolean;
   uuid: string;
   initialToh?: TohokuCatalogEntry;
   initialHasTranslationContent?: boolean;
@@ -454,7 +457,7 @@ export const NavigationProvider = ({
 
   return (
     <NavigationContext.Provider value={contextValue}>
-      <GlossaryPassagesProvider>
+      <GlossaryPassagesProvider instances={glossaryInstances}>
         <HoverCardProvider enabled={hasHoverCards && hoverCards}>
           {children}
         </HoverCardProvider>

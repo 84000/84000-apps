@@ -192,6 +192,7 @@ const EditorSession = ({
         editable={!readOnly}
         hoverCards
         commentsPanel
+        glossaryInstances
       >
         {children}
       </NavigationProvider>
