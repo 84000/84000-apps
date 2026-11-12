@@ -68,11 +68,37 @@ export const plainPastedSlice = (slice: Slice): Slice => {
     : new Slice(content, slice.openStart, slice.openEnd);
 };
 
+const textOf = (slice: Slice) =>
+  slice.content.textBetween(0, slice.content.size, '\n');
+
+/**
+ * What a glossary editor pastes: a slice copied, cut or dragged from a
+ * definition comes back as it was, markup and all, so moving a cross-linked
+ * name keeps its link. Anything else is pasted plain. The last slice taken
+ * from any glossary editor is shared by all of them, and is recognized by its
+ * text.
+ */
+export const glossaryClipboard = () => {
+  let copied: Slice | null = null;
+  return {
+    transformCopied: (slice: Slice) => {
+      copied = slice;
+      return slice;
+    },
+    transformPasted: (slice: Slice, _view?: unknown, plain = false) =>
+      !plain && copied && textOf(copied) === textOf(slice)
+        ? copied
+        : plainPastedSlice(slice),
+  };
+};
+
+const clipboard = glossaryClipboard();
+
 const PlainPaste = Extension.create({
   name: 'glossaryPlainPaste',
 
   addProseMirrorPlugins() {
-    return [new Plugin({ props: { transformPasted: plainPastedSlice } })];
+    return [new Plugin({ props: clipboard })];
   },
 });
 

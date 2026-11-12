@@ -738,4 +738,6 @@ out, and it still counts as unsaved; a save that sends nothing reports
 nothing, so it does not say "Content saved". When a save's answer is lost, the entry is read
 back, and the row settles only if what is stored is what was sent. Pasted
 HTML takes only the editor's own marks: no stored elements, kept markup,
-pointers or wrappers.
+pointers or wrappers. A slice copied, cut or dragged from a definition is
+pasted as it was, so a moved cross-link keeps its link; it is recognized by
+its text.
