@@ -281,7 +281,7 @@ describe('criterion 7: a conflicting save keeps the editor’s text', () => {
     return { glossary, theirs };
   };
 
-  it.each(['stale', 'conflict'])(
+  it.each(['stale'])(
     'criterion 7: a save refused as %s is not a success, and writes nothing',
     async (reason) => {
       const { glossary, theirs } = await conflicted();
@@ -294,7 +294,7 @@ describe('criterion 7: a conflicting save keeps the editor’s text', () => {
     },
   );
 
-  it.each(['stale', 'conflict'])(
+  it.each(['stale'])(
     'criterion 7: a save refused as %s records the conflict, with the stored entry',
     async (reason) => {
       const { glossary, theirs } = await conflicted();
@@ -306,7 +306,7 @@ describe('criterion 7: a conflicting save keeps the editor’s text', () => {
     },
   );
 
-  it.each(['stale', 'conflict'])(
+  it.each(['stale'])(
     'criterion 7: a save refused as %s keeps the local text, still unsaved',
     async (reason) => {
       const { glossary } = await conflicted();

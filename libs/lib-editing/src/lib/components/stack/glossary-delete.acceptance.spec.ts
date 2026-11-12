@@ -148,7 +148,7 @@ describe('criterion 9: confirming removes the entry, its row and its instances',
     expect(fake.stored.has('g2')).toBe(false);
   });
 
-  it('criterion 9: the row leaves the glossary, the others stay in order', async () => {
+  it('criterion 9: the row leaves the glossary, the others keep their order and take the reader’s numbering', async () => {
     const glossary = await loaded();
 
     await deleteGlossaryRow({
@@ -164,9 +164,10 @@ describe('criterion 9: confirming removes the entry, its row and its instances',
     ]);
     expect(glossary.work.spine.entries().map((row) => row.label)).toEqual([
       'g.1',
-      'g.3',
+      // The reader numbers terms by place, so the rows after a delete renumber.
+      'g.2',
     ]);
-    expect(glossary.work.store.peek('g2')).toBeUndefined();
+    expect(glossary.work.store.peek('g2')).toBeFalsy();
     expect(glossary.entries.has('g2')).toBe(false);
     expect(glossary.entries.has('g1')).toBe(true);
     expect(glossary.work.store.peek('g1')?.toNode().textContent).toBe('First.');

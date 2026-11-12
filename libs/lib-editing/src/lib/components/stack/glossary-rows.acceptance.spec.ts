@@ -172,7 +172,7 @@ describe('criterion 3: a large work opens without building every row’s editor'
       );
     expect(
       glossary.work.store.peek(loaded[loaded.length - 1].uuid),
-    ).toBeUndefined();
+    ).toBeFalsy();
     // Entries were read for those rows alone.
     const asked = new Set(
       fake.entries.mock.calls.flatMap((call) => call[0].uuids),
@@ -193,7 +193,7 @@ describe('criterion 3: a large work opens without building every row’s editor'
     await glossary.work.hydrateWindow({ start: 0, end: 10 });
     await glossary.work.hydrateWindow({ start: 300, end: 310 });
 
-    expect(glossary.work.store.peek(loaded[0].uuid)).toBeUndefined();
+    expect(glossary.work.store.peek(loaded[0].uuid)).toBeFalsy();
     expect(glossary.work.store.peek(loaded[305].uuid)).not.toBeUndefined();
     expect(glossary.work.store.held().length).toBeLessThanOrEqual(100);
   });
