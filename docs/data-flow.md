@@ -8,11 +8,11 @@ Data moves through three main paths depending on the context: the public MCP API
 
 Three client factories in `libs/data-access/src/lib/`:
 
-| Client | File | Usage | Auth |
-|--------|------|-------|------|
-| `createBrowserClient()` | `client-browser.ts` | Client components (`'use client'`) | Automatic cookie-based |
-| `createServerClient({ cookies })` | `client-server.ts` | Server components, server actions, route handlers | Requires `cookies()` from Next.js |
-| `createTokenClient(token)` | `client-token.ts` | Cross-domain requests, scripts | Bearer token in header |
+| Client                            | File                | Usage                                             | Auth                              |
+| --------------------------------- | ------------------- | ------------------------------------------------- | --------------------------------- |
+| `createBrowserClient()`           | `client-browser.ts` | Client components (`'use client'`)                | Automatic cookie-based            |
+| `createServerClient({ cookies })` | `client-server.ts`  | Server components, server actions, route handlers | Requires `cookies()` from Next.js |
+| `createTokenClient(token)`        | `client-token.ts`   | Cross-domain requests, scripts                    | Bearer token in header            |
 
 All clients require `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` environment variables.
 
@@ -95,6 +95,7 @@ schema/
 4. Creates a Supabase client and data loaders
 
 Helper functions:
+
 - `requireAuth(ctx)` — throws if not authenticated
 - `requireRole(ctx, role)` — enforces role hierarchy (`reader < scholar < translator < editor < admin`)
 
@@ -115,6 +116,7 @@ Libraries use a dual-export pattern:
 - `src/ssr.ts` — exports that require server-only APIs (cookies, headers, Node.js modules)
 
 Import patterns:
+
 ```typescript
 // Client component
 import { createBrowserClient } from '@eightyfourthousand/data-access';
@@ -153,6 +155,7 @@ Supabase ← passageToDTO() ← passagesFromNodes() ← TipTap editor state
 
 Every app write to `passages` and `passage_annotations` goes through
 `savePassagesWithDeletions` (`libs/data-access/src/lib/passage/save/`).
+
 - It commits through the `apply_passage_save` RPC.
 - Before that, `shift_passage_sorts` makes room for any new passages.
 - An ordinary save is one transaction. An import save (`chunked`, from
@@ -168,12 +171,12 @@ Some writers live outside the apps and bypass that path. They are known and
 accepted, and each has an owner. Do not add new ones. Write through the save
 path instead.
 
-| Writer | Who runs it | How |
-|---|---|---|
-| Legacy TEI/XML ingest (the functions are listed below) | A digital editor, from the Supabase SQL editor, as `postgres` | Deletes and reloads a whole work from `migration/translations/<UT>.json`. Only `postgres` and `service_role` can execute these functions; `anon` and `authenticated` cannot. The ingest goes away once the editors stop using TEI as an intermediate step. |
-| Alignment loads into `folio_annotations_passage_alignments` | Whoever has dashboard access, from the SQL editor, as `postgres` | Through the `stg_folio_annotations_passage_alignments` staging table, then a direct `INSERT … SELECT`. |
-| Dashboard table-editor edits on `passages` and `passage_annotations` | Whoever has dashboard access, as `postgres` | Single-row updates and deletes, with no range or label checks. |
-| Ad-hoc SQL scripts | Whoever has dashboard access, from the SQL editor, as `postgres` | For example, a glossary-instance generator (it previews, then inserts), and an indent → paragraph annotation fix-up. |
+| Writer                                                               | Who runs it                                                      | How                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Legacy TEI/XML ingest (the functions are listed below)               | A digital editor, from the Supabase SQL editor, as `postgres`    | Deletes and reloads a whole work from `migration/translations/<UT>.json`. Only `postgres` and `service_role` can execute these functions; `anon` and `authenticated` cannot. It can leave annotations one character late or past the end of their passage, so run the [offset repair](tei-offset-repair.md) after each ingest. The ingest goes away once the editors stop using TEI as an intermediate step. |
+| Alignment loads into `folio_annotations_passage_alignments`          | Whoever has dashboard access, from the SQL editor, as `postgres` | Through the `stg_folio_annotations_passage_alignments` staging table, then a direct `INSERT … SELECT`.                                                                                                                                                                                                                                                                                                       |
+| Dashboard table-editor edits on `passages` and `passage_annotations` | Whoever has dashboard access, as `postgres`                      | Single-row updates and deletes, with no range or label checks.                                                                                                                                                                                                                                                                                                                                               |
+| Ad-hoc SQL scripts                                                   | Whoever has dashboard access, from the SQL editor, as `postgres` | For example, a glossary-instance generator (it previews, then inserts), and an indent → paragraph annotation fix-up.                                                                                                                                                                                                                                                                                         |
 
 The ingest runs `fetch_and_insert_json_from_storage`, then
 `clear_translations_by_xmlid`, then `process_passages` (which calls
@@ -190,6 +193,7 @@ because an external app may rely on it.
 
 Four more baseline writers have no known caller, but production cannot show
 that they are unused yet:
+
 - `insert_passage_annotations`;
 - `process_annotation_batch`;
 - `process_epic_passages`;
