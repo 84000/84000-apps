@@ -167,6 +167,21 @@ describe('GlossaryRowConflict', () => {
     expect(glossary.entries.get('e1')).toBe(theirs);
   });
 
+  it('uses theirs: the conflict clears and the row shows the stored entry', () => {
+    const reseed = jest.fn();
+    const glossary = {
+      ...glossaryWith(),
+      work: { store: { peek: () => ({ reseed }) } },
+    } as unknown as GlossaryWork;
+    const theirs = { ...ENTRY, definition: '<p>Theirs.</p>' };
+    glossary.conflicts.set('e1', { theirs });
+    render(<GlossaryRowConflict glossary={glossary} uuid="e1" />);
+    fireEvent.click(screen.getByText('Use theirs'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(glossary.entries.get('e1')).toBe(theirs);
+    expect(JSON.stringify(reseed.mock.calls[0][0])).toContain('Theirs.');
+  });
+
   it('says so when the entry was deleted elsewhere', () => {
     const glossary = glossaryWith();
     glossary.conflicts.set('e1', { theirs: null });
