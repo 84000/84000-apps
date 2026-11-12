@@ -13,12 +13,14 @@ import {
 import { countCitingAnnotations, readStored } from './stored';
 import {
   glossaryEntryFromDTO,
+  type GlossaryCreatedAuthority,
   type GlossaryEntry,
   type GlossaryEntryChange,
   type GlossaryEntryDelete,
   type GlossaryEntryExpect,
   type GlossaryEntryNameInput,
   type GlossaryEntrySave,
+  type GlossaryNewAuthority,
   type GlossarySaveChanges,
   type GlossarySaveFailure,
   type GlossarySaveResult,
@@ -63,13 +65,14 @@ type Applied =
 const apply = async (
   client: DataClient,
   workUuid: string,
-  { plan }: PlannedSave,
+  { plan, authorities }: PlannedSave,
 ): Promise<Applied> => {
   let answer: { data: unknown; error: ApplyError | null };
   try {
     answer = await client.rpc('apply_glossary_save', {
       p_work_uuid: workUuid,
       ...plan,
+      ...(authorities.length ? { p_authorities_insert: authorities } : {}),
     });
   } catch (thrown) {
     // Sent, but with no answer to say whether it committed.
@@ -114,7 +117,30 @@ const apply = async (
   return { status: 'applied', dto };
 };
 
-const resultFromDTO = (dto: GlossarySaveResultDTO): GlossarySaveResult => ({
+/** The authorities and names rows a plan reports, when there are any. */
+const planDetail = (
+  planned: PlannedSave,
+  xmlIds: ReadonlyMap<string, string> = new Map(),
+) => {
+  const authorities: GlossaryCreatedAuthority[] = planned.authorities.map(
+    (a) => ({
+      uuid: a.uuid,
+      headword: a.headword,
+      headwordLanguage: a.headword_language,
+      definition: a.definition,
+      xmlId: xmlIds.get(a.uuid) ?? null,
+    }),
+  );
+  return {
+    ...(authorities.length ? { authorities } : {}),
+    ...(planned.nameRows.length ? { nameRows: planned.nameRows } : {}),
+  };
+};
+
+const resultFromDTO = (
+  dto: GlossarySaveResultDTO,
+  planned: PlannedSave,
+): GlossarySaveResult => ({
   success: true,
   dryRun: false,
   entries: dto.entries.map(glossaryEntryFromDTO),
@@ -125,6 +151,10 @@ const resultFromDTO = (dto: GlossarySaveResultDTO): GlossarySaveResult => ({
     names: dto.changes.names,
     annotations: dto.changes.annotations,
   },
+  ...planDetail(
+    planned,
+    new Map((dto.authorities ?? []).map((a) => [a.uuid, a.xmlId])),
+  ),
 });
 
 /** A dry run's result: the plan's entries and counts, nothing applied. */
@@ -147,6 +177,7 @@ const dryRunResult = async (
     entries: planned.entries,
     deleted: planned.deleted,
     changes: { ...planned.changes, annotations: { deleted: annotations } },
+    ...planDetail(planned),
   };
 };
 
@@ -160,6 +191,10 @@ const dryRunResult = async (
  * they were planned from is unchanged, and the save is planned again from
  * newer data a few times before it is refused as stale.
  *
+ * `authorities` are created in the same transaction, each the authority of
+ * a saved entry (one that already exists is left as it is and linked). The
+ * database gives each the next free `entity-N` xmlId.
+ *
  * A dry run plans without applying. Its names are sorted like the read's,
  * but by this runtime's collation, so punctuation may order differently.
  */
@@ -168,15 +203,17 @@ export const saveGlossaryEntries = async ({
   workUuid,
   saves,
   deletes = [],
+  authorities = [],
   dryRun = false,
 }: {
   client: DataClient;
   workUuid: string;
   saves: readonly GlossaryEntrySave[];
   deletes?: readonly GlossaryEntryDelete[];
+  authorities?: readonly GlossaryNewAuthority[];
   dryRun?: boolean;
 }): Promise<GlossarySaveResult> => {
-  if (saves.length === 0 && deletes.length === 0) {
+  if (saves.length === 0 && deletes.length === 0 && !authorities.length) {
     return {
       success: true,
       dryRun,
@@ -185,12 +222,18 @@ export const saveGlossaryEntries = async ({
       changes: NO_CHANGES,
     };
   }
-  const fault = checkInput(saves, deletes);
+  const fault = checkInput(saves, deletes, authorities);
   if (fault) return failure(fault.reason, fault.error, false, fault.field);
 
   let lastStale = '';
   for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
-    const read = await readStored(client, workUuid, saves, deletes);
+    const read = await readStored(
+      client,
+      workUuid,
+      saves,
+      deletes,
+      authorities,
+    );
     if (!read.ok && read.retry) {
       lastStale = read.error;
       continue;
@@ -198,7 +241,7 @@ export const saveGlossaryEntries = async ({
     if (!read.ok) return failure('failed', `Nothing was saved: ${read.error}`);
     let planned: PlannedSave | PlanFailure;
     try {
-      planned = planSave(workUuid, saves, deletes, read.stored);
+      planned = planSave(workUuid, saves, deletes, read.stored, authorities);
     } catch (thrown) {
       console.error('Error planning glossary save:', thrown);
       return failure('failed', `Nothing was saved: ${message(thrown)}`);
@@ -220,7 +263,9 @@ export const saveGlossaryEntries = async ({
     if (dryRun) return dryRunResult(client, workUuid, planned);
 
     const applied = await apply(client, workUuid, planned);
-    if (applied.status === 'applied') return resultFromDTO(applied.dto);
+    if (applied.status === 'applied') {
+      return resultFromDTO(applied.dto, planned);
+    }
     if (applied.status === 'failed') return applied.result;
     lastStale = applied.error.message;
   }

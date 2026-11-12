@@ -18,6 +18,8 @@ import {
   type GlossaryEntryName,
   type GlossaryEntryNameInput,
   type GlossaryEntrySave,
+  type GlossaryNameRowChange,
+  type GlossaryNewAuthority,
   type GlossarySaveChanges,
   type GlossarySaveFailure,
 } from './types';
@@ -74,6 +76,18 @@ export type GlossaryPlan = {
   p_edges_delete: { parent_uuid: string; child_uuid: string }[];
 };
 
+/**
+ * An `authorities` row a save creates. It is sent apart from the plan, and
+ * only when there is one, so a save that creates none calls the database
+ * exactly as before.
+ */
+export type AuthorityInsert = {
+  uuid: string;
+  headword: string;
+  headword_language: string;
+  definition: string | null;
+};
+
 /** Everything a plan is made from. */
 export type StoredState = {
   /** Entries of the work, by uuid, as `read_glossary_entries` reads them. */
@@ -82,7 +96,7 @@ export type StoredState = {
   rows: Map<string, GlossaryRow>;
   /** `glossaries` uuids, of any work, among the uuids the input gives for new rows. */
   takenRows: Set<string>;
-  /** Authorities that exist, among the ones the input names. */
+  /** Authorities that exist, among the ones the input names or creates. */
   authorities: Set<string>;
   /** `names` rows the plan may link, edit or copy, by uuid. */
   names: Map<string, NameRow>;
@@ -105,6 +119,10 @@ export type PlannedSave = {
   deleted: string[];
   /** Row counts, but for annotations. */
   changes: GlossarySaveChanges;
+  /** Authorities to create: the new ones that do not exist yet. */
+  authorities: AuthorityInsert[];
+  /** Names rows the saves copy or move. */
+  nameRows: GlossaryNameRowChange[];
   /** Whether the plan writes anything. */
   writes: boolean;
 };
@@ -283,7 +301,32 @@ const checkMode = (value: string | null | undefined) =>
 export const checkInput = (
   saves: readonly GlossaryEntrySave[],
   deletes: readonly GlossaryEntryDelete[],
+  authorities: readonly GlossaryNewAuthority[] = [],
 ): PlanFailure | null => {
+  const created = new Set<string>();
+  for (const [i, authority] of authorities.entries()) {
+    const at = `authorities[${i}]`;
+    if (!isUuid(authority.uuid)) {
+      return invalid(`${at}.uuid`, `${authority.uuid} is not a uuid`);
+    }
+    if (created.has(authority.uuid)) {
+      return invalid(
+        `${at}.uuid`,
+        `Authority ${authority.uuid} is created twice`,
+      );
+    }
+    created.add(authority.uuid);
+    if (!authority.headword?.trim()) {
+      return invalid(`${at}.headword`, 'A new authority needs a headword');
+    }
+    if (!authority.headwordLanguage?.trim()) {
+      return invalid(
+        `${at}.headwordLanguage`,
+        'A new authority needs the language of its headword',
+      );
+    }
+  }
+
   const entries = new Set<string>();
   for (const { uuid } of [...saves, ...deletes]) {
     if (!isUuid(uuid)) return invalid('uuid', `${uuid} is not a uuid`);
@@ -375,6 +418,7 @@ export const checkInput = (
 export const plannedReads = (
   saves: readonly GlossaryEntrySave[],
   deletes: readonly GlossaryEntryDelete[],
+  authorities: readonly GlossaryNewAuthority[] = [],
 ) => ({
   entries: [
     ...saves.filter((s) => !s.create).map((s) => s.uuid),
@@ -382,11 +426,12 @@ export const plannedReads = (
   ],
   creates: saves.filter((s) => s.create).map((s) => s.uuid),
   authorities: [
-    ...new Set(
-      saves.flatMap((s) =>
+    ...new Set([
+      ...saves.flatMap((s) =>
         s.change.authorityUuid ? [s.change.authorityUuid] : [],
       ),
-    ),
+      ...authorities.map((a) => a.uuid),
+    ]),
   ],
   links: [
     ...new Set(
@@ -533,6 +578,7 @@ export const planSave = (
   saves: readonly GlossaryEntrySave[],
   deletes: readonly GlossaryEntryDelete[],
   stored: StoredState,
+  newAuthorities: readonly GlossaryNewAuthority[] = [],
 ): PlannedSave | PlanFailure => {
   const plan: GlossaryPlan = {
     p_entries: [],
@@ -547,6 +593,32 @@ export const planSave = (
     p_edges_delete: [],
   };
   const entries: GlossaryEntry[] = [];
+
+  // New authorities that do not exist yet are created; the saves may use them.
+  const authorityInserts: AuthorityInsert[] = newAuthorities
+    .filter((a) => !stored.authorities.has(a.uuid))
+    .map((a) => ({
+      uuid: a.uuid,
+      headword: a.headword.trim(),
+      headword_language: a.headwordLanguage.trim(),
+      definition: storedGlossaryDefinition(a.definition ?? null),
+    }));
+  const created = new Set(authorityInserts.map((a) => a.uuid));
+  const used = new Set<string>();
+  const nameRows: GlossaryNameRowChange[] = [];
+  const nameRow = (
+    entryUuid: string,
+    nameUuid: string,
+    action: GlossaryNameRowChange['action'],
+  ) => {
+    if (
+      !nameRows.some(
+        (r) => r.entryUuid === entryUuid && r.nameUuid === nameUuid,
+      )
+    ) {
+      nameRows.push({ entryUuid, nameUuid, action });
+    }
+  };
 
   // Names rows any save of this call links: never edited or moved in place.
   const linkedInCall = new Set<string>();
@@ -596,8 +668,12 @@ export const planSave = (
       change.glossMode !== undefined &&
       (!entry || !sameMode(change.glossMode, entry.glossMode));
 
+    used.add(authorityUuid);
     if (relink || save.create) {
-      if (!stored.authorities.has(authorityUuid)) {
+      if (
+        !stored.authorities.has(authorityUuid) &&
+        !created.has(authorityUuid)
+      ) {
         return invalid(
           'authorityUuid',
           `Authority ${authorityUuid} does not exist`,
@@ -748,6 +824,7 @@ export const planSave = (
               n.glossaryUuid !== was.glossaryUuid,
           );
         if (shared) {
+          nameRow(save.uuid, was.nameUuid, 'copied');
           target = {
             nameUuid: names.addInsert(authorityUuid, text, row.internal),
             authorityUuid,
@@ -764,8 +841,10 @@ export const planSave = (
             if (want[key] !== row[key])
               (set as Record<string, unknown>)[key] = want[key];
           }
-          if (row.authority_uuid !== authorityUuid)
+          if (row.authority_uuid !== authorityUuid) {
             set.authority_uuid = authorityUuid;
+            nameRow(save.uuid, was.nameUuid, 'moved');
+          }
           // Never empty: the read checked the names row against the entry.
           names.addUpdate(row, set);
           target = { nameUuid: row.uuid, authorityUuid, text };
@@ -780,6 +859,7 @@ export const planSave = (
             text: nameText(was),
           };
         } else if (copy) {
+          nameRow(save.uuid, was.nameUuid, 'copied');
           target = { nameUuid: copy, authorityUuid, text: nameText(was) };
         } else {
           const row = must(stored.names, was.nameUuid);
@@ -795,10 +875,12 @@ export const planSave = (
               row.internal,
             );
             names.copies.set(was.nameUuid, uuid);
+            nameRow(save.uuid, was.nameUuid, 'copied');
             target = { nameUuid: uuid, authorityUuid, text: nameText(row) };
           } else {
             names.addUpdate(row, { authority_uuid: authorityUuid });
             moved.add(was.nameUuid);
+            nameRow(save.uuid, was.nameUuid, 'moved');
             target = { nameUuid: row.uuid, authorityUuid, text: nameText(row) };
           }
         }
@@ -887,6 +969,14 @@ export const planSave = (
     });
   }
 
+  const unused = authorityInserts.find((a) => !used.has(a.uuid));
+  if (unused) {
+    return invalid(
+      'authorities',
+      `New authority ${unused.uuid} is not the authority of any saved entry`,
+    );
+  }
+
   // The names rows of the whole call, after every save is planned.
   plan.p_names_insert = names.insert;
   plan.p_names_update = [...names.update.values()];
@@ -938,10 +1028,19 @@ export const planSave = (
   };
   const writes =
     deleted.length > 0 ||
+    authorityInserts.length > 0 ||
     Object.entries(plan).some(
       ([key, ops]) => key !== 'p_entries' && (ops as unknown[]).length > 0,
     );
-  return { plan, entries, deleted, changes, writes };
+  return {
+    plan,
+    entries,
+    deleted,
+    changes,
+    authorities: authorityInserts,
+    nameRows,
+    writes,
+  };
 };
 
 /**
