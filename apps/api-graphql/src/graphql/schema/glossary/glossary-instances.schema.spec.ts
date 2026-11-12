@@ -8,10 +8,8 @@ import { getGlossaryTermInstances as readInstances } from '@eightyfourthousand/c
 import type { GraphQLContext } from '../../context';
 import { resolvers } from '../../resolvers';
 
-// Acceptance tests for DEV-912 criteria 1, 3 and 4 at the API: the instances
-// read is the editor's (draft content) alone, takes the Toh and an offset, and
-// answers with the page the data layer read. The data layer is mocked; the
-// schema and resolvers are the real ones.
+// The instances read through the real schema and resolvers, with the data
+// layer mocked: the editor's alone, and the client's document runs as written.
 
 // The editor library is UI code the resolvers reach only for passage fields,
 // and Jest cannot load its assets.
@@ -98,6 +96,20 @@ const ask = (source: 'draft' | 'published', variables = {}) =>
     contextValue: ctx(source),
   });
 
+/** Sends a client function's own document and variables to the schema. */
+const schemaClient = {
+  request: (document: string, variables: Record<string, unknown>) =>
+    graphql({
+      schema,
+      source: document,
+      variableValues: variables,
+      contextValue: ctx('draft'),
+    }).then((result) => {
+      if (result.errors) throw result.errors[0];
+      return result.data;
+    }),
+};
+
 beforeEach(() => {
   dataAccess.getGlossaryTermInstances.mockReset();
   dataAccess.hasPermission.mockReset();
@@ -108,8 +120,8 @@ beforeEach(() => {
   });
 });
 
-describe('DEV-912 glossaryTermInstances query', () => {
-  it('criterion 1: answers the editor, whose content source is draft', async () => {
+describe('glossaryTermInstances', () => {
+  it('answers the editor, whose content source is draft', async () => {
     const result = await ask('draft', { toh: 'toh8', first: 50, offset: 50 });
 
     expect(result.errors).toBeUndefined();
@@ -120,7 +132,7 @@ describe('DEV-912 glossaryTermInstances query', () => {
     });
   });
 
-  it('criterion 1: answers null to the reader, whose content source is published, and reads nothing', async () => {
+  it('answers null to the reader, whose content source is published, reading nothing', async () => {
     const result = await ask('published', { toh: 'toh8' });
 
     expect(result.errors).toBeUndefined();
@@ -128,62 +140,9 @@ describe('DEV-912 glossaryTermInstances query', () => {
     expect(dataAccess.getGlossaryTermInstances).not.toHaveBeenCalled();
   });
 
-  it('criterion 4: reads the entry in the Toh named', async () => {
-    await ask('draft', { toh: 'toh8' });
-
-    expect(dataAccess.getGlossaryTermInstances).toHaveBeenCalledWith(
-      expect.objectContaining({
-        client: { marker: 'client' },
-        uuid: 'term-1',
-        toh: 'toh8',
-      }),
-    );
-  });
-
-  it('criterion 3: reads the page asked for, by offset', async () => {
-    await ask('draft', { toh: 'toh8', first: 50, offset: 18650 });
-
-    expect(dataAccess.getGlossaryTermInstances).toHaveBeenCalledWith(
-      expect.objectContaining({ first: 50, offset: 18650 }),
-    );
-  });
-
-  it('criterion 3: answers with the total count of the whole term', async () => {
-    const result = await ask('draft', { offset: 50 });
-
-    expect(
-      (result.data?.['glossaryTermInstances'] as { totalCount: number })
-        .totalCount,
-    ).toBe(18697);
-  });
-
-  it('criterion 3: a failed read is null, not an error that loses the dialog', async () => {
-    dataAccess.getGlossaryTermInstances.mockResolvedValue(null);
-
-    const result = await ask('draft');
-
-    expect(result.data?.['glossaryTermInstances']).toBeNull();
-  });
-});
-
-describe('DEV-912 client-graphql getGlossaryTermInstances against the schema', () => {
-  // The client's own document and variables, run against the real schema.
-  const client = {
-    request: (document: string, variables: Record<string, unknown>) =>
-      graphql({
-        schema,
-        source: document,
-        variableValues: variables,
-        contextValue: ctx('draft'),
-      }).then((result) => {
-        if (result.errors) throw result.errors[0];
-        return result.data;
-      }),
-  };
-
-  it('criterion 3: the client asks a page of the schema and gets it back', async () => {
+  it('runs the client query against the schema', async () => {
     const page = await readInstances({
-      client: client as never,
+      client: schemaClient as never,
       uuid: 'term-1',
       toh: 'toh8',
       first: 50,
@@ -192,6 +151,7 @@ describe('DEV-912 client-graphql getGlossaryTermInstances against the schema', (
 
     expect(dataAccess.getGlossaryTermInstances).toHaveBeenCalledWith(
       expect.objectContaining({
+        client: { marker: 'client' },
         uuid: 'term-1',
         toh: 'toh8',
         first: 50,

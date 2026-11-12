@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { useGlossaryPassages } from './glossary/GlossaryPassagesDialog';
 import { NavigationProvider } from './NavigationProvider';
 
-// Acceptance tests for DEV-912 criterion 1: the navigation provider the editor
-// mounts turns the Instances tab on (`glossaryInstances`); the reader's does not.
+// The editor's navigation provider turns the passages dialog's Instances tab
+// on with `glossaryInstances`; the reader's leaves it off.
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   ...jest.requireActual('@eightyfourthousand/client-graphql'),
@@ -87,15 +87,15 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-describe('DEV-912 criterion 1: the editor turns the Instances tab on', () => {
-  it('criterion 1: a provider with glossaryInstances gives the dialog an Instances tab', async () => {
+describe('NavigationProvider glossaryInstances', () => {
+  it('gives the passages dialog an Instances tab', async () => {
     const dialog = await openDialog({ glossaryInstances: true });
 
     expect(within(dialog).getByRole('tab', { name: 'Instances' })).toBeTruthy();
     expect(within(dialog).getByRole('tab', { name: 'Passages' })).toBeTruthy();
   });
 
-  it('criterion 1: a provider without it, as the reader mounts it, gives the dialog no Instances tab', async () => {
+  it('leaves it off without the prop, as the reader mounts it', async () => {
     const dialog = await openDialog({});
 
     expect(within(dialog).queryByRole('tab', { name: 'Instances' })).toBeNull();

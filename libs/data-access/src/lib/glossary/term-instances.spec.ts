@@ -43,6 +43,27 @@ describe('cutGlossaryInstanceContext', () => {
     });
   });
 
+  it('cuts nothing when exactly five words lie either side', () => {
+    const exact = 'a b c d e TERM f g h i j';
+    const at = exact.indexOf('TERM');
+    expect(cutGlossaryInstanceContext(exact, at, at + 4)).toMatchObject({
+      before: 'a b c d e ',
+      after: ' f g h i j',
+      truncatedStart: false,
+      truncatedEnd: false,
+    });
+  });
+
+  it('counts offsets in UTF-16 code units, as annotations do', () => {
+    const emoji = 'one 😀 two three TARGET four 😀 five';
+    const at = emoji.indexOf('TARGET');
+    expect(cutGlossaryInstanceContext(emoji, at, at + 6)).toMatchObject({
+      before: 'one 😀 two three ',
+      text: 'TARGET',
+      after: ' four 😀 five',
+    });
+  });
+
   it('flags offsets outside the passage text', () => {
     expect(cutGlossaryInstanceContext('short', 3, 10)).toMatchObject({
       text: '',
