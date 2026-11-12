@@ -50,6 +50,8 @@ export type StackWork = {
   glossary: GlossaryWork | null;
   /** The view for a tab, or null when this provider does not draw it. */
   controllerFor: (tab: string) => StackController | null;
+  /** Whether a tab's view is still being read. */
+  reading?: (tab: string) => boolean;
   /** Whether every view is read-only, as the provider was told. */
   readOnly: boolean;
 };
@@ -79,11 +81,13 @@ const loadedFrom = (
   { work, controllers }: StackViews,
   bibliography: BibliographyWork | null,
   glossary: GlossaryWork | null = null,
+  readingTabs: string[] = [],
 ): LoadedStackWork => ({
   work,
   bibliography,
   glossary,
   controllerFor: (tab) => controllers.get(tab) ?? null,
+  reading: (tab) => readingTabs.includes(tab),
   controllers: [...controllers.values()],
 });
 
@@ -316,7 +320,10 @@ export const useStackWorkLoad = ({
         })
       : Promise.resolve(null);
     const seededBibliography = views.bibliography ?? null;
-    if (seeded && !adopted) setStack(loadedFrom(views, seededBibliography));
+    const readingTabs = withGlossary ? [GLOSSARY_TAB] : [];
+    if (seeded && !adopted) {
+      setStack(loadedFrom(views, seededBibliography, null, readingTabs));
+    }
 
     void (async () => {
       // Sequentially, not in parallel: each run is placed relative to the ones
@@ -352,13 +359,16 @@ export const useStackWorkLoad = ({
           }),
         );
       }
+      const bibliography = read ?? seededBibliography;
+      // Drawn without waiting for the glossary, which may take longer.
+      // A seeded work is already drawn; it only gains what it read.
+      if (!seeded || read) {
+        setStack(loadedFrom(views, bibliography, null, readingTabs));
+      }
       const glossary = await readingGlossary;
       if (cancelled) return;
       if (glossary) controllers.set(GLOSSARY_TAB, glossaryView(glossary));
-      // A seeded work is already drawn; it only gains what it read.
-      if (!seeded || read || glossary) {
-        setStack(loadedFrom(views, read ?? seededBibliography, glossary));
-      }
+      if (withGlossary) setStack(loadedFrom(views, bibliography, glossary));
     })();
 
     return () => {
@@ -392,6 +402,7 @@ export const StackWorkContextProvider = ({
         bibliography: stack.bibliography,
         glossary: stack.glossary,
         controllerFor: stack.controllerFor,
+        reading: stack.reading,
         readOnly,
       },
     [stack, readOnly],
