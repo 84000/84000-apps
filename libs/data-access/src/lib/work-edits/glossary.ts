@@ -203,7 +203,7 @@ const expectMismatch = (
           : field === 'definition'
             ? same(stored[field], expected) ||
               same(
-                stored[field],
+                storedGlossaryDefinition(entry.definition),
                 storedGlossaryDefinition((expected as string | null) ?? null),
               )
             : same(stored[field], expected);
@@ -296,11 +296,22 @@ type Planned = {
   reports: GlossaryEntryReport[];
 };
 
-/** A definition as it will be stored, so an equal one reads as unchanged. */
-const definitionChange = (definition: string | null | undefined) =>
-  definition !== undefined
-    ? { definition: storedGlossaryDefinition(definition) }
-    : {};
+/**
+ * A definition as it will be stored, so an equal one reads as unchanged. The
+ * stored value sent back verbatim is kept as it is, even if not sanitized.
+ */
+const definitionChange = (
+  definition: string | null | undefined,
+  entry: GlossaryEntry | undefined,
+) =>
+  definition === undefined
+    ? {}
+    : {
+        definition:
+          entry && definition === entry.definition
+            ? definition
+            : storedGlossaryDefinition(definition),
+      };
 
 /** What an upsert asks the entry to be, as a save's change. */
 const upsertChange = (
@@ -311,7 +322,7 @@ const upsertChange = (
   const { definition, definitionRend, glossMode, names } = op.entry;
   return {
     authorityUuid,
-    ...definitionChange(definition),
+    ...definitionChange(definition, entry),
     ...(definitionRend !== undefined ? { definitionRend } : {}),
     ...(glossMode !== undefined ? { glossMode } : {}),
     names: matchGlossaryNames(entry, names),
@@ -464,7 +475,7 @@ const planOps = (
         entry,
         {
           ...values,
-          ...definitionChange(definition),
+          ...definitionChange(definition, entry),
           ...(names ? { names: matchGlossaryNames(entry, names) } : {}),
         },
         op.expect,

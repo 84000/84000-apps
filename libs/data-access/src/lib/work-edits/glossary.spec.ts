@@ -241,6 +241,22 @@ describe('planGlossary', () => {
     expect(result.ok).toBe(true);
   });
 
+  it('keeps a non-canonical stored definition sent back verbatim, and matches its sanitized form', async () => {
+    const raw = '<p>Old<!-- kept --></p>';
+    read.mockResolvedValue({
+      ok: true,
+      entries: [{ ...stored, definition: raw }],
+    });
+    const result = await plan({
+      op: 'patch-glossary-entry',
+      uuid: E,
+      set: { definition: raw },
+      expect: { definition: '<p>Old</p>' },
+    });
+    expect(result.ok).toBe(true);
+    expect(result.changes.entries[0].action).toBe('unchanged');
+  });
+
   it('matches expected names one to one in any order', async () => {
     const twin = name(r(4), 'en', 'mind', { termType: 'translationMain' });
     const plain = name(r(5), 'en', 'mind');
