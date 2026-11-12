@@ -701,7 +701,7 @@ mark. TEI markup they do not cover (cross-link spans, `cite`, `term`, `ref`
 and the like) is kept as `definitionMarkup`, a mark that holds the element and
 its attributes; empty elements written as XML (`<ptr …/>`, pending
 references) are read as empty, as the save reads them, and kept as
-`definitionPointer` atoms. The wrappers around paragraphs (`<note>`, `<div>`)
+`definitionPointer` atoms, as are line breaks (`<br>`). The wrappers around paragraphs (`<note>`, `<div>`)
 are `definitionWrapper` blocks, and text no paragraph holds is read into one
 that is written back without it. Paragraphs and the editor's marks keep the
 element they were read from (`stored`), so attributes the editor does not

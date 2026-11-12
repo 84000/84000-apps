@@ -28,8 +28,11 @@ const KEPT_MARKUP_PRIORITY = 10;
 /** Above every mark's rules: an empty element holds no text to mark. */
 const EMPTY_MARKUP_PRIORITY = 100;
 
-/** Elements kept as empty pointers: the kept markup, and bare links. */
-const POINTER_ELEMENTS = new Set([...KEPT_ELEMENTS, 'a']);
+/**
+ * Elements kept as empty pointers: the kept markup, bare links, and line
+ * breaks, which the editor has no node for.
+ */
+const POINTER_ELEMENTS = new Set([...KEPT_ELEMENTS, 'a', 'br']);
 
 const attributesOf = (element: HTMLElement): Record<string, string> =>
   Object.fromEntries(

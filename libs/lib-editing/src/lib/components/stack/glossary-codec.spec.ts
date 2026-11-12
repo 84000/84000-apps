@@ -125,6 +125,10 @@ describe('glossaryContentToDefinition', () => {
     });
   });
 
+  it('keeps line breaks', () => {
+    expect(roundTrip('<p>One<br>two.</p>')).toBe('<p>One<br>two.</p>');
+  });
+
   it('keeps cross-links nested in language spans', () => {
     expect(roundTrip(STORED[5])).toBe(STORED[5]);
   });
