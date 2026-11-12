@@ -3,6 +3,7 @@ import { render, screen, act } from '@testing-library/react';
 import { renderToString } from 'react-dom/server';
 import userEvent from '@testing-library/user-event';
 import { NavigationProvider, useNavigation } from './NavigationProvider';
+import { writeHighlight } from './navigation-params';
 
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
@@ -381,6 +382,42 @@ describe('NavigationProvider URL sync', () => {
     expect(new URLSearchParams(window.location.search).get('left')).toBe(
       'closed:toc',
     );
+  });
+
+  // The stack answers the passage as soon as it is named, so the range a link
+  // wrote must arrive with it, not when the router's query catches up.
+  it('takes the range a link wrote with the passage it names', async () => {
+    const seen: string[] = [];
+    const LinkProbe = () => {
+      const { panels, highlight, updatePanel } = useNavigation();
+      if (panels.main.hash) {
+        seen.push(`${panels.main.hash}:${highlight?.start}-${highlight?.end}`);
+      }
+      return (
+        <button
+          onClick={() => {
+            writeHighlight({ start: 5, end: 9 });
+            updatePanel({
+              name: 'main',
+              state: { open: true, tab: 'translation', hash: 'p-1' },
+            });
+          }}
+        >
+          Follow
+        </button>
+      );
+    };
+    render(
+      <NavigationProvider uuid="w1">
+        <LinkProbe />
+      </NavigationProvider>,
+    );
+    mockSearch.lagging = new URLSearchParams(window.location.search);
+
+    await userEvent.click(screen.getByText('Follow'));
+    mockSearch.lagging = undefined;
+
+    expect(seen[0]).toBe('p-1:5-9');
   });
 });
 
