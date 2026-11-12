@@ -72,13 +72,8 @@ export async function getPublishReadiness({
 }
 
 /**
- * True when the only thing standing between this work and a verdict is an unpopulated
- * `glossary_term_index`.
- *
- * This rule means "could not determine", not "broken work": two glossary rules went
- * unevaluated because the materialized view is empty, which is the normal state of a fresh
- * local stack and of every Supabase preview branch. Only the publish path can refresh it.
- * Presenting it as a validation failure would blame the work for the checker's blind spot.
+ * True when the glossary rules could not be evaluated, so the result means "could not
+ * determine" rather than "broken work".
  */
 export const isReadinessUndetermined = (
   readiness: PublishReadiness | null,

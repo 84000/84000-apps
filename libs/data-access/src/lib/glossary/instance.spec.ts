@@ -92,7 +92,7 @@ describe('getGlossaryInstance', () => {
     });
   });
 
-  it('falls back to glossary_edges and retries the index with the parent uuid', async () => {
+  it('falls back to glossary_edges and retries the lookup with the parent uuid', async () => {
     const indexResults: QueryResult[] = [
       { data: null, error: null }, // first index lookup misses
       { data: indexRow, error: null }, // retry with parent hits
@@ -126,9 +126,9 @@ describe('getGlossaryInstance', () => {
     expect(result?.workUuid).toBe('work-uuid');
   });
 
-  it('returns undefined when neither the index nor an edge resolves', async () => {
+  it('returns undefined when neither the term nor an edge resolves', async () => {
     const { client } = createMockClient({
-      glossary_term_index: { data: null, error: null },
+      published_glossaries_live: { data: null, error: null },
       glossary_edges: { data: null, error: null },
     });
 

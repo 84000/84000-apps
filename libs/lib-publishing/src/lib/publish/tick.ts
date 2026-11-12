@@ -63,7 +63,6 @@ export const tickJob = async ({
   explicitVersion,
   publishedBy,
   notes,
-  refreshGlossaryIndex,
 }: {
   client: DataClient;
   jobUuid: string;
@@ -73,7 +72,6 @@ export const tickJob = async ({
   explicitVersion?: string;
   publishedBy?: string | null;
   notes?: string | null;
-  refreshGlossaryIndex?: boolean;
 }): Promise<TickResult> => {
   const clock = now ?? (() => new Date());
   const makeUuid = newUuid ?? (() => crypto.randomUUID());
@@ -121,7 +119,6 @@ export const tickJob = async ({
         explicitVersion,
         publishedBy,
         notes,
-        refreshGlossaryIndex,
         outOfBudget,
       });
       steppedOnce = true;

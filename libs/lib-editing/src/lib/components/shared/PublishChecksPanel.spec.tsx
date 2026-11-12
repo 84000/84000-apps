@@ -81,8 +81,7 @@ describe('PublishChecksPanel', () => {
           {
             rule: 'glossary-index-unavailable',
             severity: 'error',
-            message:
-              'The glossary_term_index materialized view is not populated, so glossary references cannot be validated. Refresh it and re-check.',
+            message: 'Glossary references could not be validated.',
             subjects: [],
             count: 0,
           },

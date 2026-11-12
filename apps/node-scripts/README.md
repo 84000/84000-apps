@@ -100,12 +100,6 @@ per work; use the object form instead.
 One work failing does not abort the batch — the rest are independent — and the exit code is
 non-zero if any failed, with the failures listed at the end.
 
-A run of more than one work refreshes `glossary_term_index` **once** at the start rather
-than once per work. The publish pipeline refreshes it per publish by default, because the
-snapshot copies that view's output into an immutable artifact and a stale read would be
-permanent; but the view is a corpus-wide derivation and repeating it for every work in a
-pass where nothing is being edited dominates the run.
-
 **Publishing is not idempotent.** Every run creates a new `work_versions` row and a new
 immutable artifact, and neither can be cleanly removed — deleting a version row cascades
 away its snapshot rows and nulls the live pointer. So a batch that dies partway through must
