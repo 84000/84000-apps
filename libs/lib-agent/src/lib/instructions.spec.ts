@@ -30,6 +30,10 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   FOLIO_SIDES: ['a', 'b'],
   CONTENT_SOURCES: ['draft', 'published'],
   SESSION_STAGES: ['stage0', 'stage1'],
+  GLOSSARY_ATTESTATIONS: ['attestedSource'],
+  GLOSSARY_DEFINITION_RENDS: ['appendWithStandard'],
+  GLOSSARY_MODES: ['match', 'marked'],
+  GLOSSARY_TERM_TYPES: ['translationMain'],
 }));
 jest.mock('@eightyfourthousand/data-access/ssr', () => ({}));
 jest.mock('@eightyfourthousand/lib-search', () => ({}));
