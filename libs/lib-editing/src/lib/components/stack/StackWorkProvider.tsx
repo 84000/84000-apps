@@ -118,9 +118,7 @@ export const StackWorkProvider = ({
               : 'failed';
         const entries: SaveOutcome = !glossary?.work.store.isDirty
           ? 'none'
-          : (await saveGlossaryWork(glossary, createBrowserClient()))
-            ? 'saved'
-            : 'failed';
+          : await saveGlossaryWork(glossary, createBrowserClient());
         const outcome = combineSaveOutcomes([passages.outcome, rows, entries]);
         const { unconfirmed } = passages;
         if (!unconfirmed) return { outcome };

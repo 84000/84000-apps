@@ -7,6 +7,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 
+import type { SaveOutcome } from '../editor/editor-context';
 import {
   glossaryContentToDefinition,
   glossaryDefinitionToContent,
@@ -113,12 +114,12 @@ const readStored = async (
  * Write every edited definition, one entry at a time, each guarded by the
  * definition its editor read. A refused save keeps the row's text and is
  * recorded as a conflict for the row to show. A row already in conflict waits
- * for its choice and is not sent. False when a write failed.
+ * for its choice and is not sent. 'none' when nothing was sent.
  */
 export const saveGlossaryWork = async (
   glossary: SavedGlossary,
   client: DataClient,
-): Promise<boolean> => {
+): Promise<SaveOutcome> => {
   const { work, entries, conflicts } = glossary;
   const { workUuid } = work;
   const { edits, unchanged } = editsOf(glossary);
@@ -128,12 +129,14 @@ export const saveGlossaryWork = async (
     conflicts.delete(uuid);
   });
 
-  let saved = true;
+  let sent = false;
+  let failed = false;
   // Deleted from the work while its save was in flight.
   const removed = (uuid: string) => !work.spine.meta(uuid);
   for (const { uuid, version, definition } of edits) {
     const before = entries.get(uuid);
     if (!before || conflicts.get(uuid)) continue;
+    sent = true;
     const settle = (entry: GlossaryEntry) => {
       if (removed(uuid)) return;
       entries.set(uuid, entry);
@@ -151,8 +154,8 @@ export const saveGlossaryWork = async (
       if (entry) settle(entry);
       continue;
     }
-    saved = false;
     if (result.reason === 'stale' || result.reason === 'not-found') {
+      failed = true;
       const theirs = await readStored(client, workUuid, uuid);
       if (theirs !== undefined && !removed(uuid)) {
         conflicts.set(uuid, { theirs });
@@ -160,15 +163,20 @@ export const saveGlossaryWork = async (
       continue;
     }
     console.error('Failed to save glossary entry:', result.error);
-    if (!result.outcomeUnknown) continue;
-    // Settled only when what is stored is what was sent.
-    const stored = await readStored(client, workUuid, uuid);
-    if (stored && stored.definition === storedGlossaryDefinition(definition)) {
-      settle(stored);
-      saved = true;
+    if (result.outcomeUnknown) {
+      // Settled only when what is stored is what was sent.
+      const stored = await readStored(client, workUuid, uuid);
+      if (
+        stored &&
+        stored.definition === storedGlossaryDefinition(definition)
+      ) {
+        settle(stored);
+        continue;
+      }
     }
+    failed = true;
   }
-  return saved;
+  return failed ? 'failed' : sent ? 'saved' : 'none';
 };
 
 /** Drop the row's edit for the entry as stored now. */
@@ -184,14 +192,18 @@ export const takeTheirGlossaryEntry = (
   conflicts.delete(uuid);
 };
 
-/** Drop the row's edit to an entry deleted meanwhile; nothing is saved for it. */
+/**
+ * Drop the row's edit to an entry deleted meanwhile: the row shows the entry
+ * as it was read, and nothing is saved for it.
+ */
 export const discardGlossaryEdit = (
-  { work, conflicts }: SavedGlossary,
+  { work, entries, conflicts }: SavedGlossary,
   uuid: string,
 ) => {
+  const before = entries.get(uuid);
   const doc = work.store.peek(uuid);
-  if (!doc) return;
-  doc.markSynced(doc.version);
+  if (!before || !doc) return;
+  doc.reseed(glossaryDefinitionToContent(before.definition));
   conflicts.delete(uuid);
 };
 

@@ -120,7 +120,7 @@ afterEach(() => glossary.work.destroy());
 describe('saveGlossaryWork', () => {
   it('sends nothing for rows that were not edited', async () => {
     expect(unsavedGlossaryChanges(glossary)).toBe(0);
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('none');
     expect(mockSave).not.toHaveBeenCalled();
   });
 
@@ -134,7 +134,7 @@ describe('saveGlossaryWork', () => {
     });
     doc?.markDirty();
     expect(unsavedGlossaryChanges(glossary)).toBe(0);
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('none');
     expect(mockSave).not.toHaveBeenCalled();
     expect(doc?.isDirty).toBe(false);
   });
@@ -144,7 +144,7 @@ describe('saveGlossaryWork', () => {
     expect(unsavedGlossaryChanges(glossary)).toBe(1);
     mockSave.mockResolvedValue(saved(entry('t2', '<p>A great king.</p>')));
 
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('saved');
 
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(mockSave).toHaveBeenCalledWith(
@@ -175,7 +175,7 @@ describe('saveGlossaryWork', () => {
       entry: entry('t2', '<p>Theirs.</p>'),
     });
 
-    expect(await saveGlossaryWork(glossary, client)).toBe(false);
+    expect(await saveGlossaryWork(glossary, client)).toBe('failed');
 
     expect(textOf(glossary, 't2')).toBe('Mine.');
     expect(glossary.work.store.peek('t2')?.isDirty).toBe(true);
@@ -189,7 +189,7 @@ describe('saveGlossaryWork', () => {
     edit(glossary, 't2', 'Mine.');
     mockSave.mockResolvedValue(refused('not-found'));
     mockRead.mockResolvedValue({ status: 'not-found' });
-    expect(await saveGlossaryWork(glossary, client)).toBe(false);
+    expect(await saveGlossaryWork(glossary, client)).toBe('failed');
     expect(glossary.conflicts.get('t2')).toEqual({ theirs: null });
     expect(textOf(glossary, 't2')).toBe('Mine.');
   });
@@ -201,7 +201,7 @@ describe('saveGlossaryWork', () => {
       status: 'found',
       entry: entry('t2', '<p>Mine.</p>'),
     });
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('saved');
     expect(glossary.work.store.peek('t2')?.isDirty).toBe(false);
   });
 
@@ -209,9 +209,24 @@ describe('saveGlossaryWork', () => {
     edit(glossary, 't2', 'Mine.');
     mockSave.mockResolvedValue(refused('failed', true));
     mockRead.mockResolvedValue({ status: 'found', entry: entry('t2') });
-    expect(await saveGlossaryWork(glossary, client)).toBe(false);
+    expect(await saveGlossaryWork(glossary, client)).toBe('failed');
     expect(glossary.work.store.peek('t2')?.isDirty).toBe(true);
     expect(glossary.conflicts.get('t2')).toBeNull();
+  });
+
+  it('reports a failed row even when a later row is confirmed', async () => {
+    edit(glossary, 't1', 'Mine one.');
+    edit(glossary, 't2', 'Mine two.');
+    mockSave
+      .mockResolvedValueOnce(refused('failed'))
+      .mockResolvedValueOnce(refused('failed', true));
+    mockRead.mockResolvedValue({
+      status: 'found',
+      entry: entry('t2', '<p>Mine two.</p>'),
+    });
+    expect(await saveGlossaryWork(glossary, client)).toBe('failed');
+    expect(glossary.work.store.peek('t1')?.isDirty).toBe(true);
+    expect(glossary.work.store.peek('t2')?.isDirty).toBe(false);
   });
 
   it('records no conflict for a row deleted from the work during its save', async () => {
@@ -255,7 +270,7 @@ describe('resolving a conflict', () => {
     expect(textOf(glossary, 't2')).toBe('Theirs.');
     expect(glossary.conflicts.get('t2')).toBeNull();
     expect(unsavedGlossaryChanges(glossary)).toBe(0);
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('none');
     expect(mockSave).toHaveBeenCalledTimes(1);
   });
 
@@ -265,7 +280,7 @@ describe('resolving a conflict', () => {
     expect(textOf(glossary, 't2')).toBe('Mine.');
     expect(glossary.conflicts.get('t2')).toBeNull();
     mockSave.mockResolvedValueOnce(saved(entry('t2', '<p>Mine.</p>')));
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('saved');
     expect(mockSave).toHaveBeenLastCalledWith(
       expect.objectContaining({
         before: entry('t2', '<p>Theirs.</p>'),
@@ -276,7 +291,7 @@ describe('resolving a conflict', () => {
 
   it('waits for the choice: a later save does not send the row again', async () => {
     await conflicted();
-    expect(await saveGlossaryWork(glossary, client)).toBe(true);
+    expect(await saveGlossaryWork(glossary, client)).toBe('none');
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(glossary.conflicts.get('t2')).not.toBeNull();
     expect(unsavedGlossaryChanges(glossary)).toBe(1);
@@ -288,6 +303,7 @@ describe('resolving a conflict', () => {
     mockRead.mockResolvedValue({ status: 'not-found' });
     await saveGlossaryWork(glossary, client);
     discardGlossaryEdit(glossary, 't2');
+    expect(textOf(glossary, 't2')).toBe('A king.');
     expect(glossary.conflicts.get('t2')).toBeNull();
     expect(glossary.work.store.peek('t2')?.isDirty).toBe(false);
     expect(unsavedGlossaryChanges(glossary)).toBe(0);
