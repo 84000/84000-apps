@@ -42,6 +42,8 @@ export const GlossaryInstancesTable = ({
   const [state, setState] = useState<LoadState>('loading');
   // A read answers only if it is still the latest.
   const readRef = useRef(0);
+  // The page a failed read asked for, for Try again.
+  const failedAtRef = useRef(0);
 
   const load = useCallback(
     (at: number) => {
@@ -56,6 +58,7 @@ export const GlossaryInstancesTable = ({
       }).then((result) => {
         if (read !== readRef.current) return;
         if (!result) {
+          failedAtRef.current = at;
           setState('error');
           return;
         }
@@ -152,7 +155,7 @@ export const GlossaryInstancesTable = ({
             <Button
               variant="link"
               className="p-0 h-auto"
-              onClick={() => load(offset)}
+              onClick={() => load(failedAtRef.current)}
             >
               Try again
             </Button>

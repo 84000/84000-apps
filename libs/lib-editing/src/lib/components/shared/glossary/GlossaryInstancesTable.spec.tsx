@@ -160,6 +160,24 @@ describe('GlossaryInstancesTable', () => {
     expect(query.has('end')).toBe(false);
   });
 
+  it('retries the page that failed, not the one still shown', async () => {
+    mockGetGlossaryTermInstances
+      .mockResolvedValueOnce(page([row(1)], 120))
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(page([row(51)], 120, 50));
+
+    renderTable();
+    await userEvent.click(await screen.findByRole('button', { name: 'Next' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Try again' }),
+    );
+
+    expect(await screen.findByText('1.51')).toBeTruthy();
+    expect(mockGetGlossaryTermInstances).toHaveBeenLastCalledWith(
+      expect.objectContaining({ offset: 50 }),
+    );
+  });
+
   it('tells a failed read from an empty one, and retries', async () => {
     mockGetGlossaryTermInstances
       .mockResolvedValueOnce(null)
