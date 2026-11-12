@@ -49,7 +49,6 @@ export { replace, type ReplaceType, type ReplacedPassage } from './replace';
 export { savePassages, type RenumberedPassage } from './save-passages';
 export {
   getPublishReadiness,
-  isReadinessUndetermined,
   type PublishFinding,
   type PublishReadiness,
 } from './get-publish-readiness';

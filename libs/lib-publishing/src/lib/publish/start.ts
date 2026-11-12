@@ -64,7 +64,6 @@ export const startPublish = async ({
     explicitVersion: options.version,
     publishedBy: options.publishedBy ?? null,
     notes: options.notes ?? null,
-    refreshGlossaryIndex: options.refreshGlossaryIndex,
   });
 
   return { ok: true, result, adopted: started.outcome === 'adopted' };

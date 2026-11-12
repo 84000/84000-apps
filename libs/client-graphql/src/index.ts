@@ -46,7 +46,6 @@ export {
   getPublishReadiness,
   getPublishStatus,
   getPublishStatuses,
-  isReadinessUndetermined,
   publishStatusKind,
   getFindingLocations,
   getPublishHistory,

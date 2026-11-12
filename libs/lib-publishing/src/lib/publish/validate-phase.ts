@@ -6,7 +6,7 @@
  */
 
 import { checkpointJob, finishJob } from '../jobs';
-import { refreshGlossaryTermIndex, validateWork } from '../read-published';
+import { validateWork } from '../read-published';
 import type { PhaseRunner } from './context';
 
 /**
@@ -15,21 +15,7 @@ import type { PhaseRunner } from './context';
  * Warnings are carried onto the job and later into the manifest, as the audit trail of
  * what was known at publish time.
  */
-export const runValidatePhase: PhaseRunner = async ({
-  client,
-  job,
-  refreshGlossaryIndex,
-}) => {
-  // Before validating, not after: published_glossaries snapshots the output of a
-  // materialized view refreshed hourly by cron, and the artifact is immutable, so a stale
-  // read would be baked in permanently.
-  //
-  // A bulk caller that has already refreshed once opts out, because this is a corpus-wide
-  // derivation and repeating it per work dominates the run. Anything else leaves it on.
-  if (refreshGlossaryIndex !== false) {
-    await refreshGlossaryTermIndex({ client });
-  }
-
+export const runValidatePhase: PhaseRunner = async ({ client, job }) => {
   const validation = await validateWork({ client, workUuid: job.workUuid });
 
   await checkpointJob({
@@ -55,6 +41,10 @@ export const runValidatePhase: PhaseRunner = async ({
     };
   }
 
-  await checkpointJob({ client, jobUuid: job.uuid, patch: { phase: 'snapshot' } });
+  await checkpointJob({
+    client,
+    jobUuid: job.uuid,
+    patch: { phase: 'snapshot' },
+  });
   return { ...job, phase: 'snapshot', warnings: validation.warnings };
 };

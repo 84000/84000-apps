@@ -79,12 +79,17 @@ const fetchIndexRow = async (
   uuid: string,
   source: ContentSource,
 ) => {
-  const { data, error } = await client
-    .from(relationFor('glossaryTerms', source))
-    .select(GLOSSARY_INDEX_COLUMNS)
-    .eq('glossary_uuid', uuid)
-    .limit(1)
-    .maybeSingle();
+  const { data, error } =
+    source === 'draft'
+      ? await client
+          .rpc('glossary_term_by_uuid', { p_glossary_uuid: uuid })
+          .maybeSingle()
+      : await client
+          .from(relationFor('glossaryTerms', source))
+          .select(GLOSSARY_INDEX_COLUMNS)
+          .eq('glossary_uuid', uuid)
+          .limit(1)
+          .maybeSingle();
   if (error) {
     console.error(`Error fetching glossary instance: ${uuid} `, error);
     return null;
@@ -101,12 +106,12 @@ export const getGlossaryInstance = async ({
   uuid: string;
   source?: ContentSource;
 }) => {
-  // 1) Direct lookup in the term index (the published snapshot mirrors its shape).
+  // 1) Direct lookup of the term (the published snapshot mirrors its shape).
   let row = await fetchIndexRow(client, uuid, source);
 
-  // 2) Fallback: the uuid may be a non-translationMain child that isn't
-  //    represented in the index. Resolve its parent via glossary_edges and
-  //    retry the index lookup with the parent uuid.
+  // 2) Fallback: the uuid may be a non-translationMain child that isn't a term
+  //    of its own. Resolve its parent via glossary_edges and retry the lookup
+  //    with the parent uuid.
   //
   //    glossary_edges stays on the draft table in both sources: it is an
   //    unversioned child→parent map, and the UUIDs it returns are stable across

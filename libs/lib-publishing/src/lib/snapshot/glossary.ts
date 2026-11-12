@@ -1,11 +1,8 @@
 /**
  * A work's draft glossary, assembled from the base tables.
  *
- * The draft glossary relation, `glossary_term_index`, is a materialized view that only
- * publish refreshes, so it can lag the draft. This rebuilds the same rows from
- * `glossaries`, `glossary_edges`, `names` and `authorities`, following the view's
- * definition: a term is a glossary row with a self-edge, and its other names are the
- * children of that edge.
+ * Built from `glossaries`, `glossary_edges`, `names` and `authorities`: a term is a
+ * glossary row with a self-edge, and its other names are the children of that edge.
  */
 
 import type { DataClient } from '@eightyfourthousand/data-access';

@@ -132,6 +132,128 @@ export function rowToGlossaryTermNode(
   };
 }
 
+const clampGlossaryLimit = (limit: number) =>
+  Math.min(Math.max(limit, 1), MAX_GLOSSARY_LIMIT);
+
+const emptyConnection = (totalCount: number) =>
+  buildGlossaryTermConnection([], null, null, false, false, totalCount);
+
+/** A forward or backward page: rows in ascending term order. */
+function pageConnection(
+  rows: GlossaryTermIndexRow[],
+  totalCount: number,
+  withAttestations: boolean,
+): GlossaryTermConnection {
+  if (rows.length === 0) {
+    return emptyConnection(totalCount);
+  }
+
+  const nodes = rows.map((row) =>
+    rowToGlossaryTermNode({ ...row, withAttestations }),
+  );
+  const firstRow = rows[0];
+  const lastRow = rows[rows.length - 1];
+  const hasMoreBefore = parseCount(firstRow.term_number) > 1;
+  const hasMoreAfter = parseCount(lastRow.term_number) < totalCount;
+
+  return buildGlossaryTermConnection(
+    nodes,
+    hasMoreAfter ? lastRow.glossary_uuid : null,
+    hasMoreBefore ? firstRow.glossary_uuid : null,
+    hasMoreAfter,
+    hasMoreBefore,
+    totalCount,
+  );
+}
+
+/** The window of `limit` terms centred on `cursorTermNumber`, kept inside the work. */
+function aroundWindow(
+  cursorTermNumber: number,
+  limit: number,
+  totalCount: number,
+) {
+  let startTerm = Math.max(1, cursorTermNumber - Math.floor(limit / 2));
+  let endTerm = startTerm + limit - 1;
+
+  if (endTerm > totalCount) {
+    endTerm = totalCount;
+    startTerm = Math.max(1, endTerm - limit + 1);
+  }
+
+  return { startTerm, endTerm };
+}
+
+function aroundConnection(
+  rows: GlossaryTermIndexRow[],
+  { startTerm, endTerm }: { startTerm: number; endTerm: number },
+  totalCount: number,
+  withAttestations: boolean,
+): GlossaryTermConnection {
+  const nodes = rows.map((row) =>
+    rowToGlossaryTermNode({ ...row, withAttestations }),
+  );
+  const hasMoreBefore = startTerm > 1;
+  const hasMoreAfter = endTerm < totalCount;
+  const firstRow = rows[0];
+  const lastRow = rows[rows.length - 1];
+
+  return buildGlossaryTermConnection(
+    nodes,
+    hasMoreAfter && lastRow ? lastRow.glossary_uuid : null,
+    hasMoreBefore && firstRow ? firstRow.glossary_uuid : null,
+    hasMoreAfter,
+    hasMoreBefore,
+    totalCount,
+  );
+}
+
+type GlossaryTermsPageResult = {
+  total_count: number | string | null;
+  cursor_term_number: number | string | null;
+  terms: GlossaryTermIndexRow[] | null;
+};
+
+/**
+ * One page of a work's draft terms from `glossary_terms_page`, which numbers the
+ * terms live. Null on error.
+ */
+const fetchDraftTermsPage = async ({
+  client,
+  workUuid,
+  cursor,
+  direction,
+  limit,
+}: {
+  client: DataClient;
+  workUuid: string;
+  cursor: string | null;
+  direction: ApiPaginationDirection;
+  limit: number;
+}) => {
+  const { data, error } = await client.rpc('glossary_terms_page', {
+    p_work_uuid: workUuid,
+    p_cursor: cursor,
+    p_direction: direction,
+    p_limit: limit,
+  });
+
+  if (error) {
+    console.error('Error fetching glossary terms page:', error);
+    return null;
+  }
+
+  const page = data as GlossaryTermsPageResult | null;
+  const cursorTermNumber = page?.cursor_term_number;
+  return {
+    totalCount: parseCount(page?.total_count),
+    cursorTermNumber:
+      cursorTermNumber === null || cursorTermNumber === undefined
+        ? null
+        : parseCount(cursorTermNumber),
+    rows: page?.terms ?? [],
+  };
+};
+
 /**
  * A page of citing passages for each of several glossary terms, keyed by term.
  *
@@ -265,8 +387,7 @@ export const getWorkGlossaryTermsPage = async ({
   withAttestations?: boolean;
   source?: ContentSource;
 }): Promise<GlossaryTermConnection> => {
-  const clampedLimit = Math.min(Math.max(limit, 1), MAX_GLOSSARY_LIMIT);
-  const relation = relationFor('glossaryTerms', source);
+  const clampedLimit = clampGlossaryLimit(limit);
 
   if (direction === 'AROUND') {
     return getWorkGlossaryTermsAround({
@@ -279,6 +400,24 @@ export const getWorkGlossaryTermsPage = async ({
     });
   }
 
+  if (source === 'draft') {
+    const page = await fetchDraftTermsPage({
+      client,
+      workUuid,
+      cursor: cursor ?? null,
+      direction,
+      limit: clampedLimit,
+    });
+    if (!page) {
+      return emptyConnection(0);
+    }
+    if (cursor && page.cursorTermNumber === null) {
+      return emptyConnection(page.totalCount);
+    }
+    return pageConnection(page.rows, page.totalCount, withAttestations);
+  }
+
+  const relation = relationFor('glossaryTerms', source);
   const [
     { count, error: countError },
     { data: cursorRows, error: cursorError },
@@ -375,33 +514,7 @@ export const getWorkGlossaryTermsPage = async ({
 
   const pageRows = (data ?? []) as GlossaryTermIndexRow[];
   const rows = ascending ? pageRows : [...pageRows].reverse();
-  if (rows.length === 0) {
-    return buildGlossaryTermConnection(
-      [],
-      null,
-      null,
-      false,
-      false,
-      totalCount,
-    );
-  }
-
-  const nodes = rows.map((row) =>
-    rowToGlossaryTermNode({ ...row, withAttestations }),
-  );
-  const firstRow = rows[0];
-  const lastRow = rows[rows.length - 1];
-  const hasMoreBefore = parseCount(firstRow.term_number) > 1;
-  const hasMoreAfter = parseCount(lastRow.term_number) < totalCount;
-
-  return buildGlossaryTermConnection(
-    nodes,
-    hasMoreAfter ? lastRow.glossary_uuid : null,
-    hasMoreBefore ? firstRow.glossary_uuid : null,
-    hasMoreAfter,
-    hasMoreBefore,
-    totalCount,
-  );
+  return pageConnection(rows, totalCount, withAttestations);
 };
 
 export const getWorkGlossaryTermsAround = async ({
@@ -419,8 +532,6 @@ export const getWorkGlossaryTermsAround = async ({
   withAttestations: boolean;
   source?: ContentSource;
 }): Promise<GlossaryTermConnection> => {
-  const relation = relationFor('glossaryTerms', source);
-
   if (!cursor) {
     return getWorkGlossaryTermsPage({
       client,
@@ -433,6 +544,38 @@ export const getWorkGlossaryTermsAround = async ({
     });
   }
 
+  if (source === 'draft') {
+    const clampedLimit = clampGlossaryLimit(limit);
+    const page = await fetchDraftTermsPage({
+      client,
+      workUuid,
+      cursor,
+      direction: 'AROUND',
+      limit: clampedLimit,
+    });
+    if (!page) {
+      return emptyConnection(0);
+    }
+    if (page.cursorTermNumber === null) {
+      return getWorkGlossaryTermsPage({
+        client,
+        workUuid,
+        limit: clampedLimit,
+        cursor: null,
+        direction: 'FORWARD',
+        withAttestations,
+        source,
+      });
+    }
+    return aroundConnection(
+      page.rows,
+      aroundWindow(page.cursorTermNumber, clampedLimit, page.totalCount),
+      page.totalCount,
+      withAttestations,
+    );
+  }
+
+  const relation = relationFor('glossaryTerms', source);
   const [
     { count, error: countError },
     { data: cursorRows, error: cursorError },
@@ -482,14 +625,11 @@ export const getWorkGlossaryTermsAround = async ({
     });
   }
 
-  const cursorTermNumber = parseCount(cursorRow.term_number);
-  let startTerm = Math.max(1, cursorTermNumber - Math.floor(limit / 2));
-  let endTerm = startTerm + limit - 1;
-
-  if (endTerm > totalCount) {
-    endTerm = totalCount;
-    startTerm = Math.max(1, endTerm - limit + 1);
-  }
+  const { startTerm, endTerm } = aroundWindow(
+    parseCount(cursorRow.term_number),
+    limit,
+    totalCount,
+  );
 
   const { data, error } = await client
     .from(relation)
@@ -523,21 +663,10 @@ export const getWorkGlossaryTermsAround = async ({
     );
   }
 
-  const rows = (data ?? []) as GlossaryTermIndexRow[];
-  const nodes = rows.map((row) =>
-    rowToGlossaryTermNode({ ...row, withAttestations }),
-  );
-  const hasMoreBefore = startTerm > 1;
-  const hasMoreAfter = endTerm < totalCount;
-  const firstRow = rows[0];
-  const lastRow = rows[rows.length - 1];
-
-  return buildGlossaryTermConnection(
-    nodes,
-    hasMoreAfter && lastRow ? lastRow.glossary_uuid : null,
-    hasMoreBefore && firstRow ? firstRow.glossary_uuid : null,
-    hasMoreAfter,
-    hasMoreBefore,
+  return aroundConnection(
+    (data ?? []) as GlossaryTermIndexRow[],
+    { startTerm, endTerm },
     totalCount,
+    withAttestations,
   );
 };

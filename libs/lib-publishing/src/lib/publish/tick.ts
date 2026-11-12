@@ -26,7 +26,6 @@ import { runValidatePhase } from './validate-phase';
  */
 export const DEFAULT_TICK_BUDGET_MS = 20_000;
 
-
 /**
  * Phase order, as a lookup rather than a switch.
  *
@@ -63,7 +62,6 @@ export const tickJob = async ({
   explicitVersion,
   publishedBy,
   notes,
-  refreshGlossaryIndex,
 }: {
   client: DataClient;
   jobUuid: string;
@@ -73,7 +71,6 @@ export const tickJob = async ({
   explicitVersion?: string;
   publishedBy?: string | null;
   notes?: string | null;
-  refreshGlossaryIndex?: boolean;
 }): Promise<TickResult> => {
   const clock = now ?? (() => new Date());
   const makeUuid = newUuid ?? (() => crypto.randomUUID());
@@ -121,7 +118,6 @@ export const tickJob = async ({
         explicitVersion,
         publishedBy,
         notes,
-        refreshGlossaryIndex,
         outOfBudget,
       });
       steppedOnce = true;
@@ -154,4 +150,3 @@ export const tickJob = async ({
     }
   }
 };
-

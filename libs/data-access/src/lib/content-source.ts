@@ -75,12 +75,14 @@ export const isContentSource = (value: unknown): value is ContentSource =>
 /**
  * Relation names per source. The published entries are the `_live` views, never
  * the underlying `published_*` tables — see the note above.
+ *
+ * Draft glossary terms have no relation: they are derived on read by the
+ * `glossary_term*` functions.
  */
 const RELATIONS = {
   draft: {
     passages: 'passages',
     passageAnnotations: 'passage_annotations',
-    glossaryTerms: 'glossary_term_index',
     bibliographies: 'bibliographies',
   },
   published: {
@@ -91,13 +93,26 @@ const RELATIONS = {
   },
 } as const satisfies Record<ContentSource, Record<string, string>>;
 
-export type ContentRelation = keyof (typeof RELATIONS)['draft'];
+type SharedRelation = keyof (typeof RELATIONS)['draft'];
+
+export type ContentRelation = keyof (typeof RELATIONS)['published'];
 
 /** The table or view holding `relation` for `source`. */
-export const relationFor = (
+export function relationFor(
+  relation: SharedRelation,
+  source?: ContentSource,
+): string;
+/** Published only: draft glossary terms are read through RPCs. */
+export function relationFor(
+  relation: 'glossaryTerms',
+  source?: 'published',
+): string;
+export function relationFor(
   relation: ContentRelation,
   source: ContentSource = DEFAULT_CONTENT_SOURCE,
-): string => RELATIONS[source][relation];
+): string {
+  return (RELATIONS[source] as Record<string, string>)[relation];
+}
 
 /**
  * RPC names per source. Only the functions still on the reader path have a

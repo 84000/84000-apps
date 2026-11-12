@@ -190,19 +190,6 @@ export const validateWork = async ({
   };
 };
 
-export const refreshGlossaryTermIndex = async ({
-  client,
-}: {
-  client: DataClient;
-}): Promise<void> => {
-  const { error } = await client.rpc('refresh_glossary_term_index');
-  if (error) {
-    throw new Error(
-      `Failed to refresh glossary_term_index: ${JSON.stringify(error)}`,
-    );
-  }
-};
-
 /** Existing version labels for a work, used to pick the next one. */
 export const readVersionLabels = async ({
   client,

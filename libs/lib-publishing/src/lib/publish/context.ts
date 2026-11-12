@@ -25,8 +25,6 @@ export interface PhaseContext {
   explicitVersion?: string;
   publishedBy?: string | null;
   notes?: string | null;
-  /** See PublishOptions.refreshGlossaryIndex. Defaults to true when undefined. */
-  refreshGlossaryIndex?: boolean;
   /**
    * True once the tick has spent its time budget.
    *

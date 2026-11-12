@@ -5,11 +5,6 @@
  * one implementation and the CLI cannot drift from what the editor UI does. Useful for a
  * single work with no function time limit to respect, and for bulk runs.
  *
- * Bulk runs refresh `glossary_term_index` once here rather than once per work. The view is
- * a corpus-wide derivation over glossaries, edges, authorities and names; the publish phase
- * refreshes it by default because a stale read is copied into an immutable artifact, but
- * repeating that for every work in a pass where nothing is being edited dominates the run.
- *
  * Run:
  *   npx tsx --tsconfig tsconfig.base.json apps/node-scripts/src/publish-works.ts toh251
  *   ... toh251 --version 1.0.0 --notes "Revised chapter 3"
@@ -28,7 +23,6 @@ import {
   listPublishedWorks,
   parseWorkList,
   partitionBySince,
-  refreshGlossaryTermIndex,
   resolveWork,
   runBatch,
   validateWork,
@@ -74,7 +68,6 @@ const checkOne = async (
 const publishOne = async (
   client: DataClient,
   request: WorkRequest,
-  { refreshGlossaryIndex }: { refreshGlossaryIndex: boolean },
 ): Promise<BatchOutcome> => {
   const result = await drivePublish({
     client,
@@ -82,7 +75,6 @@ const publishOne = async (
       work: request.work,
       version: request.version,
       notes: request.notes,
-      refreshGlossaryIndex,
     },
     onProgress: (job) => console.log(`  ... ${job.phase} (job ${job.uuid})`),
   });
@@ -225,15 +217,6 @@ const main = async () => {
     );
   }
 
-  // Refresh once here rather than per work when there is more than one, and always for
-  // --check: validation reads glossary_term_index directly, with no publish phase to
-  // refresh it first. A lone publish leaves it to the phase, which is the safe default.
-  const refreshOnce = checkOnly || requests.length > 1;
-  if (refreshOnce) {
-    console.log('Refreshing glossary_term_index once for this run...');
-    await refreshGlossaryTermIndex({ client });
-  }
-
   const summary = await runBatch({
     requests,
     onStart: (request, index, total) =>
@@ -244,9 +227,7 @@ const main = async () => {
     each: async (request) => {
       const outcome = checkOnly
         ? await checkOne(client, request)
-        : await publishOne(client, request, {
-            refreshGlossaryIndex: !refreshOnce,
-          });
+        : await publishOne(client, request);
       console[outcome.ok ? 'log' : 'error'](`  ${outcome.message}`);
       return outcome;
     },
