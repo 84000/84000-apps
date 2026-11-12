@@ -877,6 +877,12 @@ describeLive('glossary entry saves against the database', () => {
     expect(
       await getGlossaryEntry({ client: db, workUuid: workA, uuid: e.uuid }),
     ).toEqual({ status: 'not-found' });
+    // Its names rows and authority stay.
+    const nameUuids = e.names.map((n) => n.nameUuid);
+    expect(await select(db, 'names', 'uuid', nameUuids)).toHaveLength(
+      nameUuids.length,
+    );
+    expect(await select(db, 'authorities', 'uuid', [authA])).toHaveLength(1);
 
     const again = await makeEntry({
       workUuid: workA,

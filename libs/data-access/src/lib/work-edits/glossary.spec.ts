@@ -327,6 +327,55 @@ describe('planGlossary', () => {
     );
   });
 
+  it('reports each entry its own copied and moved names rows, and a delete with no after', async () => {
+    const F = '20000000-0000-4000-8000-000000000002';
+    const other: GlossaryEntry = { ...stored, uuid: F, names: [] };
+    read.mockResolvedValue({ ok: true, entries: [stored, other] });
+    const row = (
+      entryUuid: string,
+      nameUuid: string,
+      action: 'copied' | 'moved',
+    ) => ({ entryUuid, nameUuid, language: 'en', content: nameUuid, action });
+    save.mockResolvedValue({
+      ...ok,
+      entries: [{ ...stored, authorityUuid: B }],
+      deleted: [F],
+      nameRows: [
+        row(E, 'n-moved', 'moved'),
+        row(E, 'n-copied', 'copied'),
+        row(F, 'n-other', 'copied'),
+      ],
+    });
+    const result = await plan(
+      {
+        op: 'relink-glossary-entry',
+        uuid: E,
+        authority: B,
+        expect: { authority: A },
+      },
+      { op: 'delete-glossary-entry', uuid: F },
+    );
+    const [relinked, deleted] = result.changes.entries;
+    const text = (nameUuid: string) => ({
+      nameUuid,
+      language: 'en',
+      content: nameUuid,
+    });
+    expect(relinked).toMatchObject({
+      action: 'update',
+      after: { authorityUuid: B },
+      movedNames: [text('n-moved')],
+      copiedNames: [text('n-copied')],
+    });
+    expect(deleted).toMatchObject({
+      action: 'delete',
+      before: other,
+      after: null,
+      movedNames: [],
+      copiedNames: [text('n-other')],
+    });
+  });
+
   it('refuses one new authority given twice with different values', async () => {
     read.mockResolvedValue({ ok: true, entries: [] });
     const U = '60000000-0000-4000-8000-000000000001';
