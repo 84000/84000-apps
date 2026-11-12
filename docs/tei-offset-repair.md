@@ -35,7 +35,11 @@ revert, that line takes the run id instead.
 
 2. **Apply.** Run the apply with the same `@param` value. Run the whole
    snippet at once. It either repairs every row the report listed or, if a
-   check fails, raises an error and writes nothing. It returns one row.
+   check fails, raises an error and writes nothing. While it runs, editors'
+   saves wait. If another write holds the tables for more than 10 seconds, it
+   stops with a lock timeout and writes nothing: run it again. If it hits the
+   SQL editor's time limit with a `NULL` `@param`, nothing is written either:
+   run it one work at a time. It returns one row.
    **Write down its `run_id`**, with the date and the work, for example in the
    ingest's ticket. You need the `run_id` to undo the run. A `run_id` of `NULL`
    means there was nothing to repair.
@@ -48,11 +52,12 @@ revert, that line takes the run id instead.
 
 ## Undo
 
-Run the revert with the run's `run_id` on its `@param` line. It restores every
-row of the run that is still where the run left it. It skips rows that were
-deleted or edited since then, and reports them as `skipped-deleted` or
-`skipped-changed`. Running it twice does nothing the second time
-(`already-reverted`).
+Run the revert with the run's `run_id` on its `@param` line. It restores the
+old offsets of every row of the run that is unchanged since the run: same
+offsets and same columns as when the run wrote it. It skips rows that were
+deleted or changed since then, and reports them as `skipped-deleted` or
+`skipped-changed`. It doesn't notice an edit to the passage text alone.
+Running it twice does nothing the second time (`already-reverted`).
 
 ## Notes
 
