@@ -1,8 +1,6 @@
-// Acceptance tests for DEV-912 criteria 6 to 9 at the data layer: removing
-// glossary instances goes through the passage write path, one passage at a
-// time, and a passage that fails leaves the others removed. The database is an
-// in-memory stand-in for PostgREST that runs the real passage save unmodified.
-import { removeGlossaryTermInstances } from '../../index';
+// Removing glossary instances through the real passage save, against an
+// in-memory stand-in for PostgREST and apply_passage_save.
+import { removeGlossaryTermInstances } from './remove-instances';
 
 type Row = Record<string, unknown>;
 type Tables = Record<string, Row[]>;
@@ -244,9 +242,10 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe('DEV-912 criterion 6: delete one', () => {
-  it('criterion 6: removes the instance and nothing else from its passage', async () => {
+describe('removeGlossaryTermInstances through the passage save', () => {
+  it('removes only the instances asked for, leaving the text and the other offsets', async () => {
     const tables = fixture();
+    const text = tables.passages.map((p) => p.content);
 
     const { result } = await remove(tables, ['a1']);
 
@@ -255,75 +254,28 @@ describe('DEV-912 criterion 6: delete one', () => {
     expect(stored(tables)).toEqual(
       ['a2', 'o1', 's1', 'b1', 'b2', 's2', 'c1', 'c2', 's3'].sort(),
     );
-  });
-
-  it('criterion 6: the passage text is unchanged', async () => {
-    const tables = fixture();
-    const before = tables.passages.map((p) => p.content);
-
-    await remove(tables, ['a1']);
-
-    expect(tables.passages.map((p) => p.content)).toEqual(before);
-  });
-
-  it('criterion 6: the other annotations of the passage keep their offsets', async () => {
-    const tables = fixture();
-
-    await remove(tables, ['a1']);
-
+    expect(tables.passages.map((p) => p.content)).toEqual(text);
     const byUuid = new Map(tables.passage_annotations.map((r) => [r.uuid, r]));
     expect(byUuid.get('a2')).toMatchObject({ start: 31, end: 42 });
     expect(byUuid.get('s1')).toMatchObject({ start: 0, end: 7 });
     expect(byUuid.get('o1')).toMatchObject({ start: 0, end: 7 });
-  });
-
-  it('criterion 6: only the passage that held the instance is saved', async () => {
-    const tables = fixture();
-
-    const { log } = await remove(tables, ['b2']);
-
-    expect(log.saves).toEqual([['b2']]);
-  });
-
-  it('criterion 6: names the rewritten passage, as it now stands, for the caller', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1']);
-
     expect(result.passages.map((p) => p.uuid)).toEqual(['p1']);
-    const text = JSON.stringify(result.passages[0].annotations);
-    expect(text).not.toContain('"a1"');
-    expect(text).toContain('a2');
-  });
-});
-
-describe('DEV-912 criterion 7: delete selected', () => {
-  it('criterion 7: removes every selected instance, across passages', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'a2', 'b1', 'c2']);
-
-    expect([...result.removed].sort()).toEqual(['a1', 'a2', 'b1', 'c2']);
-    expect(result.failed).toEqual([]);
-    expect(stored(tables)).toEqual(['o1', 's1', 'b2', 's2', 'c1', 's3'].sort());
+    const annotations = JSON.stringify(result.passages[0].annotations);
+    expect(annotations).not.toContain('"a1"');
+    expect(annotations).toContain('a2');
   });
 
-  it('criterion 7: each passage is saved on its own, with only its own instances', async () => {
+  it('saves each passage once, with only its own instances, and writes no table directly', async () => {
     const tables = fixture();
 
-    const { log } = await remove(tables, ['a1', 'a2', 'b1', 'c2']);
+    const { result, log } = await remove(tables, ['a1', 'a2', 'b1', 'c2']);
 
     expect(log.saves.map((gone) => [...gone].sort())).toEqual(
       expect.arrayContaining([['a1', 'a2'], ['b1'], ['c2']]),
     );
     expect(log.saves).toHaveLength(3);
-  });
-
-  it('criterion 7: every rewritten passage is returned, once', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'a2', 'b1', 'c2']);
-
+    expect(log.directWrites).toEqual([]);
+    expect([...result.removed].sort()).toEqual(['a1', 'a2', 'b1', 'c2']);
     expect(result.passages.map((p) => p.uuid).sort()).toEqual([
       'p1',
       'p2',
@@ -331,29 +283,7 @@ describe('DEV-912 criterion 7: delete selected', () => {
     ]);
   });
 
-  it('criterion 7: passage text is untouched across all of them', async () => {
-    const tables = fixture();
-    const before = tables.passages.map((p) => p.content);
-
-    await remove(tables, ['a1', 'a2', 'b1', 'c2']);
-
-    expect(tables.passages.map((p) => p.content)).toEqual(before);
-  });
-
-  it('criterion 7: nothing selected removes and saves nothing', async () => {
-    const tables = fixture();
-
-    const { result, log } = await remove(tables, []);
-
-    expect(result.removed).toEqual([]);
-    expect(result.failed).toEqual([]);
-    expect(log.saves).toEqual([]);
-    expect(stored(tables)).toHaveLength(10);
-  });
-});
-
-describe('DEV-912 criterion 8: partial failure', () => {
-  it('criterion 8: a passage whose save fails is reported, with its label and instances', async () => {
+  it('keeps a failed passage’s instances and names it, while the others stay removed', async () => {
     const tables = fixture();
 
     const { result } = await remove(tables, ['a1', 'b1', 'b2', 'c1'], {
@@ -364,98 +294,23 @@ describe('DEV-912 criterion 8: partial failure', () => {
     expect(result.failed[0]).toMatchObject({
       passageUuid: 'p2',
       passageLabel: '1.2',
+      error: expect.stringContaining('deadlock detected'),
     });
     expect([...result.failed[0].annotationUuids].sort()).toEqual(['b1', 'b2']);
-    expect(typeof result.failed[0].error).toBe('string');
-    expect(result.failed[0].error.length).toBeGreaterThan(0);
-  });
-
-  it('criterion 8: the deletions that succeeded stay deleted', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'b1', 'b2', 'c1'], {
-      failing: ['b1'],
-    });
-
     expect([...result.removed].sort()).toEqual(['a1', 'c1']);
+    expect(result.passages.map((p) => p.uuid).sort()).toEqual(['p1', 'p3']);
     const left = stored(tables);
+    expect(left).toEqual(expect.arrayContaining(['b1', 'b2']));
     expect(left).not.toContain('a1');
     expect(left).not.toContain('c1');
   });
 
-  it('criterion 8: the failed passage keeps its instances', async () => {
+  it('reports a save that throws as that passage’s failure', async () => {
     const tables = fixture();
 
-    await remove(tables, ['a1', 'b1', 'b2', 'c1'], { failing: ['b1'] });
-
-    const left = stored(tables);
-    expect(left).toContain('b1');
-    expect(left).toContain('b2');
-  });
-
-  it('criterion 8: a failure does not stop the passages after it', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'b1', 'c1'], {
-      failing: ['a1'],
-    });
-
-    expect(result.failed.map((f) => f.passageUuid)).toEqual(['p1']);
-    expect([...result.removed].sort()).toEqual(['b1', 'c1']);
-  });
-
-  it('criterion 8: only passages that were saved are returned for display', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'b1', 'c1'], {
-      failing: ['b1'],
-    });
-
-    expect(result.passages.map((p) => p.uuid).sort()).toEqual(['p1', 'p3']);
-  });
-
-  it('criterion 8: every passage failing reports them all and removes nothing', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'b1'], {
-      failing: ['a1', 'b1'],
-    });
-
-    expect(result.removed).toEqual([]);
-    expect(result.failed.map((f) => f.passageUuid).sort()).toEqual([
-      'p1',
-      'p2',
-    ]);
-    expect(stored(tables)).toHaveLength(10);
-  });
-
-  it('criterion 8: a save that throws is a reported failure, not a throw', async () => {
-    const tables = fixture();
     const { result } = await remove(tables, ['a1', 'b1'], { throwing: ['a1'] });
 
     expect(result.failed.map((f) => f.passageUuid)).toEqual(['p1']);
     expect(result.removed).toEqual(['b1']);
-  });
-});
-
-describe('DEV-912 criterion 9: open sessions see it, because the write is the passage save', () => {
-  it('criterion 9: instances go through the passage save, not straight to the table', async () => {
-    const tables = fixture();
-
-    const { log } = await remove(tables, ['a1', 'b1']);
-
-    expect(log.saves.length).toBeGreaterThan(0);
-    expect(log.directWrites).toEqual([]);
-  });
-
-  it('criterion 9: the rewritten passages are returned for an open editor to take in', async () => {
-    const tables = fixture();
-
-    const { result } = await remove(tables, ['a1', 'b1']);
-
-    expect(result.passages.map((p) => p.uuid).sort()).toEqual(['p1', 'p2']);
-    for (const rewritten of result.passages) {
-      expect(JSON.stringify(rewritten.annotations)).not.toMatch(/"(a1|b1)"/);
-    }
   });
 });

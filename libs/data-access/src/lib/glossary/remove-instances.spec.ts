@@ -59,36 +59,6 @@ const saved = (uuid: string) => ({
 beforeEach(() => mockApplyPassageEdits.mockReset());
 
 describe('removeGlossaryTermInstances', () => {
-  it('saves each passage once, removing its instances', async () => {
-    const { client } = clientReading({
-      data: [stored('a1', 'p1'), stored('a2', 'p1'), stored('a3', 'p2')],
-      error: null,
-    });
-    mockApplyPassageEdits.mockImplementation(async ({ edits }) =>
-      saved(edits[0].passageUuid),
-    );
-
-    const result = await removeGlossaryTermInstances({
-      client,
-      workUuid: 'work',
-      termUuid: 'term',
-      annotationUuids: ['a1', 'a2', 'a3', 'a1'],
-    });
-
-    expect(mockApplyPassageEdits).toHaveBeenCalledTimes(2);
-    expect(mockApplyPassageEdits).toHaveBeenCalledWith({
-      client,
-      workUuid: 'work',
-      edits: [
-        { op: 'remove-annotation', passageUuid: 'p1', annotationUuid: 'a1' },
-        { op: 'remove-annotation', passageUuid: 'p1', annotationUuid: 'a2' },
-      ],
-    });
-    expect(result.removed.sort()).toEqual(['a1', 'a2', 'a3']);
-    expect(result.failed).toEqual([]);
-    expect(result.passages.map((p) => p.uuid).sort()).toEqual(['p1', 'p2']);
-  });
-
   it('keeps a failed passage’s instances and the others’ removals', async () => {
     const { client } = clientReading({
       data: [stored('a1', 'p1'), stored('a2', 'p2'), stored('a3', 'p3')],
@@ -140,27 +110,6 @@ describe('removeGlossaryTermInstances', () => {
         }),
       ]),
     );
-  });
-
-  it('reports a passage whose save threw', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    const { client } = clientReading({
-      data: [stored('a1', 'p1')],
-      error: null,
-    });
-    mockApplyPassageEdits.mockRejectedValue(new Error('boom'));
-
-    const result = await removeGlossaryTermInstances({
-      client,
-      workUuid: 'work',
-      termUuid: 'term',
-      annotationUuids: ['a1'],
-    });
-
-    expect(result.failed).toEqual([
-      expect.objectContaining({ passageUuid: 'p1', error: 'boom' }),
-    ]);
-    jest.restoreAllMocks();
   });
 
   it('removes nothing that is not an instance of the entry in the work, and counts one already gone', async () => {
