@@ -227,6 +227,57 @@ describe('GlossaryCopyDialog', () => {
     expect(onOpenChange).not.toHaveBeenCalled();
   });
 
+  it("never shows an earlier query's late answer for a later query", async () => {
+    const answers: Record<string, (results: GlossaryCopySource[]) => void> = {};
+    mockSearch.mockImplementation(
+      ({ query }: { query: string }) =>
+        new Promise((resolve) => {
+          answers[query] = resolve;
+        }),
+    );
+    render(
+      <GlossaryCopyDialog
+        controller={controllerWith()}
+        open
+        onOpenChange={() => undefined}
+      />,
+    );
+    const box = screen.getByLabelText('Search other works');
+    fireEvent.change(box, { target: { value: 'lot' } });
+    await waitFor(() => expect(answers['lot']).toBeDefined());
+    fireEvent.change(box, { target: { value: 'lotus' } });
+    await waitFor(() => expect(answers['lotus']).toBeDefined());
+
+    await act(async () => answers['lotus']([SOURCE]));
+    await act(async () => answers['lot']([]));
+
+    expect(screen.getByRole('button', { name: /Lotus/ })).toBeTruthy();
+    expect(screen.queryByText(/No entry in another work matches/)).toBeNull();
+  });
+
+  it("keeps Copy off until this work's entries for the authority are read", async () => {
+    let answer: (entries: GlossaryEntry[]) => void = () => undefined;
+    mockOfAuthority.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    render(
+      <GlossaryCopyDialog
+        controller={controllerWith()}
+        open
+        onOpenChange={() => undefined}
+      />,
+    );
+    await typeQuery('lotus');
+    await choose();
+
+    const copy = screen.getByRole('button', { name: 'Copy' });
+    expect(copy.hasAttribute('disabled')).toBe(true);
+    await act(async () => answer([]));
+    expect(copy.hasAttribute('disabled')).toBe(false);
+  });
+
   it('goes back to the results without copying', async () => {
     const copy = jest.fn();
     render(

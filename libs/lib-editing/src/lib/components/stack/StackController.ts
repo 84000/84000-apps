@@ -336,7 +336,12 @@ export class StackController {
       return { copied: false, error: 'The glossary cannot be edited here.' };
     }
     const copy = await copyGlossaryRow({ glossary, source, client });
-    if (copy.copied) await this.revealPassage(copy.entry.uuid);
+    // The copy is made; a failed scroll must not report it as not copied.
+    if (copy.copied) {
+      await this.revealPassage(copy.entry.uuid).catch((cause) =>
+        console.error('Failed to reveal the copied glossary entry:', cause),
+      );
+    }
     return copy;
   };
 

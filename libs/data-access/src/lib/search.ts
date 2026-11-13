@@ -67,15 +67,11 @@ const escapeIlike = (input: string) =>
  * Passages are ranked by relevance when the search spans the corpus and left in
  * document order when it is scoped to one work.
  */
-export const searchEntities = async ({
-  client,
-  query,
-  workUuid,
-  toh,
-  types,
-  limit = DEFAULT_SEARCH_LIMIT,
-  source = DEFAULT_CONTENT_SOURCE,
-}: {
+export const searchEntities = async (
+  args: EntitySearchArgs,
+): Promise<EntitySearchResult[]> => (await trySearchEntities(args)) ?? [];
+
+type EntitySearchArgs = {
   client: DataClient;
   query: string;
   workUuid?: string;
@@ -83,7 +79,18 @@ export const searchEntities = async ({
   types?: EntitySearchResultType[];
   limit?: number;
   source?: ContentSource;
-}): Promise<EntitySearchResult[]> => {
+};
+
+/** As `searchEntities`, but `null` when the search fails or is refused. */
+export const trySearchEntities = async ({
+  client,
+  query,
+  workUuid,
+  toh,
+  types,
+  limit = DEFAULT_SEARCH_LIMIT,
+  source = DEFAULT_CONTENT_SOURCE,
+}: EntitySearchArgs): Promise<EntitySearchResult[] | null> => {
   const trimmed = query.trim();
   if (!trimmed) {
     return [];
@@ -101,7 +108,7 @@ export const searchEntities = async ({
 
   if (error) {
     console.error(`Failed to search entities: ${error.message}`);
-    return [];
+    return null;
   }
 
   return ((data ?? []) as EntitySearchResultDTO[]).map(

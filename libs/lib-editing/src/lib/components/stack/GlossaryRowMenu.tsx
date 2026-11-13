@@ -228,13 +228,11 @@ export const GlossaryRowMenu = ({
       </DropdownMenu>
 
       <GlossaryCommentDialog comments={comments} />
-      {copying && (
-        <GlossaryCopyDialog
-          controller={controller}
-          open
-          onOpenChange={setCopying}
-        />
-      )}
+      <GlossaryCopyDialog
+        controller={controller}
+        open={copying}
+        onOpenChange={setCopying}
+      />
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && close()}>
         {deleting && (

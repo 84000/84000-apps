@@ -778,7 +778,10 @@ definition, rend, matching mode and the same names rows, so the source is not
 written. A name owned by another authority cannot be linked, and is written
 anew with the same text. The copy is read around to find its place, put into
 the spine between its loaded neighbours (renumbering the rows after it) and
-revealed; outside the loaded window the feed reaches it.
+revealed; outside the loaded window the feed reaches it. The search matches
+whole words, and also definitions, as `search_entities` does. A fallback name
+the save cannot accept (no language, say) refuses the whole copy, with the
+planner's reason.
 
 What later glossary work builds on:
 
@@ -788,7 +791,9 @@ What later glossary work builds on:
   the guard for `saveGlossaryEntry`.
 - **Creating an entry.** An item in `GlossaryRowMenu`, beside "Delete", that
   puts a row into the spine. That row has no entry and no sort yet.
-- **Copying an entry from another work.** `placeGlossaryRow` puts a saved
-  entry's row into the spine in glossary order.
+- **Placing a new entry's row.** `placeGlossaryRow` (`glossary-place.ts`)
+  puts the row of an entry just saved into the spine in glossary order, and
+  returns false when its neighbours are outside the window; the caller then
+  reveals it.
 - **Reviewing and deleting instances.** "Passages ›" in the footer opens the
   shared passages dialog, which this stack does not change.

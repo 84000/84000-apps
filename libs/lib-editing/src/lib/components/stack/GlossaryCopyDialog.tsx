@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   createBrowserClient,
   getGlossaryEntriesOfAuthority,
@@ -10,6 +10,7 @@ import {
 } from '@eightyfourthousand/data-access';
 import {
   Button,
+  DebounceLevel,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -22,9 +23,6 @@ import { htmlToText, parseToh } from '@eightyfourthousand/lib-utils';
 
 import type { StackController } from './StackController';
 import { GlossaryRowNames } from './glossary-row';
-
-/** How long typing pauses before the search runs. */
-const SEARCH_DELAY_MS = 300;
 
 /** Characters of a definition a result shows. */
 const DEFINITION_START = 160;
@@ -75,7 +73,8 @@ export const GlossaryCopyDialog = ({
   const [read, setRead] = useState<ExistingRead | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const workUuid = controller.getGlossary()?.work.workUuid;
+  const latest = useRef('');
+  const workUuid = open ? controller.getGlossary()?.work.workUuid : undefined;
 
   const trimmed = query.trim();
   // Shown for the query typed, never an earlier one's answer.
@@ -87,23 +86,37 @@ export const GlossaryCopyDialog = ({
         ? { status: 'found', query: trimmed, results: answer.results }
         : { status: 'error', query: trimmed };
 
-  useEffect(() => {
-    if (!open || !workUuid || !trimmed) return;
-    let current = true;
-    const timer = setTimeout(() => {
+  /** Leave the chosen entry for the results. */
+  const back = useCallback(() => {
+    setChosen(null);
+    setRead(null);
+    setError(null);
+  }, []);
+
+  // The input waits for typing to pause; a later query's answer replaces it.
+  const changeQuery = useCallback(
+    (next: string) => {
+      setQuery(next);
+      back();
+      const typed = next.trim();
+      latest.current = typed;
+      if (!workUuid || !typed) return;
       searchGlossaryEntriesToCopy({
         client: createBrowserClient(),
         workUuid,
-        query: trimmed,
-      }).then((results) => {
-        if (current) setAnswer({ query: trimmed, results });
-      });
-    }, SEARCH_DELAY_MS);
-    return () => {
-      current = false;
-      clearTimeout(timer);
-    };
-  }, [open, trimmed, workUuid]);
+        query: typed,
+      })
+        .catch((cause) => {
+          console.error('Failed to search other works:', cause);
+          return null;
+        })
+        .then((results) => {
+          // An earlier query's late answer must not replace a later one's.
+          if (latest.current === typed) setAnswer({ query: typed, results });
+        });
+    },
+    [workUuid, back],
+  );
 
   const authority = chosen?.entry.authorityUuid;
   const existing: Existing | null = !authority
@@ -121,9 +134,14 @@ export const GlossaryCopyDialog = ({
       client: createBrowserClient(),
       workUuid,
       authorityUuid: authority,
-    }).then((entries) => {
-      if (current) setRead({ authority, entries });
-    });
+    })
+      .catch((cause) => {
+        console.error('Failed to read entries of the authority:', cause);
+        return null;
+      })
+      .then((entries) => {
+        if (current) setRead({ authority, entries });
+      });
     return () => {
       current = false;
     };
@@ -131,6 +149,7 @@ export const GlossaryCopyDialog = ({
 
   const reset = useCallback(() => {
     setQuery('');
+    latest.current = '';
     setAnswer(null);
     setChosen(null);
     setRead(null);
@@ -142,12 +161,6 @@ export const GlossaryCopyDialog = ({
     reset();
     onOpenChange(false);
   }, [pending, reset, onOpenChange]);
-
-  const back = useCallback(() => {
-    setChosen(null);
-    setRead(null);
-    setError(null);
-  }, []);
 
   const handleCopy = useCallback(async () => {
     if (!chosen) return;
@@ -175,20 +188,29 @@ export const GlossaryCopyDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      {open && (
-        <DialogContent
-          className="max-w-readable w-full font-serif"
-          showCloseButton={false}
-        >
-          <DialogHeader>
-            <DialogTitle>Copy from Another Work</DialogTitle>
-            <DialogDescription>
-              {chosen
-                ? 'The copy is a new entry in this work, with the same authority, names and definition. The entry it is copied from does not change.'
-                : 'Search the glossaries of other works by English, Tibetan or Sanskrit name.'}
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent
+        className="max-w-readable w-full font-serif"
+        showCloseButton={false}
+      >
+        <DialogHeader>
+          <DialogTitle>Copy from Another Work</DialogTitle>
+          <DialogDescription>
+            {chosen
+              ? 'The copy is a new entry in this work, with the same authority, names and definition. The entry it is copied from does not change.'
+              : 'Search the glossaries of other works by English, Tibetan or Sanskrit name.'}
+          </DialogDescription>
+        </DialogHeader>
 
+        <div className="flex flex-col gap-3">
+          <Input
+            autoFocus
+            disabled={pending}
+            delay={DebounceLevel.MEDIUM}
+            aria-label="Search other works"
+            placeholder="Whole words of an English, Tibetan or Sanskrit name"
+            value={query}
+            onChange={(event) => changeQuery(event.target.value)}
+          />
           {chosen ? (
             <div className="flex flex-col gap-3" data-glossary-copy-chosen="">
               <GlossaryCopySourceCard source={chosen} />
@@ -203,43 +225,30 @@ export const GlossaryCopyDialog = ({
               )}
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <Input
-                autoFocus
-                aria-label="Search other works"
-                placeholder="Search other works"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <GlossaryCopyResults search={search} onChoose={setChosen} />
-            </div>
+            <GlossaryCopyResults search={search} onChoose={setChosen} />
           )}
+        </div>
 
-          <DialogFooter>
-            {chosen ? (
-              <>
-                <Button variant="outline" disabled={pending} onClick={back}>
-                  Back
-                </Button>
-                <Button
-                  disabled={pending || existing?.status === 'reading'}
-                  onClick={handleCopy}
-                >
-                  {pending
-                    ? 'Copying…'
-                    : already.length
-                      ? 'Copy anyway'
-                      : 'Copy'}
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" onClick={close}>
-                Cancel
+        <DialogFooter>
+          {chosen ? (
+            <>
+              <Button variant="outline" disabled={pending} onClick={back}>
+                Back
               </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      )}
+              <Button
+                disabled={pending || existing?.status === 'reading'}
+                onClick={handleCopy}
+              >
+                {pending ? 'Copying…' : already.length ? 'Copy anyway' : 'Copy'}
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={close}>
+              Cancel
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   );
 };
@@ -258,7 +267,9 @@ const GlossaryCopySourceCard = ({ source }: { source: GlossaryCopySource }) => {
       <GlossaryRowNames entry={entry} />
       {definition && <p className="text-sm leading-relaxed">{definition}</p>}
       {headword && (
-        <p className="text-muted-foreground text-xs">Authority: {headword}</p>
+        <p className="text-muted-foreground text-xs">
+          Authority: <span>{headword}</span>
+        </p>
       )}
     </div>
   );
@@ -335,7 +346,7 @@ const GlossaryCopyExisting = ({
   return (
     <div
       role="status"
-      className="flex flex-col gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+      className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-sm"
       data-glossary-copy-existing=""
     >
       <p className="font-medium">

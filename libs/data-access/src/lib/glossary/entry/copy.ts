@@ -1,5 +1,5 @@
 import { inBatches } from '../../passage/in-batches';
-import { searchEntities } from '../../search';
+import { trySearchEntities } from '../../search';
 import type { DataClient } from '../../types';
 import { getGlossaryEntries } from './read';
 import { createGlossaryEntry } from './save';
@@ -54,8 +54,9 @@ const readHeadwords = async (
 /**
  * Entries of other works whose names match `query`, to copy into `workUuid`,
  * in the order `search_entities` ranks them (draft, library-wide). Entries of
- * `workUuid` are left out, so fewer than `limit` may come back. `null` when
- * an entry or headword read fails.
+ * `workUuid` are left out, so fewer than `limit` may come back, as are those
+ * of a work whose entries cannot be read. `null` when the search, every entry
+ * read or the headword read fails.
  */
 export const searchGlossaryEntriesToCopy = async ({
   client,
@@ -68,15 +69,15 @@ export const searchGlossaryEntriesToCopy = async ({
   query: string;
   limit?: number;
 }): Promise<GlossaryCopySource[] | null> => {
-  const hits = (
-    await searchEntities({
-      client,
-      query,
-      types: ['glossary'],
-      limit,
-      source: 'draft',
-    })
-  ).filter((hit) => hit.workUuid && hit.workUuid !== workUuid);
+  const found = await trySearchEntities({
+    client,
+    query,
+    types: ['glossary'],
+    limit,
+    source: 'draft',
+  });
+  if (!found) return null;
+  const hits = found.filter((hit) => hit.workUuid && hit.workUuid !== workUuid);
   if (!hits.length) return [];
 
   const byWork = new Map<string, string[]>();
@@ -90,7 +91,8 @@ export const searchGlossaryEntriesToCopy = async ({
       getGlossaryEntries({ client, workUuid: work, uuids }),
     ),
   );
-  if (reads.some((read) => read === null)) return null;
+  // A work whose entries cannot be read drops out of the results.
+  if (reads.every((read) => read === null)) return null;
   const entries = new Map(
     reads.flatMap((read) => (read ?? []).map((e) => [e.uuid, e] as const)),
   );

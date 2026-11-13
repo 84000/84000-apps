@@ -281,4 +281,78 @@ describeLive('copying a glossary entry between works (live)', () => {
     });
     expect(read).toEqual({ status: 'found', entry: source });
   });
+
+  it('writes a name owned by another authority anew, with the same text', async () => {
+    const from = await work();
+    const authorityUuid = await authority();
+    const other = await authority();
+    const own = entryOf(
+      await createGlossaryEntry({
+        client: editor,
+        workUuid: from,
+        entry: {
+          authorityUuid,
+          definition: '<p>Owned elsewhere.</p>',
+          definitionRend: null,
+          glossMode: null,
+          names: [
+            {
+              language: 'en',
+              content: `Owned ${word}`,
+              contentTransformed: null,
+              termType: 'translationMain',
+              attestation: null,
+            },
+            {
+              language: 'Sa-Ltn',
+              content: `owned${tag}`,
+              contentTransformed: null,
+              termType: null,
+              attestation: 'attestedDictionary',
+            },
+          ],
+        },
+      }),
+    );
+    const moved = own.names[1];
+    check(
+      (
+        await db
+          .from('names')
+          .update({ authority_uuid: other })
+          .eq('uuid', moved.nameUuid)
+      ).error,
+      'move name',
+    );
+    const read = await getGlossaryEntry({
+      client: editor,
+      workUuid: from,
+      uuid: own.uuid,
+    });
+    if (read.status !== 'found') throw new Error('source not read back');
+
+    const copy = entryOf(
+      await copyGlossaryEntry({
+        client: editor,
+        workUuid: target,
+        source: read.entry,
+      }),
+    );
+
+    const [root, sanskrit] = copy.names;
+    expect(root.nameUuid).toBe(own.names[0].nameUuid);
+    expect(sanskrit).toMatchObject({
+      language: 'Sa-Ltn',
+      content: `owned${tag}`,
+      attestation: 'attestedDictionary',
+      nameAuthorityUuid: authorityUuid,
+    });
+    expect(sanskrit.nameUuid).not.toBe(moved.nameUuid);
+    const { data } = await db
+      .from('names')
+      .select('authority_uuid')
+      .eq('uuid', moved.nameUuid)
+      .single();
+    expect(data).toEqual({ authority_uuid: other });
+  });
 });

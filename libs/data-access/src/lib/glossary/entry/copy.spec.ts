@@ -99,9 +99,21 @@ describe('searchGlossaryEntriesToCopy', () => {
     names: [],
   });
 
-  const clientWith = (hits: unknown[]) => {
+  const failure = { message: 'refused' };
+
+  const clientWith = (
+    hits: unknown[] | null,
+    { failingWorks = [] as string[] } = {},
+  ) => {
     const rpc = jest.fn(async (name: string, args: Record<string, unknown>) => {
-      if (name === 'search_entities') return { data: hits, error: null };
+      if (name === 'search_entities') {
+        return hits
+          ? { data: hits, error: null }
+          : { data: null, error: failure };
+      }
+      if (failingWorks.includes(args['p_work_uuid'] as string)) {
+        return { data: null, error: failure };
+      }
       const uuids = args['p_uuids'] as string[];
       return {
         data: uuids.map((u) => dto(u, args['p_work_uuid'] as string)),
@@ -172,5 +184,42 @@ describe('searchGlossaryEntriesToCopy', () => {
       await searchGlossaryEntriesToCopy({ client, workUuid: HERE, query: 'x' }),
     ).toEqual([]);
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('is null when the search is refused, not an empty list', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { client } = clientWith(null);
+
+    expect(
+      await searchGlossaryEntriesToCopy({ client, workUuid: HERE, query: 'x' }),
+    ).toBeNull();
+  });
+
+  it("drops a work whose entries can't be read, keeping the rest", async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const ELSEWHERE = '10000000-0000-4000-8000-000000000003';
+    const { client } = clientWith(
+      [hit('e2', THERE, 'g.7'), hit('e3', ELSEWHERE, 'g.2')],
+      { failingWorks: [ELSEWHERE] },
+    );
+
+    const found = await searchGlossaryEntriesToCopy({
+      client,
+      workUuid: HERE,
+      query: 'lotus',
+    });
+
+    expect(found?.map((source) => source.entry.uuid)).toEqual(['e2']);
+  });
+
+  it("is null when no work's entries can be read", async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { client } = clientWith([hit('e2', THERE, 'g.7')], {
+      failingWorks: [THERE],
+    });
+
+    expect(
+      await searchGlossaryEntriesToCopy({ client, workUuid: HERE, query: 'x' }),
+    ).toBeNull();
   });
 });
