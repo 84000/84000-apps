@@ -457,6 +457,16 @@ export const GlossaryEntryPanel = ({
       <DialogContent
         className="max-w-readable"
         onOpenAutoFocus={(event) => event.preventDefault()}
+        onEscapeKeyDown={(event) => {
+          // Radix hears Escape before the name form does; there it
+          // cancels the name, not the dialog.
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[data-glossary-name-form]')
+          ) {
+            event.preventDefault();
+          }
+        }}
         data-glossary-entry-panel=""
       >
         <DialogHeader>
