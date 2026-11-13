@@ -1,6 +1,7 @@
 import type { DataClient } from '../../types';
-import { getWorkGlossaryTermsPage, type GlossaryTermNode } from '../pagination';
+import { getWorkGlossaryTermsPage } from '../pagination';
 import { escapeIlike } from '../search';
+import { unwrap } from './stored';
 
 /** An entry of the work that a new entry may duplicate. */
 export type GlossaryEntryMatch = {
@@ -21,14 +22,6 @@ export type GlossaryEntryMatch = {
 const ROWS = 100;
 /** Matches read back at most: each read numbers the whole work. */
 const MATCHES = 10;
-
-const unwrap = <T>(
-  { data, error }: { data: unknown; error: { message: string } | null },
-  what: string,
-): T[] => {
-  if (error) throw new Error(`${what}: ${error.message}`);
-  return (data ?? []) as T[];
-};
 
 /** The rows of the work with an English name equal to `english`, ignoring case. */
 const rowsNamed = async (
@@ -91,8 +84,8 @@ const rootsOf = async (
 /**
  * Entries of a work's draft glossary that a new entry may duplicate: those
  * with an English name equal to `english` ignoring case, and those linking
- * `authorityUuid`. Ordered by their number. Null when the read fails; never
- * writes.
+ * `authorityUuid`, at most ten, those with the name first. Ordered by their
+ * number. Null when a read fails; never writes.
  */
 export const findGlossaryEntryMatches = async ({
   client,
@@ -130,11 +123,12 @@ export const findGlossaryEntryMatches = async ({
           limit: 1,
           source: 'draft',
         });
-        return nodes.find((node) => node.uuid === uuid);
+        const term = nodes.find((node) => node.uuid === uuid);
+        if (!term) throw new Error(`numbering glossary entry ${uuid}`);
+        return term;
       }),
     );
     return terms
-      .filter((term): term is GlossaryTermNode => !!term)
       .sort((a, b) => a.termNumber - b.termNumber)
       .map((term) => ({
         uuid: term.uuid,
