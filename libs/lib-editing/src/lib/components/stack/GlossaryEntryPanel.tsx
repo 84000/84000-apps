@@ -29,6 +29,7 @@ import { PencilIcon, XIcon } from 'lucide-react';
 
 import { GlossaryAuthoritySearch } from '../shared/glossary/GlossaryAuthoritySearch';
 import { nameLanguageLabel } from '../shared/glossary/glossary-languages';
+import { GlossaryEntryNames } from './GlossaryEntryNames';
 import {
   GlossaryEntrySaveStatus,
   useGlossaryEntrySaves,
@@ -41,7 +42,7 @@ import {
   glossaryEntryPanelOf,
   useGlossaryEntryPanel,
 } from './glossary-entry-panel';
-import { englishNameOf, GlossaryRowNames } from './glossary-row';
+import { englishNameOf } from './glossary-row';
 import { renderGlossaryRow } from './glossary-work';
 
 type Choice = { value: string; label: string; explanation: string };
@@ -385,7 +386,7 @@ const GlossaryEntryPanelBody = ({
   return (
     <div className="flex flex-col" data-glossary-entry-panel-body="">
       <Section title="Names">
-        <GlossaryRowNames entry={entry} />
+        <GlossaryEntryNames entry={entry} saves={saves} readOnly={readOnly} />
       </Section>
 
       <Section title="Authority">

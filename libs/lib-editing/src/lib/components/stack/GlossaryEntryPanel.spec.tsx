@@ -27,6 +27,7 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   getGlossaryEntry: (args: unknown) => mockRead(args),
   getGlossaryAuthorities: (args: unknown) => mockAuthorities(args),
   searchGlossaryAuthorities: (args: unknown) => mockSearch(args),
+  getGlossaryEntrySharedNames: async () => new Set(),
 }));
 
 const authority = (uuid: string, headword: string): GlossaryAuthority => ({
