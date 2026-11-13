@@ -421,9 +421,17 @@ describe('GlossaryEntryPanel', () => {
     await open(controller);
     await choose('Append standard');
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Attestation of bodhicitta'), {
-        target: { value: 'attestedOther' },
+      fireEvent.keyDown(screen.getByLabelText('Attestation of bodhicitta'), {
+        key: 'Enter',
       });
+    });
+    await act(async () => {
+      fireEvent.keyDown(
+        screen.getByRole('option', { name: 'Attested Other' }),
+        {
+          key: 'Enter',
+        },
+      );
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /an alternative/ }));
@@ -609,12 +617,15 @@ describe('GlossaryEntryPanel', () => {
     expect(confirm.textContent).toContain('Indra');
     expect(confirm.textContent).toContain('Śakra');
     expect(confirm.textContent).toContain('definition readers see may change');
-    expect(screen.queryByLabelText('Search authorities')).toBeNull();
+    // The search stays, hidden, so cancelling returns to its results.
+    expect(
+      screen.getByLabelText('Search authorities').closest('[hidden]'),
+    ).not.toBeNull();
     expect(mockSave).not.toHaveBeenCalled();
     expect(
       within(confirm)
         .getAllByRole('button')
-        .map((button) => button.textContent),
+        .map((button) => button.getAttribute('aria-label')),
     ).toEqual(['Link', 'Cancel']);
     await act(async () => {
       fireEvent.click(within(confirm).getByRole('button', { name: 'Link' }));

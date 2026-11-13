@@ -122,6 +122,27 @@ const row = (content: string) =>
 const savedNames = (call = 0) =>
   mockSave.mock.calls[call][0].after.names as GlossaryEntryName[];
 
+/** Choose an attestation through its select, by keyboard. */
+const chooseAttestation = async (of: string, label: string) => {
+  await act(async () => {
+    fireEvent.keyDown(screen.getByLabelText(`Attestation of ${of}`), {
+      key: 'Enter',
+    });
+  });
+  await act(async () => {
+    fireEvent.keyDown(screen.getByRole('option', { name: label }), {
+      key: 'Enter',
+    });
+  });
+};
+
+beforeAll(() => {
+  // Radix Select reaches for these, which jsdom lacks.
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.releasePointerCapture = () => undefined;
+  Element.prototype.scrollIntoView = () => undefined;
+});
+
 beforeEach(() => {
   mockSave.mockReset();
   mockShared.mockReset();
@@ -364,18 +385,23 @@ describe('GlossaryEntryNames', () => {
     await setup();
     expect(screen.queryByLabelText('Attestation of Indra')).toBeNull();
     expect(screen.queryByLabelText('Attestation of lord of gods')).toBeNull();
-    const picker = screen.getByLabelText(
-      'Attestation of brgya byin',
-    ) as HTMLSelectElement;
-    expect(picker.value).toBe('attestedSource');
-    expect([...picker.options].map((option) => option.textContent)).toContain(
-      'No attestation',
-    );
+    const picker = screen.getByLabelText('Attestation of brgya byin');
+    expect(picker.textContent).toBe('Attested Source');
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Attestation of Śakra'), {
-        target: { value: 'reconstructedPhonetic' },
-      });
+      fireEvent.keyDown(picker, { key: 'Enter' });
     });
+    expect(
+      screen.getAllByRole('option').map((option) => option.textContent),
+    ).toContain('No attestation');
+    await act(async () => {
+      fireEvent.keyDown(
+        screen.getByRole('option', { name: 'No attestation' }),
+        {
+          key: 'Escape',
+        },
+      );
+    });
+    await chooseAttestation('Śakra', 'Reconstructed Phonetic');
     expect(savedNames().find((n) => n.content === 'Śakra')?.attestation).toBe(
       'reconstructedPhonetic',
     );
@@ -383,11 +409,7 @@ describe('GlossaryEntryNames', () => {
 
   it('clears an attestation back to none, saving it as null', async () => {
     await setup();
-    await act(async () => {
-      fireEvent.change(screen.getByLabelText('Attestation of brgya byin'), {
-        target: { value: '' },
-      });
-    });
+    await chooseAttestation('brgya byin', 'No attestation');
     expect(
       savedNames().find((n) => n.content === 'brgya byin')?.attestation,
     ).toBeNull();

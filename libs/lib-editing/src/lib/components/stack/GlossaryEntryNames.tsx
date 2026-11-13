@@ -8,7 +8,14 @@ import {
   GLOSSARY_ATTESTATIONS,
   type GlossaryEntry,
 } from '@eightyfourthousand/data-access';
-import { Button } from '@eightyfourthousand/design-system';
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@eightyfourthousand/design-system';
 import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 import { cn } from '@eightyfourthousand/lib-utils';
 import {
@@ -245,7 +252,8 @@ const NameWarnings = ({ warnings }: { warnings: string[] }) =>
     </ul>
   ) : null;
 
-const ATTESTATION_NONE = '';
+/** The select's value for no attestation, which Radix can't give as ''. */
+const ATTESTATION_NONE = 'none';
 
 const AttestationPicker = ({
   name,
@@ -258,22 +266,31 @@ const AttestationPicker = ({
 }) => {
   const value = name.attestation ?? ATTESTATION_NONE;
   const offered: string[] = [...GLOSSARY_ATTESTATIONS];
-  if (value && !offered.includes(value)) offered.push(value);
+  const stored = name.attestation;
+  if (stored && !offered.includes(stored)) offered.push(stored);
   return (
-    <select
-      aria-label={`Attestation of ${name.content}`}
+    <Select
       value={value}
       disabled={disabled}
-      onChange={(event) => onChange(event.target.value || null)}
-      className="border-input bg-background h-8 self-start rounded-md border px-2 text-xs"
+      onValueChange={(chosen) =>
+        onChange(chosen === ATTESTATION_NONE ? null : chosen)
+      }
     >
-      <option value={ATTESTATION_NONE}>No attestation</option>
-      {offered.map((attestation) => (
-        <option key={attestation} value={attestation}>
-          {formatAttestation(attestation)}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        aria-label={`Attestation of ${name.content}`}
+        className="w-56 self-start"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ATTESTATION_NONE}>No attestation</SelectItem>
+        {offered.map((attestation) => (
+          <SelectItem key={attestation} value={attestation}>
+            {formatAttestation(attestation)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
 
@@ -362,7 +379,7 @@ export const GlossaryEntryNames = ({
                 return (
                   <li
                     key={keyOf(name, index)}
-                    className="flex flex-col gap-1 py-2"
+                    className="flex flex-col gap-2 py-3"
                     data-glossary-name={name.content}
                   >
                     {isEditing ? (
@@ -384,7 +401,7 @@ export const GlossaryEntryNames = ({
                     ) : (
                       <>
                         <div className="flex min-h-10 items-center gap-2 text-sm">
-                          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+                          <span className="flex min-w-0 flex-wrap items-center gap-x-2">
                             <NameText name={name} />
                             {root && group.kind !== 'main' && (
                               <span className="text-muted-foreground text-xs">
@@ -419,6 +436,7 @@ export const GlossaryEntryNames = ({
                               size="icon"
                               variant="ghost"
                               aria-label={`Remove ${name.content}`}
+                              className="ml-auto"
                               disabled={disabled}
                               onClick={() => save(withoutName(names, name))}
                             >
@@ -478,7 +496,7 @@ export const GlossaryEntryNames = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="self-start"
+                  className="-ml-3 self-start"
                   disabled={disabled}
                   onClick={() => setEditing({ group: groupKey })}
                 >

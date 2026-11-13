@@ -89,6 +89,25 @@ describe('GlossaryEntryPanel and Escape', () => {
     expect(mockSave).not.toHaveBeenCalled();
   });
 
+  it('stops an authority search without closing the dialog', async () => {
+    await setup();
+    await act(async () => {
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Link another authority' }),
+      );
+    });
+    await act(async () => {
+      fireEvent.keyDown(screen.getByLabelText('Search authorities'), {
+        key: 'Escape',
+      });
+    });
+    expect(panel()).not.toBeNull();
+    expect(screen.queryByLabelText('Search authorities')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Link another authority' }),
+    ).toBeTruthy();
+  });
+
   it('closes the dialog on Escape elsewhere', async () => {
     await setup();
     await act(async () => {
