@@ -64,6 +64,13 @@ class FakeStack {
   getMeta = (uuid: string) => ({ uuid, label: 'g.1', type: 'glossary' });
   isReadOnly = () => this.readOnly;
   settleGlossaryEntry = jest.fn();
+  /** Whether the entry panel was already open when each focus happened. */
+  panelOpenAtFocus: boolean[] = [];
+  focusPassage = jest.fn((uuid: string) => {
+    void uuid;
+    this.panelOpenAtFocus.push(!!document.querySelector('[role=dialog]'));
+    return true;
+  });
 }
 
 const rect = { top: 0, left: 0, width: 10, height: 10 };
@@ -106,6 +113,15 @@ describe('[AC1] "Edit Entry" in the row label menu', () => {
     const panel = await screen.findByRole('dialog');
     expect(panel.textContent).toContain('second term');
     expect(panel.textContent).not.toContain('first term');
+  });
+
+  it('[AC1] focuses the row before the panel opens', async () => {
+    const { user, stack } = await mount(false, 'e2');
+    await user.click(screen.getByRole('menuitem', { name: /edit entry/i }));
+    await screen.findByRole('dialog');
+    expect(stack.focusPassage).toHaveBeenCalled();
+    expect(stack.focusPassage.mock.calls[0][0]).toBe('e2');
+    expect(stack.panelOpenAtFocus).not.toContain(true);
   });
 
   it('[AC1] closes the menu when it is chosen', async () => {

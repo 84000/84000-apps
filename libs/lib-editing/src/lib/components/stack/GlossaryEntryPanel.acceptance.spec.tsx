@@ -149,10 +149,6 @@ import {
 } from './GlossaryEntryPanel';
 import type { StackController } from './StackController';
 import { openGlossaryEntryPanel } from './glossary-entry-panel';
-import {
-  GlossaryTibetanProvider,
-  type TibetanToWylie,
-} from './glossary-tibetan';
 
 // ---------------------------------------------------------------- fixtures
 
@@ -263,11 +259,18 @@ const authority = (
   ...o,
 });
 
-/** Script containing ཁ gets a warning; every script gets a `w(…)` Wylie. */
-const toWylie: TibetanToWylie = jest.fn((script: string) => ({
-  ewts: `w(${script})`,
-  warnings: script.includes('ཁ') ? ['check the stack near ཁ'] : [],
-}));
+/**
+ * Real lib-tibetan output, `toEwtsWithWarnings(script, { finalShad: 'drop' })`,
+ * as run when this was written.
+ */
+const KA_KA = { script: 'ཀཀ', wylie: 'kaka' };
+const GA_GA = { script: 'གག', wylie: 'gag' };
+/** A letter with no EWTS form: converts with a warning. */
+const WARNED = {
+  script: 'ཀ\u0FD0',
+  wylie: 'ka\\u0FD0',
+  warning: 'U+0FD0 has no EWTS form; it was written as \\u0FD0.',
+};
 
 const settle = () =>
   act(async () => {
@@ -276,7 +279,6 @@ const settle = () =>
 
 type Options = {
   readOnly?: boolean;
-  tibetan?: boolean;
   shared?: string[];
   authorities?: GlossaryAuthority[];
 };
@@ -294,13 +296,7 @@ const start = async (entry: GlossaryEntry, o: Options = {}) => {
   );
   const stack = new FakeStack([entry], o.readOnly);
   const controller = asController(stack);
-  const ui = (
-    <GlossaryTibetanProvider toWylie={toWylie}>
-      <GlossaryEntryPanel controller={controller} />
-    </GlossaryTibetanProvider>
-  );
-  const bare = <GlossaryEntryPanel controller={controller} />;
-  const view = render(o.tibetan === false ? bare : ui);
+  const view = render(<GlossaryEntryPanel controller={controller} />);
   await act(async () => {
     openGlossaryEntryPanel(controller, entry.uuid);
   });
@@ -367,7 +363,6 @@ beforeEach(() => {
   mockApi.authorities = new Map();
   mockApi.results = [];
   mockApi.counter = 0;
-  (toWylie as jest.Mock).mockClear();
 });
 
 const BASE = () => [
@@ -675,10 +670,12 @@ describe('[AC5] adding and removing names', () => {
     const { user } = await start(makeEntry(BASE()));
     const scope = section('Tibetan');
     await user.click(button(scope, /add/i));
-    await user.type(within(scope).getByRole('textbox'), 'ཀཀ');
+    await user.type(within(scope).getByRole('textbox'), KA_KA.script);
     await user.click(button(scope, /^add$/i));
     await settle();
-    expect(find(savedNames(), 'w(ཀཀ)')).toMatchObject({ language: 'Bo-Ltn' });
+    expect(find(savedNames(), KA_KA.wylie)).toMatchObject({
+      language: 'Bo-Ltn',
+    });
   });
 
   it.each([
@@ -753,10 +750,9 @@ describe('[AC6] Tibetan entered as script', () => {
     const { user } = await start(makeEntry(BASE()));
     const scope = section('Tibetan');
     await user.click(button(scope, /add/i));
-    await user.type(within(scope).getByRole('textbox'), 'ཀཀ');
+    await user.type(within(scope).getByRole('textbox'), KA_KA.script);
     await settle();
-    expect(toWylie).toHaveBeenCalledWith(expect.stringContaining('ཀཀ'));
-    expect(scope.textContent).toContain('w(ཀཀ)');
+    expect(scope.textContent).toContain(KA_KA.wylie);
     expect(writes()).toEqual([]);
   });
 
@@ -764,28 +760,28 @@ describe('[AC6] Tibetan entered as script', () => {
     const { user } = await start(makeEntry(BASE()));
     const scope = section('Tibetan');
     await user.click(button(scope, /add/i));
-    await user.type(within(scope).getByRole('textbox'), 'ཀཀ');
+    await user.type(within(scope).getByRole('textbox'), KA_KA.script);
     await user.click(button(scope, /^add$/i));
     await settle();
-    expect(find(savedNames(), 'w(ཀཀ)')).toMatchObject({
+    expect(find(savedNames(), KA_KA.wylie)).toMatchObject({
       language: 'Bo-Ltn',
-      contentTransformed: 'ཀཀ',
+      contentTransformed: KA_KA.script,
     });
-    const item = itemOf('w(ཀཀ)', section('Tibetan'));
-    expect(item.textContent).toContain('ཀཀ');
+    const item = itemOf(KA_KA.wylie, section('Tibetan'));
+    expect(item.textContent).toContain(KA_KA.script);
   });
 
   it('[AC6] shows conversion warnings next to the name, and still saves it', async () => {
     const { user } = await start(makeEntry(BASE()));
     const scope = section('Tibetan');
     await user.click(button(scope, /add/i));
-    await user.type(within(scope).getByRole('textbox'), 'ཁཁ');
+    await user.type(within(scope).getByRole('textbox'), WARNED.script);
     await settle();
-    expect(scope.textContent).toContain('check the stack near ཁ');
+    expect(scope.textContent).toContain(WARNED.warning);
     await user.click(button(scope, /^add$/i));
     await settle();
-    expect(find(savedNames(), 'w(ཁཁ)')).toMatchObject({
-      contentTransformed: 'ཁཁ',
+    expect(find(savedNames(), WARNED.wylie)).toMatchObject({
+      contentTransformed: WARNED.script,
     });
   });
 
@@ -793,9 +789,9 @@ describe('[AC6] Tibetan entered as script', () => {
     const { user } = await start(makeEntry(BASE()));
     const scope = section('Tibetan');
     await user.click(button(scope, /add/i));
-    await user.type(within(scope).getByRole('textbox'), 'ཀཀ');
+    await user.type(within(scope).getByRole('textbox'), KA_KA.script);
     await settle();
-    expect(scope.textContent).not.toContain('check the stack');
+    expect(scope.textContent).not.toContain(WARNED.warning);
   });
 
   it('[AC6] regenerates the Wylie when a Tibetan name is edited', async () => {
@@ -804,14 +800,14 @@ describe('[AC6] Tibetan entered as script', () => {
     await user.click(button(itemOf('byang chub sems', scope), /edit/i));
     const input = within(scope).getByRole('textbox');
     await user.clear(input);
-    await user.type(input, 'གག');
+    await user.type(input, GA_GA.script);
     await settle();
-    expect(scope.textContent).toContain('w(གག)');
+    expect(scope.textContent).toContain(GA_GA.wylie);
     await user.click(button(scope, /save/i));
     await settle();
-    expect(find(savedNames(), 'w(གག)')).toMatchObject({
+    expect(find(savedNames(), GA_GA.wylie)).toMatchObject({
       language: 'Bo-Ltn',
-      contentTransformed: 'གག',
+      contentTransformed: GA_GA.script,
     });
     expect(find(savedNames(), 'byang chub sems')).toBeUndefined();
   });
@@ -1542,7 +1538,7 @@ describe('[AC19] round trip', () => {
     await settle();
     const tib = section('Tibetan');
     await user.click(button(tib, /add/i));
-    await user.type(within(tib).getByRole('textbox'), 'ཀཀ');
+    await user.type(within(tib).getByRole('textbox'), KA_KA.script);
     await user.click(button(tib, /^add$/i));
     await settle();
 
@@ -1561,7 +1557,9 @@ describe('[AC19] round trip', () => {
     expect(section('English alternatives').textContent).toContain('rt alt');
     expect(section('Pali').textContent).toContain('rt pi');
     expect(section('Chinese').textContent).toContain('rt zh');
-    expect(itemOf('w(ཀཀ)', section('Tibetan')).textContent).toContain('ཀཀ');
+    expect(itemOf(KA_KA.wylie, section('Tibetan')).textContent).toContain(
+      KA_KA.script,
+    );
     expect(
       (
         within(itemOf('rt sa', section('Sanskrit'))).getByRole(
