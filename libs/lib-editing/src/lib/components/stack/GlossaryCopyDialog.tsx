@@ -319,7 +319,7 @@ const GlossaryCopyResults = ({
         <li key={source.entry.uuid}>
           <button
             type="button"
-            className="hover:bg-accent focus-visible:bg-accent w-full rounded-md p-2 text-left outline-none"
+            className="hover:bg-muted focus-visible:bg-muted w-full rounded-md p-2 text-left outline-none"
             onClick={() => onChoose(source)}
           >
             <GlossaryCopySourceCard source={source} />

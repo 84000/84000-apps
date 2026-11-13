@@ -75,12 +75,12 @@ export const AuthorityNameLabel = ({
 }: {
   name: GlossaryAuthorityName;
 }) => (
-  <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
-    <span className="text-muted-foreground text-xs">
+  <span className="inline-flex flex-wrap items-baseline gap-x-2">
+    <span className="text-muted-foreground">
       {nameLanguageLabel(name.language)}
     </span>
     {tibetanScript(name) && (
-      <span className="font-tibetan">{tibetanScript(name)}</span>
+      <span className="font-tibetan text-base">{tibetanScript(name)}</span>
     )}
     <span className={name.language === 'en' ? '' : 'italic'}>
       {name.content}
@@ -227,11 +227,13 @@ const AuthoritySearchResults = ({
               type="button"
               disabled={disabled || linked}
               onClick={() => onSelect(authority)}
-              className="hover:bg-accent focus-visible:bg-accent flex w-full flex-col gap-1 rounded-md p-2 text-left text-sm disabled:cursor-default disabled:opacity-60"
+              className="hover:bg-muted focus-visible:bg-muted flex w-full flex-col gap-1 rounded-md p-2 text-left text-sm disabled:cursor-default disabled:opacity-60"
               data-authority-uuid={authority.uuid}
             >
               <span className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-semibold">{authority.headword}</span>
+                <span className="text-primary font-sans text-base font-bold">
+                  {authority.headword}
+                </span>
                 <span className="text-muted-foreground text-xs">
                   {nameLanguageLabel(authority.headwordLanguage)}
                 </span>
@@ -243,7 +245,7 @@ const AuthoritySearchResults = ({
                 <AuthorityNameLabel key={name.uuid} name={name} />
               ))}
               {authority.definition && (
-                <span className="text-muted-foreground text-xs leading-snug">
+                <span className="leading-relaxed">
                   {definitionStart(authority.definition)}
                 </span>
               )}
