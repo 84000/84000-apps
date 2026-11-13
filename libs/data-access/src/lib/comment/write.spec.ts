@@ -287,20 +287,35 @@ describe('createComment', () => {
     expect(state.ops).toEqual(['select:bibliographies', 'insert:comments']);
   });
 
-  it('rejects an entity type this build does not know', async () => {
+  it('checks a glossary entry against the glossaries table', async () => {
     const { client, state } = fakeClient();
 
     const result = await createComment({
       client,
       entityUuid: PASSAGE,
       entityType: 'glossary',
+      content: 'Is this the right term?',
+      userUuid: AUTHOR,
+    });
+
+    expect(result.comment).toMatchObject({ entityType: 'glossary' });
+    expect(state.ops).toEqual(['select:glossaries', 'insert:comments']);
+  });
+
+  it('rejects an entity type this build does not know', async () => {
+    const { client, state } = fakeClient();
+
+    const result = await createComment({
+      client,
+      entityUuid: PASSAGE,
+      entityType: 'authority',
       content: 'A note',
       userUuid: AUTHOR,
     });
 
     expect(result).toEqual({
       success: false,
-      error: 'Unknown comment entity type: glossary',
+      error: 'Unknown comment entity type: authority',
     });
     expect(state.ops).toEqual([]);
   });

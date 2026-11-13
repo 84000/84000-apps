@@ -9,6 +9,10 @@ const mockGetBibliographyComments = jest.fn<
   Promise<PassageComments[]>,
   unknown[]
 >();
+const mockGetGlossaryComments = jest.fn<
+  Promise<PassageComments[]>,
+  unknown[]
+>();
 const mockResolveComment = jest.fn();
 const mockReplyToComment = jest.fn();
 const mockDeleteComment = jest.fn();
@@ -26,9 +30,11 @@ jest.mock('resend', () => ({ Resend: class {} }));
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   createGraphQLClient: () => ({}),
   BIBLIOGRAPHY_COMMENTS_TYPE: 'bibliography',
+  GLOSSARY_COMMENTS_TYPE: 'glossary',
   getPassageComments: (...args: unknown[]) => mockGetPassageComments(...args),
   getBibliographyComments: (...args: unknown[]) =>
     mockGetBibliographyComments(...args),
+  getGlossaryComments: (...args: unknown[]) => mockGetGlossaryComments(...args),
   getCommentThread: jest.fn(),
   replyToComment: (...args: unknown[]) => mockReplyToComment(...args),
   resolveComment: (...args: unknown[]) => mockResolveComment(...args),
@@ -130,6 +136,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = jest.fn();
   mockGetPassageComments.mockResolvedValue([]);
   mockGetBibliographyComments.mockResolvedValue([]);
+  mockGetGlossaryComments.mockResolvedValue([]);
   mockDeleteComment.mockResolvedValue({ success: true, deletedUuids: [] });
   mockRequestEditorFor.mockResolvedValue(null);
   mockSetCommentTags.mockResolvedValue({ success: true });
@@ -374,6 +381,33 @@ describe('CommentsPanel', () => {
     expect(mockUpdatePanel).toHaveBeenCalledWith({
       name: 'right',
       state: { open: true, tab: 'bibliography', hash: 'b1' },
+    });
+  });
+
+  it('lists a glossary entry thread and navigates to the entry', async () => {
+    mockGetGlossaryComments.mockResolvedValue([
+      {
+        passageUuid: 'g1',
+        label: 'Indra',
+        type: 'glossary',
+        sort: 0,
+        anchored: [{ thread: thread('t1'), anchors: [] }],
+        unanchored: [],
+      },
+    ]);
+
+    render(<CommentsPanel workUuid="w1" />);
+    await user.click(await screen.findByText('body of t1'));
+
+    expect(mockGetGlossaryComments).toHaveBeenCalledWith(
+      expect.objectContaining({ workUuid: 'w1' }),
+    );
+    expect(screen.getByText('Glossary Indra')).toBeTruthy();
+    expect(screen.queryByText(/Unanchored/)).toBeNull();
+    expect(mockSetFocusedComment).toHaveBeenCalledWith('t1');
+    expect(mockUpdatePanel).toHaveBeenCalledWith({
+      name: 'right',
+      state: { open: true, tab: 'glossary', hash: 'g1' },
     });
   });
 

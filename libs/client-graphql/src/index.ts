@@ -93,6 +93,8 @@ export {
   type PassageComments,
   BIBLIOGRAPHY_COMMENTS_TYPE,
   getBibliographyComments,
+  GLOSSARY_COMMENTS_TYPE,
+  getGlossaryComments,
   findWorkPassages,
 } from './lib/functions';
 

@@ -118,6 +118,31 @@ describe('orderThreads', () => {
     ]);
   });
 
+  it('lists a glossary entry thread as anchored to its entry', () => {
+    const { anchored, unanchored } = orderThreads(
+      [],
+      [
+        passage({
+          uuid: 'g1',
+          sort: 0,
+          label: 'Indra',
+          type: 'glossary',
+          anchored: [{ thread: thread('entry'), anchors: [] }],
+        }),
+      ],
+    );
+
+    expect(unanchored).toEqual([]);
+    expect(anchored).toEqual([
+      expect.objectContaining({
+        passageUuid: 'g1',
+        passageLabel: 'Indra',
+        passageType: 'glossary',
+        anchors: [],
+      }),
+    ]);
+  });
+
   it('lists a thread once however many anchors carry it, collecting them all', () => {
     // A selection crossing a passage boundary is one row per passage, so the
     // same thread comes back under both.

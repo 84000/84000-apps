@@ -759,6 +759,16 @@ entry that no longer exists. A row whose entry was deleted elsewhere shows that
 in place of a conflict, with "Remove it", which does the same without the
 request, and "Discard my edit".
 
+The label menu also holds the comment entry (`GlossaryRowComments`): "See
+comments" when the entry has a thread, which opens it in the comments panel, and
+"Add comment" otherwise, which asks for the first comment in a dialog. Which
+entries have threads is read once for the work, and again when a comment is
+written (`Work.glossaryComments`), never per row or per menu open. An entry has
+no text for a thread to point at, so its threads are listed in the panel under
+"Glossary <name>" and are never unanchored; clicking one opens the entry in the
+Glossary tab. A thread outlives a deleted entry in the table but is no longer
+listed.
+
 What later glossary work builds on:
 
 - **Names, attestations, alternatives, matching mode and authority.** The
@@ -768,7 +778,5 @@ What later glossary work builds on:
 - **Creating an entry, and copying one from another work.** Items in
   `GlossaryRowMenu`, beside "Delete", that put a row into the spine. That row
   has no entry and no sort yet.
-- **Comments.** The row's footer, beside "Passages ›", and the same actions
-  area of the header.
 - **Reviewing and deleting instances.** "Passages ›" in the footer opens the
   shared passages dialog, which this stack does not change.

@@ -6,8 +6,10 @@ import {
   deleteComment,
   getBibliographyComments,
   getCommentThread,
+  getGlossaryComments,
   getPassageComments,
   getTaggedComments,
+  GLOSSARY_COMMENTS_TYPE,
   replyToComment,
   resolveComment,
   setCommentTags,
@@ -66,21 +68,23 @@ const tagsIn = (passages: PassageComments[]): string[] => {
 };
 
 /** How a thread's heading names where it sits. */
-const placeLabel = (label?: string, type?: string) =>
-  type === BIBLIOGRAPHY_COMMENTS_TYPE
-    ? `Bibliography${label ? ` ${label}` : ''}`
-    : label;
+const placeLabel = (label?: string, type?: string) => {
+  if (type === BIBLIOGRAPHY_COMMENTS_TYPE) {
+    return `Bibliography${label ? ` ${label}` : ''}`;
+  }
+  if (type === GLOSSARY_COMMENTS_TYPE) {
+    return `Glossary${label ? ` ${label}` : ''}`;
+  }
+  return label;
+};
 
 /**
- * Comment threads for the passages on screen and the work's bibliography,
- * beside the text they annotate, or, filtered by a tag, every thread in the
- * work carrying it.
+ * Comment threads for the passages on screen and the work's bibliography and
+ * glossary entries, beside the text they annotate, or, filtered by a tag,
+ * every thread in the work carrying it.
  *
  * Editor-only. Comments are draft-only working material and never reach a
  * published version, so a reader has nothing to read here.
- *
- * The store was shaped for glossary entries too, so this reads a set of
- * entities rather than the body specifically.
  */
 export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const {
@@ -94,6 +98,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const passageUuids = useVisiblePassageUuids();
   const [passages, setPassages] = useState<PassageComments[]>([]);
   const [bibliography, setBibliography] = useState<PassageComments[]>([]);
+  const [glossary, setGlossary] = useState<PassageComments[]>([]);
   const [loading, setLoading] = useState(true);
   const [showResolved, setShowResolved] = useState(false);
   const [filterTag, setFilterTag] = useState(initialFilterTag);
@@ -191,8 +196,22 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
     };
   }, [client, workUuid, readCount, commentsRevision]);
 
+  // Every glossary entry thread, whatever is in view: few entries carry one.
+  useEffect(() => {
+    let current = true;
+
+    (async () => {
+      const read = await getGlossaryComments({ client, workUuid });
+      if (current) setGlossary(read);
+    })();
+
+    return () => {
+      current = false;
+    };
+  }, [client, workUuid, readCount, commentsRevision]);
+
   const { anchored, unanchored } = useMemo(() => {
-    const all = orderThreads(passages, bibliography);
+    const all = orderThreads(passages, [...bibliography, ...glossary]);
     const isTagged = ({ thread }: PanelThread) =>
       !!taggedThreads?.threadUuids.has(thread.uuid);
     const ordered = filterTag
@@ -226,7 +245,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         ({ thread }) => !pendingUuids.has(thread.uuid),
       ),
     };
-  }, [passages, bibliography, taggedThreads, filterTag]);
+  }, [passages, bibliography, glossary, taggedThreads, filterTag]);
 
   const resolvedCount = useMemo(
     () =>
@@ -346,6 +365,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
         if (!branch) return;
         setPassages((prev) => prev.map((p) => graftBranch(p, branch)));
         setBibliography((prev) => prev.map((p) => graftBranch(p, branch)));
+        setGlossary((prev) => prev.map((p) => graftBranch(p, branch)));
       },
     }),
     [client, reload, unsetAnchors],
@@ -358,8 +378,13 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
       // The first anchor by document position wins. A thread may be anchored in
       // several places, and the earliest is where the discussion started.
       const entry = anchored.find(({ thread }) => thread.uuid === uuid);
-      const anchor = entry?.anchors[0];
-      if (!anchor) return;
+      // A glossary entry has no text to anchor a thread, so the entry is it.
+      const hash =
+        entry?.anchors[0]?.passageUuid ??
+        (entry?.passageType === GLOSSARY_COMMENTS_TYPE
+          ? entry.passageUuid
+          : undefined);
+      if (!hash) return;
 
       // Navigate rather than scroll. The passage may be in a tab that is not
       // showing — the front matter while the translation is open — and the
@@ -370,7 +395,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
       const { panel, tab } = locationForPassageType(entry?.passageType);
       updatePanel({
         name: panel,
-        state: { open: true, tab, hash: anchor.passageUuid },
+        state: { open: true, tab, hash },
       });
     },
     [anchored, setFocusedComment, updatePanel],
@@ -381,7 +406,7 @@ export const CommentsPanel = ({ workUuid }: { workUuid: string }) => {
   const filterSuggestions = [
     ...new Set([
       ...COMMENT_TAG_SUGGESTIONS,
-      ...tagsIn([...passages, ...bibliography]),
+      ...tagsIn([...passages, ...bibliography, ...glossary]),
     ]),
   ];
 

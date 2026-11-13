@@ -1,5 +1,6 @@
 """
-A comment thread on a passage or bibliography entry, or one reply within it.
+A comment thread on a passage, bibliography entry or glossary entry, or one
+reply within it.
 
 Carries no text range. The range a comment refers to lives on the mark
 anchoring it, which is what places a thread: a thread's `entityUuid` records
@@ -252,18 +253,50 @@ extend type Work {
 }
 
 """
+One glossary entry's comment threads.
+
+An entry has no text for a thread to point at, so every thread written on it
+belongs to the entry itself.
+"""
+type GlossaryEntryComments {
+  """
+  The glossary entry
+  """
+  uuid: ID!
+
+  """
+  The entry's English name
+  """
+  label: String
+
+  """
+  The entry's threads. Roots only, replies nested.
+  """
+  comments: [Comment!]!
+}
+
+extend type Work {
+  """
+  The glossary entries that carry comment threads. Empty for a `published`
+  content source.
+  """
+  glossaryComments: [GlossaryEntryComments!]!
+}
+
+"""
 What a client sends to start a thread. A reply carries no scope of its own —
 `replyToComment` inherits its parent's, so a reply cannot be filed under an
 entity its thread does not belong to.
 """
 input CreateCommentInput {
   """
-  The entity the thread hangs off: a passage or bibliography row uuid
+  The entity the thread hangs off: a passage, bibliography row or glossary
+  entry uuid
   """
   entityUuid: ID!
 
   """
-  What kind of entity that is: `passage` or `bibliography`.
+  What kind of entity that is: `passage`, `bibliography` or `glossary`.
   """
   entityType: String!
 
