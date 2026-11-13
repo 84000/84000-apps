@@ -1,18 +1,11 @@
 'use client';
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import {
   createBrowserClient,
   getGlossaryAuthorities,
   GLOSSARY_DEFINITION_ALLOWLIST,
   sanitizeHtml,
-  termDefinition,
   type GlossaryAuthority,
   type GlossaryAuthorityMatch,
   type GlossaryEntry,
@@ -22,15 +15,15 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@eightyfourthousand/design-system';
+import { PencilIcon, XIcon } from 'lucide-react';
 
 import { GlossaryAuthoritySearch } from '../shared/glossary/GlossaryAuthoritySearch';
 import { nameLanguageLabel } from '../shared/glossary/glossary-languages';
@@ -51,50 +44,31 @@ import { renderGlossaryRow } from './glossary-work';
 
 type Choice = { value: string; label: string; explanation: string };
 
-/** The `none` choice of the definition relation, stored as null. */
-const NO_REND = '';
+/** What a stored null renders as: the entry's own definition. */
+const CUSTOM_REND = 'incompatibleWithStandard';
+const STANDARD_REND = 'overrideWithStandard';
 
 /** The definition relations, in the order the panel offers them. */
 export const DEFINITION_REND_CHOICES: Choice[] = [
   {
-    value: NO_REND,
-    label: 'None',
-    explanation: 'No relation set: readers see this entry’s definition.',
-  },
-  {
-    value: 'incompatibleWithStandard',
-    label: 'Incompatible with the standard',
+    value: CUSTOM_REND,
+    label: 'Custom definition',
     explanation: 'Readers see only this entry’s definition.',
   },
   {
-    value: 'overrideWithStandard',
-    label: 'Override with the standard',
-    explanation: 'Readers see the standard definition instead of this one.',
+    value: STANDARD_REND,
+    label: 'Use standard',
+    explanation: 'Readers see the authority’s standard definition.',
   },
   {
     value: 'appendWithStandard',
-    label: 'Append the standard',
+    label: 'Append standard',
     explanation: 'Readers see this entry’s definition, then the standard one.',
   },
   {
     value: 'prependWithStandard',
-    label: 'Prepend the standard',
+    label: 'Prepend standard',
     explanation: 'Readers see the standard definition, then this entry’s.',
-  },
-];
-
-/** The matching modes, in the order the panel offers them. */
-export const GLOSSARY_MODE_CHOICES: Choice[] = [
-  {
-    value: 'match',
-    label: 'Match',
-    explanation:
-      'Its names are linked wherever they appear in the translation.',
-  },
-  {
-    value: 'marked',
-    label: 'Marked',
-    explanation: 'Only instances marked by hand are linked.',
   },
 ];
 
@@ -121,7 +95,6 @@ const Definition = ({
 }: {
   html: string | null;
   empty: string;
-  'data-glossary-entry-preview'?: string;
   'data-glossary-entry-standard'?: string;
 }) => {
   const drawn = definitionHtml(html);
@@ -192,93 +165,97 @@ const Section = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <section className="flex flex-col gap-2 border-t px-4 py-3">
+  <section className="flex flex-col gap-2 border-t py-3">
     <h3 className="text-sm font-semibold">{title}</h3>
     {children}
   </section>
 );
 
-/** A set of choices: radios to edit, or only the chosen one when read-only. */
-const ChoiceGroup = ({
-  name,
-  legend,
-  choices,
+/** The entry's definition relation: a select to edit, its label when read-only. */
+const DefinitionRend = ({
   value,
   readOnly,
   disabled,
   onChange,
 }: {
-  name: string;
-  legend: string;
-  choices: Choice[];
   value: string;
   readOnly: boolean;
   disabled: boolean;
   onChange: (value: string) => void;
 }) => {
-  const id = useId();
-  const chosen = choices.find((choice) => choice.value === value);
-  if (readOnly) {
-    return (
-      <div className="flex flex-col text-sm" data-glossary-entry-choice={name}>
-        <span className="font-medium">{chosen?.label ?? value}</span>
-        {chosen && (
-          <span className="text-muted-foreground text-xs">
-            {chosen.explanation}
-          </span>
-        )}
-      </div>
-    );
-  }
+  const chosen = DEFINITION_REND_CHOICES.find(
+    (choice) => choice.value === value,
+  );
   return (
-    <fieldset
-      className="flex flex-col gap-1.5"
-      data-glossary-entry-choice={name}
-    >
-      <legend className="sr-only">{legend}</legend>
-      {!chosen && (
-        <p className="text-muted-foreground text-xs">
-          Stored as “{value}”, which the panel does not offer.
-        </p>
+    <div className="flex flex-col gap-1.5" data-glossary-entry-rend="">
+      {readOnly ? (
+        <span className="text-sm font-medium">{chosen?.label ?? value}</span>
+      ) : (
+        <Select value={value} disabled={disabled} onValueChange={onChange}>
+          <SelectTrigger aria-label="Definition relation">
+            <SelectValue placeholder={value} />
+          </SelectTrigger>
+          <SelectContent>
+            {DEFINITION_REND_CHOICES.map((choice) => (
+              <SelectItem key={choice.value} value={choice.value}>
+                {choice.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       )}
-      {choices.map((choice) => {
-        const inputId = `${id}-${choice.value || 'none'}`;
-        return (
-          <label
-            key={choice.value}
-            htmlFor={inputId}
-            className="flex cursor-pointer items-start gap-2 text-sm has-disabled:cursor-default"
-          >
-            <input
-              id={inputId}
-              type="radio"
-              name={`${id}-${name}`}
-              value={choice.value}
-              checked={choice.value === value}
-              disabled={disabled}
-              onChange={() => onChange(choice.value)}
-              className="accent-primary mt-1"
-            />
-            <span className="flex flex-col">
-              <span>{choice.label}</span>
-              <span className="text-muted-foreground text-xs">
-                {choice.explanation}
-              </span>
-            </span>
-          </label>
-        );
-      })}
-    </fieldset>
+      <span className="text-muted-foreground text-xs">
+        {chosen
+          ? chosen.explanation
+          : `Stored as “${value}”, which the panel does not offer.`}
+      </span>
+    </div>
   );
 };
 
+/** The authority's headword, with its language beneath. */
 const AuthorityHeading = ({ authority }: { authority: GlossaryAuthority }) => (
-  <span className="flex flex-wrap items-baseline gap-x-2">
+  <span className="flex flex-col">
     <span className="font-semibold">{authority.headword}</span>
     <span className="text-muted-foreground text-xs">
       {nameLanguageLabel(authority.headwordLanguage)}
     </span>
   </span>
+);
+
+/** Asks before relinking the entry, in place of the search. */
+const RelinkConfirm = ({
+  from,
+  to,
+  onConfirm,
+  onCancel,
+}: {
+  from: string | undefined;
+  to: GlossaryAuthorityMatch;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) => (
+  <div
+    role="group"
+    aria-label={`Link to ${to.headword}?`}
+    className="flex flex-col gap-2 rounded-md border p-3"
+    data-glossary-entry-relink=""
+  >
+    <p className="text-sm font-medium">Link to {to.headword}?</p>
+    <p className="text-muted-foreground text-sm">
+      The entry moves from <strong>{from ?? 'its authority'}</strong> to{' '}
+      <strong>{to.headword}</strong>. The definition readers see may change, as
+      it can draw on the authority’s standard definition.
+    </p>
+    <div className="flex gap-2">
+      <Button size="sm" onClick={onConfirm}>
+        Link
+      </Button>
+      <Button size="sm" variant="outline" onClick={onCancel}>
+        Cancel
+      </Button>
+    </div>
+  </div>
 );
 
 /** The entry's authority, and the search that relinks it. */
@@ -319,79 +296,64 @@ const LinkedAuthority = ({
           The linked authority was not found.
         </p>
       )}
+      {(current || !readOnly) && (
+        <div className="flex items-start justify-between gap-2">
+          {current ? <AuthorityHeading authority={current} /> : <span />}
+          {!readOnly && !searching && (
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Link another authority"
+              disabled={!saves.canSave}
+              onClick={() => setSearching(true)}
+            >
+              <PencilIcon />
+            </Button>
+          )}
+        </div>
+      )}
       {current && (
-        <>
-          <AuthorityHeading authority={current} />
-          <span className="text-muted-foreground text-xs">
-            Standard definition
-          </span>
-          <Definition
-            html={current.definition}
-            empty="This authority has no standard definition."
-            data-glossary-entry-standard=""
-          />
-        </>
+        <Definition
+          html={current.definition}
+          empty="This authority has no standard definition."
+          data-glossary-entry-standard=""
+        />
       )}
       <GlossaryEntrySaveStatus saves={saves} field="authorityUuid" />
       {!readOnly &&
-        (searching ? (
-          <div className="flex flex-col gap-2">
-            <GlossaryAuthoritySearch
-              autoFocus
-              currentUuid={current?.uuid}
-              disabled={!saves.canSave}
-              onSelect={setRelinking}
-            />
+        searching &&
+        (relinking ? (
+          <RelinkConfirm
+            from={current?.headword}
+            to={relinking}
+            onConfirm={confirm}
+            onCancel={() => setRelinking(null)}
+          />
+        ) : (
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <GlossaryAuthoritySearch
+                autoFocus
+                currentUuid={current?.uuid}
+                disabled={!saves.canSave}
+                onSelect={setRelinking}
+              />
+            </div>
             <Button
-              size="sm"
+              size="icon"
               variant="ghost"
-              className="self-start"
+              aria-label="Stop searching"
               onClick={() => setSearching(false)}
             >
-              Stop searching
+              <XIcon />
             </Button>
           </div>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className="self-start"
-            disabled={!saves.canSave}
-            onClick={() => setSearching(true)}
-          >
-            Link another authority
-          </Button>
         ))}
-      <Dialog
-        open={!!relinking}
-        onOpenChange={(open) => !open && setRelinking(null)}
-      >
-        {relinking && (
-          <DialogContent showCloseButton={false}>
-            <DialogHeader>
-              <DialogTitle>Link to {relinking.headword}?</DialogTitle>
-              <DialogDescription>
-                The entry moves from{' '}
-                <strong>{current?.headword ?? 'its authority'}</strong> to{' '}
-                <strong>{relinking.headword}</strong>. The definition readers
-                see may change, as it can draw on the authority’s standard
-                definition.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setRelinking(null)}>
-                Cancel
-              </Button>
-              <Button onClick={confirm}>Link</Button>
-            </DialogFooter>
-          </DialogContent>
-        )}
-      </Dialog>
     </div>
   );
 };
 
-/** The entry the panel shows: its names, settings and authority. */
+/** The entry the panel shows: its names, authority and definition relation. */
 const GlossaryEntryPanelBody = ({
   controller,
   entry,
@@ -408,23 +370,18 @@ const GlossaryEntryPanelBody = ({
     (after) => after.authorityUuid ?? entry.authorityUuid,
   );
   const authority = useAuthority(authorityUuid);
+  // A stored null reads as the entry's own definition, so it shows as custom.
   const rend = shownValue(
     saves,
     'definitionRend',
-    entry.definitionRend ?? NO_REND,
-    (after) => after.definitionRend ?? NO_REND,
+    entry.definitionRend ?? CUSTOM_REND,
+    (after) => after.definitionRend ?? CUSTOM_REND,
   );
-  const mode = shownValue(
-    saves,
-    'glossMode',
-    entry.glossMode,
-    (after) => after.glossMode ?? 'match',
-  );
-  const standard =
-    authority.status === 'read' ? authority.authority.definition : null;
+  const noStandard =
+    authority.status === 'read' && !authority.authority.definition?.trim();
 
   return (
-    <div className="flex flex-col pb-6" data-glossary-entry-panel-body="">
+    <div className="flex flex-col" data-glossary-entry-panel-body="">
       <Section title="Names">
         <GlossaryRowNames entry={entry} />
       </Section>
@@ -434,61 +391,34 @@ const GlossaryEntryPanelBody = ({
       </Section>
 
       <Section title="Definition relation">
-        <ChoiceGroup
-          name="definitionRend"
-          legend="Definition relation"
-          choices={DEFINITION_REND_CHOICES}
+        <DefinitionRend
           value={rend}
           readOnly={readOnly}
           disabled={!saves.canSave}
           onChange={(value) =>
-            saves.save('definitionRend', { definitionRend: value || null })
+            saves.save('definitionRend', { definitionRend: value })
           }
         />
+        {rend === STANDARD_REND && noStandard && (
+          <p
+            role="status"
+            className="text-destructive text-sm"
+            data-glossary-entry-no-standard=""
+          >
+            This authority has no standard definition, so readers will see no
+            definition.
+          </p>
+        )}
         <GlossaryEntrySaveStatus
           saves={saves}
           field="definitionRend"
           describeTheirs={(theirs) =>
             DEFINITION_REND_CHOICES.find(
-              (choice) => choice.value === (theirs.definitionRend ?? NO_REND),
+              (choice) =>
+                choice.value === (theirs.definitionRend ?? CUSTOM_REND),
             )?.label ??
             theirs.definitionRend ??
             ''
-          }
-        />
-        <span className="text-muted-foreground text-xs">
-          What readers will see
-        </span>
-        {authority.status === 'reading' ? (
-          <p className="text-muted-foreground text-sm">
-            Reading the authority…
-          </p>
-        ) : (
-          <Definition
-            html={termDefinition(entry.definition, standard, rend || null)}
-            empty="Readers see no definition."
-            data-glossary-entry-preview=""
-          />
-        )}
-      </Section>
-
-      <Section title="Matching">
-        <ChoiceGroup
-          name="glossMode"
-          legend="Matching mode"
-          choices={GLOSSARY_MODE_CHOICES}
-          value={mode}
-          readOnly={readOnly}
-          disabled={!saves.canSave}
-          onChange={(value) => saves.save('glossMode', { glossMode: value })}
-        />
-        <GlossaryEntrySaveStatus
-          saves={saves}
-          field="glossMode"
-          describeTheirs={(theirs) =>
-            GLOSSARY_MODE_CHOICES.find(
-              (choice) => choice.value === theirs.glossMode,
-            )?.label ?? theirs.glossMode
           }
         />
       </Section>
@@ -497,8 +427,8 @@ const GlossaryEntryPanelBody = ({
 };
 
 /**
- * The side panel for the parts of a glossary entry its row does not hold.
- * Opened from a row's label menu; while open it follows the selected row.
+ * The dialog for the parts of a glossary entry its row does not hold, opened
+ * from a row's label menu.
  */
 export const GlossaryEntryPanel = ({
   controller,
@@ -515,37 +445,24 @@ export const GlossaryEntryPanel = ({
   const readOnly = controller.isReadOnly();
   const english = entry && englishNameOf(entry);
   const title = english?.content ?? entry?.names[0]?.content ?? 'Entry';
-  const content = useRef<HTMLDivElement>(null);
 
   return (
-    <Sheet
-      modal={false}
+    <Dialog
       open={!!uuid}
       onOpenChange={(open) => !open && glossaryEntryPanelOf(controller).close()}
     >
-      <SheetContent
-        ref={content}
-        side="left"
-        className="w-full overflow-y-auto sm:max-w-md"
-        // The rows stay usable beside it: selecting one switches the panel.
-        onInteractOutside={(event) => event.preventDefault()}
-        // Escape in a row's editor is the editor's, not the panel's.
-        onEscapeKeyDown={(event) => {
-          if (!content.current?.contains(document.activeElement)) {
-            event.preventDefault();
-          }
-        }}
+      <DialogContent
         onOpenAutoFocus={(event) => event.preventDefault()}
         data-glossary-entry-panel=""
       >
-        <SheetHeader className="pr-16">
-          <SheetTitle className="font-serif text-lg">{title}</SheetTitle>
-          <SheetDescription>
+        <DialogHeader>
+          <DialogTitle className="font-serif">{title}</DialogTitle>
+          <DialogDescription>
             {readOnly
               ? 'This glossary entry, as stored. You can’t change it.'
               : 'Each change saves on its own.'}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         {entry ? (
           <GlossaryEntryPanelBody
             key={entry.uuid}
@@ -553,11 +470,11 @@ export const GlossaryEntryPanel = ({
             entry={entry}
           />
         ) : (
-          <p className="text-muted-foreground px-4 text-sm">
+          <p className="text-muted-foreground text-sm">
             This entry is no longer in the glossary.
           </p>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };

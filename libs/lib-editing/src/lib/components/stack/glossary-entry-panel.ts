@@ -10,19 +10,10 @@ import {
 
 import type { StackController } from './StackController';
 
-/**
- * Which entry a stack's entry panel shows, if it is open. While it is open it
- * follows the selected row: selecting another glossary row switches it.
- */
+/** Which entry a stack's entry panel shows, if it is open. */
 export class GlossaryEntryPanelState {
   private uuid: string | null = null;
-  private focused: string | null;
   private listeners = new Set<() => void>();
-
-  constructor(private readonly controller: StackController) {
-    this.focused = controller.getFocusedUuid();
-    controller.subscribe(this.follow);
-  }
 
   get = () => this.uuid;
 
@@ -45,20 +36,6 @@ export class GlossaryEntryPanelState {
     };
   };
 
-  /** Switch to a newly selected row, when it is a read glossary entry. */
-  private follow = () => {
-    const focused = this.controller.getFocusedUuid();
-    if (focused === this.focused) return;
-    this.focused = focused;
-    if (
-      this.uuid !== null &&
-      focused &&
-      this.controller.getGlossaryEntry(focused)
-    ) {
-      this.open(focused);
-    }
-  };
-
   private notify() {
     this.listeners.forEach((listener) => listener());
   }
@@ -70,7 +47,7 @@ const panels = new WeakMap<StackController, GlossaryEntryPanelState>();
 export const glossaryEntryPanelOf = (controller: StackController) => {
   let panel = panels.get(controller);
   if (!panel) {
-    panel = new GlossaryEntryPanelState(controller);
+    panel = new GlossaryEntryPanelState();
     panels.set(controller, panel);
   }
   return panel;

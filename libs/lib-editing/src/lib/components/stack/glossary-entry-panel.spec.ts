@@ -3,7 +3,6 @@ import type {
   GlossaryEntry,
 } from '@eightyfourthousand/data-access';
 
-import type { StackController } from './StackController';
 import {
   GlossaryEntryPanelState,
   saveGlossaryEntryPanelChange,
@@ -30,26 +29,6 @@ const entry = (overrides: Partial<GlossaryEntry> = {}): GlossaryEntry => ({
   ...overrides,
 });
 
-/** A controller with only what the panel state watches. */
-const fakeController = (entries: string[]) => {
-  let focused: string | null = null;
-  const listeners = new Set<() => void>();
-  const controller = {
-    getFocusedUuid: () => focused,
-    getGlossaryEntry: (uuid: string) =>
-      entries.includes(uuid) ? entry({ uuid }) : null,
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-  } as unknown as StackController;
-  const focus = (uuid: string | null) => {
-    focused = uuid;
-    listeners.forEach((listener) => listener());
-  };
-  return { controller, focus };
-};
-
 beforeEach(() => {
   mockSave.mockReset();
   mockRead.mockReset();
@@ -57,8 +36,7 @@ beforeEach(() => {
 
 describe('GlossaryEntryPanelState', () => {
   it('opens on an entry and closes', () => {
-    const { controller } = fakeController(['e1']);
-    const panel = new GlossaryEntryPanelState(controller);
+    const panel = new GlossaryEntryPanelState();
     const listener = jest.fn();
     panel.subscribe(listener);
     panel.open('e1');
@@ -66,29 +44,6 @@ describe('GlossaryEntryPanelState', () => {
     panel.close();
     expect(panel.get()).toBeNull();
     expect(listener).toHaveBeenCalledTimes(2);
-  });
-
-  it('follows the selected row while open', () => {
-    const { controller, focus } = fakeController(['e1', 'e2']);
-    const panel = new GlossaryEntryPanelState(controller);
-    panel.open('e1');
-    focus('e2');
-    expect(panel.get()).toBe('e2');
-  });
-
-  it('stays closed when a row is selected', () => {
-    const { controller, focus } = fakeController(['e1']);
-    const panel = new GlossaryEntryPanelState(controller);
-    focus('e1');
-    expect(panel.get()).toBeNull();
-  });
-
-  it('keeps its entry when the selected row has no entry read', () => {
-    const { controller, focus } = fakeController(['e1']);
-    const panel = new GlossaryEntryPanelState(controller);
-    panel.open('e1');
-    focus('unread');
-    expect(panel.get()).toBe('e1');
   });
 });
 

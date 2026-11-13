@@ -204,7 +204,7 @@ export const GlossaryRowMenu = ({
               {controller.getGlossaryEntry(uuid) && (
                 <DropdownMenuItem
                   onSelect={() => {
-                    // Selecting the row keeps the panel on it until another is.
+                    // The row it edits is the selected one.
                     controller.focusPassage(uuid);
                     openGlossaryEntryPanel(controller, uuid);
                   }}

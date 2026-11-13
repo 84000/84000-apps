@@ -15,13 +15,11 @@ import { saveGlossaryEntryPanelChange } from './glossary-entry-panel';
 export type GlossaryEntryPanelField =
   | 'names'
   | 'definitionRend'
-  | 'glossMode'
   | 'authorityUuid';
 
 const FIELD_LABELS: Record<GlossaryEntryPanelField, string> = {
   names: 'names',
   definitionRend: 'definition relation',
-  glossMode: 'matching mode',
   authorityUuid: 'authority',
 };
 

@@ -73,7 +73,6 @@ const fakeController = ({
   entries = [entry('e1'), entry('e2')],
 } = {}) => {
   const held = new Map(entries.map((e) => [e.uuid, e]));
-  let focused: string | null = null;
   let version = 0;
   const listeners = new Set<() => void>();
   const bump = () => {
@@ -81,7 +80,6 @@ const fakeController = ({
     listeners.forEach((listener) => listener());
   };
   const controller = {
-    getFocusedUuid: () => focused,
     getGlossaryEntry: (uuid: string) => held.get(uuid) ?? null,
     isReadOnly: () => readOnly,
     subscribe: (listener: () => void) => {
@@ -94,15 +92,10 @@ const fakeController = ({
       bump();
     }),
   };
-  const focus = (uuid: string) => {
-    focused = uuid;
-    bump();
-  };
   return {
     controller: controller as unknown as StackController,
     settle: controller.settleGlossaryEntry,
     held,
-    focus,
   };
 };
 
@@ -121,10 +114,27 @@ const open = async (controller: StackController, uuid = 'e1') => {
 const panel = () =>
   document.querySelector('[data-glossary-entry-panel]') as HTMLElement | null;
 
-const radio = (label: string) =>
-  screen.getByRole('radio', {
-    name: new RegExp(`^${label}`),
-  }) as HTMLInputElement;
+const relation = () =>
+  screen.getByRole('combobox', { name: 'Definition relation' });
+
+/** Choose a definition relation through the select, by keyboard. */
+const choose = async (label: string) => {
+  await act(async () => {
+    fireEvent.keyDown(relation(), { key: 'Enter' });
+  });
+  await act(async () => {
+    fireEvent.keyDown(screen.getByRole('option', { name: label }), {
+      key: 'Enter',
+    });
+  });
+};
+
+beforeAll(() => {
+  // Radix Select reaches for these, which jsdom lacks.
+  Element.prototype.hasPointerCapture = () => false;
+  Element.prototype.releasePointerCapture = () => undefined;
+  Element.prototype.scrollIntoView = () => undefined;
+});
 
 beforeEach(() => {
   mockSave.mockReset();
@@ -145,13 +155,6 @@ describe('GlossaryEntryPanel', () => {
     expect(screen.getByRole('heading', { name: 'Indra' })).toBeTruthy();
   });
 
-  it('switches to another row selected while it is open', async () => {
-    const { controller, focus } = setup();
-    await open(controller);
-    await act(async () => focus('e2'));
-    expect(screen.getByRole('heading', { name: 'Brahmā' })).toBeTruthy();
-  });
-
   it('shows the linked authority with its headword, language and standard definition', async () => {
     const { controller } = setup();
     await open(controller);
@@ -160,31 +163,55 @@ describe('GlossaryEntryPanel', () => {
     ) as HTMLElement;
     expect(shown.textContent).toContain('Indra');
     expect(shown.textContent).toContain('Sanskrit');
+    expect(shown.textContent).not.toContain('Standard definition');
     expect(
       document.querySelector('[data-glossary-entry-standard]')?.textContent,
     ).toContain('The standard Indra.');
   });
 
-  it('offers five definition relations with explanations, none chosen for null', async () => {
+  it('offers the four definition relations, showing a stored null as custom', async () => {
     const { controller } = setup();
     await open(controller);
-    const group = document.querySelector(
-      '[data-glossary-entry-choice="definitionRend"]',
-    ) as HTMLElement;
-    expect(group.querySelectorAll('input[type="radio"]')).toHaveLength(5);
-    expect(radio('None').checked).toBe(true);
-    expect(group.textContent).toContain('readers see this entry’s definition');
+    expect(relation().textContent).toBe('Custom definition');
+    expect(
+      document.querySelector('[data-glossary-entry-rend]')?.textContent,
+    ).toContain('Readers see only this entry’s definition.');
+    await act(async () => {
+      fireEvent.keyDown(relation(), { key: 'Enter' });
+    });
+    expect(
+      screen.getAllByRole('option').map((option) => option.textContent),
+    ).toEqual([
+      'Custom definition',
+      'Use standard',
+      'Append standard',
+      'Prepend standard',
+    ]);
+    expect(mockSave).not.toHaveBeenCalled();
   });
 
-  it('previews what readers see for the chosen relation', async () => {
+  it('warns when the standard is used and the authority has none', async () => {
+    mockAuthorities.mockResolvedValue([{ ...AUTHORITIES.a1, definition: ' ' }]);
     const { controller } = setup({
-      entries: [entry('e1', { definitionRend: 'appendWithStandard' })],
+      entries: [entry('e1', { definitionRend: 'overrideWithStandard' })],
     });
     await open(controller);
-    const preview = () =>
-      document.querySelector('[data-glossary-entry-preview]')?.textContent;
-    expect(preview()).toContain('The king of the gods.');
-    expect(preview()).toContain('The standard Indra.');
+    expect(
+      document.querySelector('[data-glossary-entry-no-standard]')?.textContent,
+    ).toContain('no standard definition');
+    expect(
+      document.querySelector('[data-glossary-entry-standard]')?.textContent,
+    ).toBe('This authority has no standard definition.');
+  });
+
+  it('does not warn when the authority has a standard definition', async () => {
+    const { controller } = setup({
+      entries: [entry('e1', { definitionRend: 'overrideWithStandard' })],
+    });
+    await open(controller);
+    expect(
+      document.querySelector('[data-glossary-entry-no-standard]'),
+    ).toBeNull();
   });
 
   it('saves a relation on its own and settles the saved entry', async () => {
@@ -192,45 +219,13 @@ describe('GlossaryEntryPanel', () => {
     const saved = entry('e1', { definitionRend: 'overrideWithStandard' });
     mockSave.mockResolvedValue({ success: true, entries: [saved] });
     await open(controller);
-    await act(async () => {
-      fireEvent.click(radio('Override'));
-    });
+    await choose('Use standard');
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(mockSave.mock.calls[0][0].after).toEqual({
       definitionRend: 'overrideWithStandard',
     });
     expect(settle).toHaveBeenCalledWith('e1', saved);
-    expect(radio('Override').checked).toBe(true);
-    expect(
-      document.querySelector('[data-glossary-entry-preview]')?.textContent,
-    ).toBe('The standard Indra.');
-  });
-
-  it('saves none as null', async () => {
-    const { controller } = setup({
-      entries: [entry('e1', { definitionRend: 'appendWithStandard' })],
-    });
-    mockSave.mockResolvedValue({ success: true, entries: [entry('e1')] });
-    await open(controller);
-    await act(async () => {
-      fireEvent.click(radio('None'));
-    });
-    expect(mockSave.mock.calls[0][0].after).toEqual({ definitionRend: null });
-  });
-
-  it('offers match and marked, showing match for an entry with no mode', async () => {
-    const { controller } = setup();
-    mockSave.mockResolvedValue({
-      success: true,
-      entries: [entry('e1', { glossMode: 'marked' })],
-    });
-    await open(controller);
-    expect(radio('Match').checked).toBe(true);
-    expect(radio('Marked').checked).toBe(false);
-    await act(async () => {
-      fireEvent.click(radio('Marked'));
-    });
-    expect(mockSave.mock.calls[0][0].after).toEqual({ glossMode: 'marked' });
+    expect(relation().textContent).toBe('Use standard');
   });
 
   it('saves nothing when opened and closed without a change', async () => {
@@ -253,27 +248,25 @@ describe('GlossaryEntryPanel', () => {
     });
     mockRead.mockResolvedValue({ status: 'found', entry: theirs });
     await open(controller);
-    await act(async () => {
-      fireEvent.click(radio('Override'));
-    });
+    await choose('Use standard');
     const alert = document.querySelector(
       '[data-glossary-entry-conflict]',
     ) as HTMLElement;
     expect(alert.textContent).toContain('changed by someone else');
-    expect(alert.textContent).toContain('Prepend the standard');
-    expect(radio('Override').checked).toBe(true);
+    expect(alert.textContent).toContain('Prepend standard');
+    expect(relation().textContent).toBe('Use standard');
     expect(settle).not.toHaveBeenCalled();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Use theirs' }));
     });
     expect(settle).toHaveBeenCalledWith('e1', theirs);
-    expect(radio('Prepend').checked).toBe(true);
+    expect(relation().textContent).toBe('Prepend standard');
     expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
   });
 
-  it('keeps a refused save when the panel moves to another row and back', async () => {
-    const { controller, focus } = setup();
+  it('keeps a refused save when the panel is opened on another row and back', async () => {
+    const { controller } = setup();
     mockSave.mockResolvedValue({
       success: false,
       reason: 'stale',
@@ -284,16 +277,14 @@ describe('GlossaryEntryPanel', () => {
       entry: entry('e1', { definitionRend: 'prependWithStandard' }),
     });
     await open(controller);
-    await act(async () => {
-      fireEvent.click(radio('Override'));
-    });
-    await act(async () => focus('e2'));
+    await choose('Use standard');
+    await open(controller, 'e2');
     expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
-    await act(async () => focus('e1'));
+    await open(controller, 'e1');
     expect(
       document.querySelector('[data-glossary-entry-conflict]'),
     ).toBeTruthy();
-    expect(radio('Override').checked).toBe(true);
+    expect(relation().textContent).toBe('Use standard');
   });
 
   it('sanitizes the standard definition it draws', async () => {
@@ -323,9 +314,7 @@ describe('GlossaryEntryPanel', () => {
       .mockResolvedValueOnce({ success: true, entries: [mine] });
     mockRead.mockResolvedValue({ status: 'found', entry: theirs });
     await open(controller);
-    await act(async () => {
-      fireEvent.click(radio('Override'));
-    });
+    await choose('Use standard');
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Keep mine' }));
     });
@@ -334,7 +323,7 @@ describe('GlossaryEntryPanel', () => {
     expect(mockSave.mock.calls[1][0].after).toEqual({
       definitionRend: 'overrideWithStandard',
     });
-    expect(radio('Override').checked).toBe(true);
+    expect(relation().textContent).toBe('Use standard');
     expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
   });
 
@@ -363,9 +352,12 @@ describe('GlossaryEntryPanel', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('Śakra'));
     });
-    const dialog = screen.getByRole('dialog', { name: /Link to Śakra/ });
-    expect(dialog.textContent).toContain('Indra');
-    expect(dialog.textContent).toContain('definition readers see may change');
+    // The confirmation is a step in the panel, not a dialog of its own.
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    const confirm = screen.getByRole('group', { name: 'Link to Śakra?' });
+    expect(confirm.textContent).toContain('Indra');
+    expect(confirm.textContent).toContain('definition readers see may change');
+    expect(screen.queryByLabelText('Search authorities')).toBeNull();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Link' }));
     });
@@ -401,7 +393,8 @@ describe('GlossaryEntryPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     });
     expect(mockSave).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog', { name: /Link to/ })).toBeNull();
+    expect(screen.queryByRole('group', { name: /Link to/ })).toBeNull();
+    expect(screen.getByLabelText('Search authorities')).toBeTruthy();
   });
 
   it('shows values without controls when read-only', async () => {
@@ -412,9 +405,12 @@ describe('GlossaryEntryPanel', () => {
     await open(controller);
     const body = panel() as HTMLElement;
     expect(body.querySelectorAll('input')).toHaveLength(0);
-    expect(screen.queryByText('Link another authority')).toBeNull();
-    expect(body.textContent).toContain('Append the standard');
-    expect(body.textContent).toContain('Match');
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Link another authority' }),
+    ).toBeNull();
+    expect(body.textContent).toContain('Append standard');
+    expect(body.textContent).not.toContain('Matching');
     expect(body.textContent).toContain('The standard Indra.');
   });
 });
