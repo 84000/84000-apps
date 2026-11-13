@@ -297,7 +297,7 @@ const LinkedAuthority = ({
         </p>
       )}
       {(current || !readOnly) && (
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
           {current ? <AuthorityHeading authority={current} /> : <span />}
           {!readOnly && !searching && (
             <Button
@@ -452,6 +452,7 @@ export const GlossaryEntryPanel = ({
       onOpenChange={(open) => !open && glossaryEntryPanelOf(controller).close()}
     >
       <DialogContent
+        className="max-w-readable"
         onOpenAutoFocus={(event) => event.preventDefault()}
         data-glossary-entry-panel=""
       >
