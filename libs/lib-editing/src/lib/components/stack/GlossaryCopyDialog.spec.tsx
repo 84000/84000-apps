@@ -109,9 +109,10 @@ beforeEach(() => {
 
 describe('GlossaryCopyDialog', () => {
   it("searches other works and shows each result's work, names, definition and headword", async () => {
+    const copy = jest.fn();
     render(
       <GlossaryCopyDialog
-        controller={controllerWith()}
+        controller={controllerWith(copy)}
         open
         onOpenChange={() => undefined}
       />,
@@ -130,6 +131,7 @@ describe('GlossaryCopyDialog', () => {
     expect(result.textContent).toContain('Authority: padma');
     expect(result.textContent).toMatch(/A flower\. .*…/);
     expect(result.textContent?.length).toBeLessThan(400);
+    expect(copy).not.toHaveBeenCalled();
   });
 
   it('says so when nothing matches', async () => {
@@ -174,6 +176,8 @@ describe('GlossaryCopyDialog', () => {
     expect(mockOfAuthority).toHaveBeenCalledWith(
       expect.objectContaining({ workUuid: HERE, authorityUuid: 'a1' }),
     );
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/already/i);
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
     });
@@ -294,6 +298,62 @@ describe('GlossaryCopyDialog', () => {
     });
     expect(screen.getByLabelText('Search other works')).toBeTruthy();
     expect(copy).not.toHaveBeenCalled();
+  });
+});
+
+describe('GlossaryCopyDialog search timing', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const renderOpen = (open = true) =>
+    render(
+      <GlossaryCopyDialog
+        controller={controllerWith()}
+        open={open}
+        onOpenChange={() => undefined}
+      />,
+    );
+  const type = (value: string) =>
+    fireEvent.change(screen.getByLabelText('Search other works'), {
+      target: { value },
+    });
+
+  it('draws nothing while closed', () => {
+    renderOpen(false);
+    expect(screen.queryByLabelText('Search other works')).toBeNull();
+  });
+
+  it('searches once typing pauses, for this work', async () => {
+    renderOpen();
+    type('lotus');
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+    });
+    expect(mockSearch).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(150);
+    });
+    expect(mockSearch).toHaveBeenCalledTimes(1);
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ workUuid: HERE, query: 'lotus' }),
+    );
+  });
+
+  it('searches once for a run of keystrokes, not once for each', async () => {
+    renderOpen();
+    for (const value of ['l', 'lo', 'lot', 'lotu', 'lotus']) {
+      type(value);
+      await act(async () => {
+        jest.advanceTimersByTime(100);
+      });
+    }
+    await act(async () => {
+      jest.advanceTimersByTime(400);
+    });
+    expect(mockSearch.mock.calls.map(([args]) => args.query)).toEqual([
+      'lotus',
+    ]);
   });
 });
 
