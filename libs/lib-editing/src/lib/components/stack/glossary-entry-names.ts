@@ -3,6 +3,8 @@ import type {
   GlossaryEntryNameInput,
 } from '@eightyfourthousand/data-access';
 
+import { nameLanguageLabel } from '../shared/glossary/glossary-languages';
+
 /** A name as the panel holds it: stored, or added and not saved yet. */
 export type PanelName = GlossaryEntryName | GlossaryEntryNameInput;
 
@@ -157,3 +159,15 @@ export const replacingName = (
 
 /** Whether a group's names take an attestation. */
 export const takesAttestation = (group: NameGroup) => group.kind === 'language';
+
+const GROUP_TITLES: Record<NameGroupKind, (language: string | null) => string> =
+  {
+    main: () => 'Main English name',
+    alternatives: () => 'English alternatives',
+    language: (language) => nameLanguageLabel(language),
+    other: (language) => language ?? 'No language',
+  };
+
+/** A group's heading. */
+export const groupTitle = (group: NameGroup) =>
+  GROUP_TITLES[group.kind](group.language);

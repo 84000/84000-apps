@@ -29,6 +29,8 @@ import {
 } from '@eightyfourthousand/design-system';
 import { cn } from '@eightyfourthousand/lib-utils';
 
+import { LANGUAGE_LABELS } from '../languages';
+
 /**
  * Human-readable names for the title types stored on `public.titles`. The
  * picker iterates `TITLE_TYPES`, which fixes the order.
@@ -46,20 +48,12 @@ export const TITLE_TYPE_LABELS: Record<TitleType, string> = {
  * The languages a title may be recorded in, with the labels editors use for
  * them. Ordered by how much of the corpus each accounts for.
  */
-export const TITLE_LANGUAGE_LABELS: Record<
-  ExtendedTranslationLanguage,
-  string
-> = {
-  en: 'English',
-  bo: 'Tibetan',
-  'Bo-Ltn': 'Tibetan (Wylie)',
-  'Sa-Ltn': 'Sanskrit (Latin)',
-  zh: 'Chinese',
-  'Zh-Ltn': 'Chinese (Pinyin)',
-  ja: 'Japanese',
-  'Mt-Ltn': 'Mongolian (Latin)',
-  'Pi-Ltn': 'Pali (Latin)',
-};
+export const TITLE_LANGUAGE_LABELS = Object.fromEntries(
+  Object.entries(LANGUAGE_LABELS).map(([code, { language, script }]) => [
+    code,
+    script ? `${language} (${script})` : language,
+  ]),
+) as Record<ExtendedTranslationLanguage, string>;
 
 const TITLE_LANGUAGES = Object.keys(
   TITLE_LANGUAGE_LABELS,
