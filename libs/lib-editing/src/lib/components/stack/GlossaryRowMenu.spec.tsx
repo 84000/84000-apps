@@ -118,8 +118,6 @@ describe('GlossaryRowMenu', () => {
       fireEvent.click(screen.getByText('Edit Entry'));
     });
     expect(glossaryEntryPanelOf(controller).get()).toBe('e1');
-    // Selected, so that selecting another row moves the panel there.
-    expect(controller.focusPassage).toHaveBeenCalledWith('e1');
   });
 
   it('offers the entry panel but no delete when read-only', () => {
