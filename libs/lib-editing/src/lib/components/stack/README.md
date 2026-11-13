@@ -800,9 +800,10 @@ stored now, with "Use theirs" and "Keep mine".
 What later glossary work builds on:
 
 - **Names, attestations, alternatives and authority.** Edited in
-  `GlossaryEntryPanel`; the matching mode is left to the import. the row's header (`glossaryRowChrome`) still draws
-  the names read-only with `GlossaryRowNames`. A field saved from the panel
-  goes through `useGlossaryEntrySaves`.
+  `GlossaryEntryPanel`; the matching mode is left to the import. The row's
+  header (`glossaryRowChrome`) still draws the names read-only with
+  `GlossaryRowNames`. A field saved from the panel goes through
+  `useGlossaryEntrySaves`.
 - **Creating an entry.** An item in `GlossaryRowMenu`, beside "Delete", that
   puts a row into the spine. That row has no entry and no sort yet.
 - **Placing a new entry's row.** `placeGlossaryRow` (`glossary-place.ts`)
