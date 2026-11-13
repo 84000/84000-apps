@@ -2,6 +2,7 @@ import type { GlossaryEntryName } from '@eightyfourthousand/data-access';
 
 import {
   groupEntryNames,
+  groupTitle,
   hasSameName,
   newName,
   type NameGroup,
@@ -160,5 +161,42 @@ describe('newName', () => {
       contentTransformed: 'སེམས།',
       termType: null,
     });
+  });
+});
+
+describe('groupTitle', () => {
+  it('titles each group by its language alone, others by their code', () => {
+    const groups = groupEntryNames([
+      MAIN,
+      name('lord of gods', 'en', 'translationAlternative'),
+      name('brgya byin', 'Bo-Ltn', null, 'བརྒྱ་བྱིན།'),
+      name('Śakra', 'Sa-Ltn'),
+      name('sakka', 'Pi-Ltn'),
+      name('帝釋', 'zh'),
+      name('Taishakuten', 'ja'),
+      name('qurmusta', 'Mt-Ltn'),
+    ]);
+    expect(
+      groups.map((group) => ({
+        kind: group.kind,
+        language: group.language,
+        title: groupTitle(group),
+      })),
+    ).toEqual([
+      { kind: 'main', language: 'en', title: 'Main English name' },
+      { kind: 'alternatives', language: 'en', title: 'English alternatives' },
+      { kind: 'language', language: 'Bo-Ltn', title: 'Tibetan' },
+      { kind: 'language', language: 'Sa-Ltn', title: 'Sanskrit' },
+      { kind: 'language', language: 'Pi-Ltn', title: 'Pali' },
+      { kind: 'language', language: 'zh', title: 'Chinese' },
+      { kind: 'other', language: 'ja', title: 'ja' },
+      { kind: 'other', language: 'Mt-Ltn', title: 'Mt-Ltn' },
+    ]);
+  });
+
+  it('titles an other group with no language', () => {
+    expect(groupTitle({ kind: 'other', language: null, names: [] })).toBe(
+      'No language',
+    );
   });
 });
