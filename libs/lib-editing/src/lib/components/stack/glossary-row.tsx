@@ -3,13 +3,13 @@
 import { useSyncExternalStore } from 'react';
 import {
   englishNameOf,
-  type ExtendedTranslationLanguage,
   type GlossaryEntry,
   type GlossaryEntryName,
 } from '@eightyfourthousand/data-access';
 import { Button } from '@eightyfourthousand/design-system';
 
 import { GlossaryPassagesLink } from '../shared/glossary/GlossaryPassagesLink';
+import { nameLanguageLabel } from '../shared/glossary/glossary-languages';
 import type { WorkDocument } from '@eightyfourthousand/lib-doc-model';
 import type { StackController } from './StackController';
 import { glossaryDefinitionToContent } from './glossary-codec';
@@ -25,28 +25,9 @@ const ALTERNATIVE = 'translationAlternative';
 
 export { englishNameOf };
 
-/**
- * A name's language without its script: a row draws a Tibetan name in both
- * Unicode and Wylie, so "Tibetan (Wylie)" would describe only half of it.
- */
-const NAME_LANGUAGE_LABELS: Record<ExtendedTranslationLanguage, string> = {
-  en: 'English',
-  bo: 'Tibetan',
-  'Bo-Ltn': 'Tibetan',
-  'Sa-Ltn': 'Sanskrit',
-  zh: 'Chinese',
-  'Zh-Ltn': 'Chinese',
-  ja: 'Japanese',
-  'Mt-Ltn': 'Mongolian',
-  'Pi-Ltn': 'Pali',
-};
-
 const languageLabel = ({ language, termType }: GlossaryEntryName) => {
   if (language === 'en' && termType === ALTERNATIVE) return 'Alternative';
-  if (!language) return 'Unknown language';
-  return (
-    NAME_LANGUAGE_LABELS[language as ExtendedTranslationLanguage] ?? language
-  );
+  return nameLanguageLabel(language);
 };
 
 /**
