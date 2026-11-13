@@ -789,8 +789,8 @@ what the row does not hold: the names, the linked authority, relinked through
 relation. A stored null relation renders as the entry's own definition, so the
 panel shows it as "Custom definition". Which entry it shows is per controller
 (`glossary-entry-panel`). A read-only stack mounts the editing menus for
-glossary rows too, offering "Copy Link" and "Edit Entry" without "Delete", and
-the panel shows its values without controls. Each change saves on its own
+glossary rows too, offering only "Copy Link" and "Edit Entry", and the panel
+shows its values without controls. Each change saves on its own
 (`GlossaryEntrySaves`) through `saveGlossaryEntry`, guarded by the entry in
 `glossary.entries`, one at a time. A saved entry becomes the row's through
 `settleGlossaryEntry`, which keeps the row's definition, the guard of its own
