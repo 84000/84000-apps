@@ -204,6 +204,118 @@ describe('GlossaryEntryNames', () => {
     expect(row('lord of gods')).toBeNull();
   });
 
+  it('removes through a trash icon button that has no text', async () => {
+    await setup();
+    const remove = screen.getByRole('button', { name: 'Remove lord of gods' });
+    expect(remove.tagName).toBe('BUTTON');
+    expect(remove.textContent).toBe('');
+    expect(remove.querySelector('svg')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: /^(Remove|Delete)$/ }),
+    ).toBeNull();
+    await act(async () => {
+      fireEvent.click(remove);
+    });
+    expect(savedNames().map((n) => n.content)).not.toContain('lord of gods');
+    expect(
+      screen.queryByRole('button', { name: 'Remove lord of gods' }),
+    ).toBeNull();
+  });
+
+  it('adds with a check icon button and cancels with an x icon button', async () => {
+    await setup();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /an alternative/ }));
+    });
+    const input = screen.getByLabelText(/New English alternatives name/);
+    fireEvent.change(input, { target: { value: 'never saved' } });
+    for (const label of ['Add', 'Cancel']) {
+      const icon = screen.getByRole('button', { name: label });
+      expect(icon.textContent).toBe('');
+      expect(icon.querySelector('svg')).toBeTruthy();
+    }
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText(/New English alternatives name/)).toBeNull();
+    expect(row('never saved')).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /an alternative/ }));
+    });
+    fireEvent.change(screen.getByLabelText(/New English alternatives name/), {
+      target: { value: 'saved by check' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    });
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(savedNames().at(-1)).toMatchObject({ content: 'saved by check' });
+    expect(screen.queryByLabelText(/New English alternatives name/)).toBeNull();
+    expect(row('saved by check')).toBeTruthy();
+  });
+
+  it('edits with a check icon button and cancels with an x icon button', async () => {
+    await setup();
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Edit lord of gods' }),
+      );
+    });
+    const input = screen.getByDisplayValue('lord of gods');
+    fireEvent.change(input, { target: { value: 'lord of heaven' } });
+    for (const label of ['Save', 'Cancel']) {
+      const icon = screen.getByRole('button', { name: label });
+      expect(icon.textContent).toBe('');
+      expect(icon.querySelector('svg')).toBeTruthy();
+    }
+    expect(screen.queryByRole('button', { name: 'Add' })).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    });
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(row('lord of gods')).toBeTruthy();
+    expect(row('lord of heaven')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Edit lord of gods' }),
+      );
+    });
+    fireEvent.change(screen.getByDisplayValue('lord of gods'), {
+      target: { value: 'lord of heaven' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(
+      savedNames().find((n) => n.glossaryUuid === 'g-lord of gods'),
+    ).toMatchObject({ content: 'lord of heaven' });
+  });
+
+  it('puts the attestation select on its own line under the name', async () => {
+    await setup();
+    const picker = screen.getByLabelText('Attestation of brgya byin');
+    const line = screen.getByRole('button', {
+      name: 'Edit brgya byin',
+    }).parentElement as HTMLElement;
+    // The name, with its edit and remove buttons, is one line of the row;
+    // the select is a line of its own below it.
+    expect(line.textContent).toContain('brgya byin');
+    expect(line.contains(picker)).toBe(false);
+    expect(picker.parentElement).toBe(row('brgya byin'));
+    expect(row('brgya byin').firstElementChild).toBe(line);
+    expect(
+      line.compareDocumentPosition(picker) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it('adds an alternative, refusing one already in the group', async () => {
     await setup();
     await act(async () => {
