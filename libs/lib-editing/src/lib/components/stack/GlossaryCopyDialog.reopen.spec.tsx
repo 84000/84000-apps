@@ -144,6 +144,12 @@ describe('GlossaryCopyDialog opened again', () => {
     await click('Cancel');
     await click('Reopen');
     expectFresh();
+
+    mockSearch.mockClear();
+    await typeQuery('padma');
+    expect(mockSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'padma' }),
+    );
   });
 
   it('starts empty after a copy', async () => {
