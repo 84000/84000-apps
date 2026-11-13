@@ -33,9 +33,9 @@ export type NameGroup = {
   names: PanelName[];
 };
 
-/** The group a name's language belongs in: any Chinese code is Chinese. */
+/** The group a name's language belongs in: Chinese characters, in either script, are Chinese. */
 const groupLanguage = (language: string | null) =>
-  language && /^zh(-|$)/i.test(language) ? 'zh' : language;
+  language && /^zh(-(hant|hans))?$/i.test(language) ? 'zh' : language;
 
 const collator = new Intl.Collator();
 // Case aside, a name differing only in a diacritic is another name.

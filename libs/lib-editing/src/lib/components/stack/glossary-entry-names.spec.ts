@@ -66,13 +66,16 @@ describe('groupEntryNames', () => {
     expect(kinds(groups).slice(-2)).toEqual(['other:de', 'other:ja']);
   });
 
-  it('lists any Chinese code with the Chinese names', () => {
+  it('lists Chinese in either script with the Chinese names, not pinyin', () => {
     const groups = groupEntryNames([
       MAIN,
       name('帝釋天', 'Zh-Hant'),
       name('帝釋', 'zh'),
+      name('Dishi', 'Zh-Ltn'),
     ]);
-    expect(groups.some((g) => g.kind === 'other')).toBe(false);
+    expect(kinds(groups).filter((k) => k.startsWith('other'))).toEqual([
+      'other:Zh-Ltn',
+    ]);
     expect(
       groups.find((g) => g.language === 'zh')?.names.map((n) => n.content),
     ).toEqual(['帝釋', '帝釋天']);
