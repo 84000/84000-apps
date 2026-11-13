@@ -6,7 +6,8 @@ import type {
   GlossarySaveResult,
 } from '../glossary/entry/types';
 import type { DataClient } from '../types';
-import { matchGlossaryNames, planGlossary } from './glossary';
+import { planGlossary } from './glossary';
+import { matchGlossaryNames } from './glossary-names';
 import type { GlossaryOp } from './types';
 
 jest.mock('../glossary/entry/stored', () => ({

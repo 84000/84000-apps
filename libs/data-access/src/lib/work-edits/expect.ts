@@ -1,7 +1,8 @@
 import { stableStringify } from '../passage/save/diff';
 import type { ExpectGuard } from './types';
 
-const same = (a: unknown, b: unknown) =>
+/** Whether two values are equal as JSON, absent being `null`. */
+export const same = (a: unknown, b: unknown) =>
   stableStringify(a ?? null) === stableStringify(b ?? null);
 
 /**
