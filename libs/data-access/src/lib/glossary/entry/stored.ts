@@ -100,6 +100,50 @@ const selectIn = async <T>(
   return out;
 };
 
+/** Which of these names rows a creator uses. Throws when it can't read. */
+export const readCreatorNames = async (
+  client: DataClient,
+  nameUuids: readonly string[],
+): Promise<Set<string>> =>
+  new Set(
+    (
+      await selectIn<{ name_uuid: string }>(
+        client,
+        'creators',
+        'name_uuid',
+        nameUuids,
+        'name_uuid',
+      )
+    ).map((r) => r.name_uuid),
+  );
+
+/**
+ * Which of these names rows of `entry` a glossaries row outside the entry
+ * uses, in any work. Throws when it can't read.
+ */
+export const readNamesUsedOutside = async (
+  client: DataClient,
+  entry: GlossaryEntry,
+  nameUuids: readonly string[],
+): Promise<Set<string>> => {
+  const own = `(${entry.names.map((n) => n.glossaryUuid).join(',')})`;
+  const used = await Promise.all(
+    nameUuids.map(async (nameUuid) => {
+      const found = unwrap<{ uuid: string }>(
+        await client
+          .from('glossaries')
+          .select('uuid')
+          .eq('name_uuid', nameUuid)
+          .not('uuid', 'in', own)
+          .limit(1),
+        'reading glossaries',
+      );
+      return found.length ? [nameUuid] : [];
+    }),
+  );
+  return new Set(used.flat());
+};
+
 const sameEntryRows = (
   entry: GlossaryEntry,
   rows: Map<string, GlossaryRow>,
@@ -216,34 +260,18 @@ export const readStored = async (
       ).map((row) => [row.uuid, row]),
     );
 
-    const creatorNames = new Set(
-      (
-        await selectIn<{ name_uuid: string }>(
-          client,
-          'creators',
-          'name_uuid',
-          candidateNames,
-          'name_uuid',
-        )
-      ).map((r) => r.name_uuid),
-    );
+    const creatorNames = await readCreatorNames(client, candidateNames);
 
     const usedOutside = new Set<string>();
     await Promise.all(
-      candidates.flatMap(({ entry, names: used }) => {
-        const own = `(${entry.names.map((n) => n.glossaryUuid).join(',')})`;
-        return used.map(async (nameUuid) => {
-          const found = unwrap<{ uuid: string }>(
-            await client
-              .from('glossaries')
-              .select('uuid')
-              .eq('name_uuid', nameUuid)
-              .not('uuid', 'in', own)
-              .limit(1),
-            'reading glossaries',
-          );
-          if (found.length) usedOutside.add(`${entry.uuid}>${nameUuid}`);
-        });
+      candidates.map(async ({ entry, names: used }) => {
+        for (const nameUuid of await readNamesUsedOutside(
+          client,
+          entry,
+          used,
+        )) {
+          usedOutside.add(`${entry.uuid}>${nameUuid}`);
+        }
       }),
     );
 

@@ -1,6 +1,10 @@
 import type { DataClient } from '../../types';
-import { getGlossaryEntries, getGlossaryEntry } from './read';
-import type { GlossaryEntryDTO } from './types';
+import {
+  getGlossaryEntries,
+  getGlossaryEntry,
+  getGlossaryEntrySharedNames,
+} from './read';
+import type { GlossaryEntry, GlossaryEntryDTO } from './types';
 
 const W = '10000000-0000-4000-8000-000000000001';
 const E1 = '20000000-0000-4000-8000-000000000001';
@@ -115,5 +119,86 @@ describe('getGlossaryEntry', () => {
         uuids: [E1],
       }),
     ).toBeNull();
+  });
+});
+
+describe('getGlossaryEntrySharedNames', () => {
+  const entry = {
+    uuid: E1,
+    workUuid: W,
+    authorityUuid: 'a1',
+    definition: null,
+    definitionRend: null,
+    glossMode: 'match',
+    names: [
+      { glossaryUuid: E1, nameUuid: 'n-own' },
+      { glossaryUuid: 'g2', nameUuid: 'n-other-entry' },
+      { glossaryUuid: 'g3', nameUuid: 'n-creator' },
+    ],
+  } as GlossaryEntry;
+
+  /** Glossaries rows by name, and the names creators use. */
+  const fakeClient = (
+    glossaries: { uuid: string; name_uuid: string }[],
+    creators: string[],
+    fail = false,
+  ) =>
+    ({
+      from(table: string) {
+        let rows: Record<string, string>[] =
+          table === 'creators'
+            ? creators.map((name_uuid) => ({ name_uuid }))
+            : glossaries;
+        const query = {
+          select: () => query,
+          in(column: string, values: string[]) {
+            rows = rows.filter((row) => values.includes(row[column]));
+            return query;
+          },
+          eq(column: string, value: string) {
+            rows = rows.filter((row) => row[column] === value);
+            return query;
+          },
+          not(column: string, _op: string, list: string) {
+            const own = list.slice(1, -1).split(',');
+            rows = rows.filter((row) => !own.includes(row[column]));
+            return query;
+          },
+          limit: () => query,
+          then: (resolve: (value: unknown) => void) =>
+            resolve(
+              fail
+                ? { data: null, error: { message: 'boom' } }
+                : { data: rows, error: null },
+            ),
+        };
+        return query;
+      },
+    }) as unknown as DataClient;
+
+  it('finds names used by another entry or a creator', async () => {
+    const client = fakeClient(
+      [
+        { uuid: E1, name_uuid: 'n-own' },
+        { uuid: 'g2', name_uuid: 'n-other-entry' },
+        { uuid: 'elsewhere', name_uuid: 'n-other-entry' },
+        { uuid: 'g3', name_uuid: 'n-creator' },
+      ],
+      ['n-creator'],
+    );
+    expect(await getGlossaryEntrySharedNames({ client, entry })).toEqual(
+      new Set(['n-other-entry', 'n-creator']),
+    );
+  });
+
+  it('is null when the read fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(
+      await getGlossaryEntrySharedNames({
+        client: fakeClient([], [], true),
+        entry,
+      }),
+    ).toBeNull();
+    jest.restoreAllMocks();
   });
 });

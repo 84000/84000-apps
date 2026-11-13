@@ -167,6 +167,13 @@ describe('GlossaryAuthoritySearch', () => {
     expect(screen.queryByRole('button', { name: /Mañjuśrī/ })).toBeNull();
   });
 
+  it('cannot be searched while disabled', () => {
+    render(<GlossaryAuthoritySearch onSelect={jest.fn()} disabled />);
+    expect((screen.getByRole('searchbox') as HTMLInputElement).disabled).toBe(
+      true,
+    );
+  });
+
   it('does not search a blank query', async () => {
     render(<GlossaryAuthoritySearch onSelect={jest.fn()} />);
     await typeQuery('   ');
