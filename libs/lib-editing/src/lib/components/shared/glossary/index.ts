@@ -1,4 +1,5 @@
 export { GlossaryAuthoritySearch } from './GlossaryAuthoritySearch';
+export { GlossaryEntryForm } from './GlossaryEntryForm';
 export * from './GlossaryInstanceBody';
 export * from './GlossaryPaginationProvider';
 export * from './GlossaryPassagesDialog';
