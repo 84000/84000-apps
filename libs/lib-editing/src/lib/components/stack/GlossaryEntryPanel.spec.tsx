@@ -239,6 +239,135 @@ describe('GlossaryEntryPanel', () => {
     expect(mockSave).not.toHaveBeenCalled();
   });
 
+  it('saves nothing when an oddly stored entry is opened and closed', async () => {
+    const odd = entry('e1', {
+      definition: null,
+      glossMode: null as unknown as string,
+    });
+    odd.names = [
+      { ...odd.names[0], termType: null },
+      {
+        ...odd.names[0],
+        glossaryUuid: 'g-sa',
+        nameUuid: 'n-sa',
+        language: 'Sa-Ltn',
+        content: 'Śakra',
+        termType: 'translationAlternative',
+      },
+      {
+        ...odd.names[0],
+        glossaryUuid: 'g-ko',
+        nameUuid: 'n-ko',
+        language: 'Ko-Ltn',
+        content: 'other',
+      },
+    ];
+    const { controller } = setup({ entries: [odd] });
+    await open(controller);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    });
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('saves each change on its own, against the entry the last save returned', async () => {
+    const { controller, held } = setup({
+      entries: [
+        entry('e1', {
+          names: [
+            ...entry('e1').names,
+            {
+              glossaryUuid: 'g-sa',
+              nameUuid: 'n-sa',
+              nameAuthorityUuid: 'a1',
+              language: 'Sa-Ltn',
+              content: 'bodhicitta',
+              contentTransformed: null,
+              termType: null,
+              attestation: null,
+            },
+          ],
+        }),
+      ],
+    });
+    let added = 0;
+    mockSave.mockImplementation(
+      async ({
+        before,
+        after,
+      }: {
+        before: GlossaryEntry;
+        after: Partial<GlossaryEntry>;
+      }) => {
+        const names = after.names?.map((n) => ({
+          ...n,
+          glossaryUuid: n.glossaryUuid ?? `g-new-${++added}`,
+          nameUuid: n.nameUuid ?? `n-new-${added}`,
+          nameAuthorityUuid: n.nameAuthorityUuid ?? before.authorityUuid,
+        }));
+        const saved = { ...before, ...after, ...(names ? { names } : {}) };
+        return { success: true, entries: [saved] };
+      },
+    );
+    await open(controller);
+    await act(async () => {
+      fireEvent.click(radio('Append'));
+    });
+    await act(async () => {
+      fireEvent.click(radio('Marked'));
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Attestation of bodhicitta'), {
+        target: { value: 'attestedOther' },
+      });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /an alternative/ }));
+    });
+    fireEvent.change(screen.getByLabelText(/New English alternatives name/), {
+      target: { value: 'brand new' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    });
+    await act(async () => {
+      fireEvent.click(radio('Prepend'));
+    });
+    await act(async () => {
+      fireEvent.click(radio('None'));
+    });
+
+    const calls = mockSave.mock.calls.map(([args]) => args);
+    expect(calls.map((call) => Object.keys(call.after))).toEqual([
+      ['definitionRend'],
+      ['glossMode'],
+      ['names'],
+      ['names'],
+      ['definitionRend'],
+      ['definitionRend'],
+    ]);
+    for (const [i, call] of calls.entries()) {
+      if (i === 0) continue;
+      const previous = await mockSave.mock.results[i - 1].value;
+      expect(call.before).toEqual(previous.entries[0]);
+    }
+    expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Use theirs' })).toBeNull();
+    const stored = held.get('e1') as GlossaryEntry;
+    expect(stored).toMatchObject({ definitionRend: null, glossMode: 'marked' });
+    expect(
+      stored.names.find((n) => n.content === 'bodhicitta')?.attestation,
+    ).toBe('attestedOther');
+    expect(stored.names.find((n) => n.content === 'brand new')).toMatchObject({
+      language: 'en',
+      termType: 'translationAlternative',
+    });
+    expect(stored.definition).toBe('<p>The king of the gods.</p>');
+  });
+
   it('keeps the editor’s value on a conflict, and takes theirs when asked', async () => {
     const { controller, settle } = setup();
     const theirs = entry('e1', { definitionRend: 'prependWithStandard' });

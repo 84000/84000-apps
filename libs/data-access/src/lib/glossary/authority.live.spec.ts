@@ -1,10 +1,12 @@
 /**
  * @jest-environment node
  */
-// The authority search against a local Supabase seeded with toh8. Read-only.
-// Skipped unless DATA_ACCESS_LIVE=1, with SUPABASE_URL (a local URL) and
+// The authority search against a local Supabase seeded with toh8. Writes
+// scratch authorities only, and removes them. Skipped unless
+// DATA_ACCESS_LIVE=1, with SUPABASE_URL (a local URL) and
 // SUPABASE_SERVICE_ROLE_KEY.
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 import type { DataClient } from '../types';
 import { getGlossaryAuthorities, searchGlossaryAuthorities } from './authority';
@@ -30,8 +32,57 @@ const liveClient = (): DataClient => {
   }) as unknown as DataClient;
 };
 
+const check = (error: { message: string } | null, what: string) => {
+  if (error) throw new Error(`${what}: ${error.message}`);
+};
+
 describeLive('searchGlossaryAuthorities (live)', () => {
   const client = LIVE ? liveClient() : (null as unknown as DataClient);
+  const tag = uuidv4().replace(/-/g, '').slice(0, 8);
+  const scratch: string[] = [];
+
+  afterAll(async () => {
+    if (!scratch.length) return;
+    for (const [table, column] of [
+      ['names', 'authority_uuid'],
+      ['authorities', 'uuid'],
+    ] as const) {
+      const { error } = await client.from(table).delete().in(column, scratch);
+      if (error) console.warn(`scratch cleanup (${table}): ${error.message}`);
+    }
+  });
+
+  /** A scratch authority with these names. */
+  const authorityWith = async (
+    headword: string,
+    names: { language: string; content: string; script?: string }[],
+  ) => {
+    const uuid = uuidv4();
+    scratch.push(uuid);
+    check(
+      (
+        await client
+          .from('authorities')
+          .insert({ uuid, xmlId: `authority-live-${tag}`, headword })
+      ).error,
+      'insert authority',
+    );
+    check(
+      (
+        await client.from('names').insert(
+          names.map((n) => ({
+            uuid: uuidv4(),
+            authority_uuid: uuid,
+            language: n.language,
+            content: n.content,
+            content_transformed: n.script ?? null,
+          })),
+        )
+      ).error,
+      'insert names',
+    );
+    return uuid;
+  };
 
   it('finds a headword without its diacritics, first', async () => {
     const found = await searchGlossaryAuthorities({
@@ -70,5 +121,32 @@ describeLive('searchGlossaryAuthorities (live)', () => {
       })) ?? [];
     expect(manjusri?.names).toHaveLength(53);
     expect(manjusri?.headwordLanguage).toBe('Sa-Ltn');
+  });
+
+  it('finds an authority by its headword or by an English, Wylie, script or Chinese name', async () => {
+    const headword = `Zqhead${tag}`;
+    const script = 'ཀྵཀྵཀྵཀྵཀྵ';
+    const english = `zqeng${tag} wording`;
+    const wylie = `zqwyl${tag} bla`;
+    const chinese = `虛${tag}`;
+    const uuid = await authorityWith(headword, [
+      { language: 'en', content: english },
+      { language: 'Bo-Ltn', content: wylie, script },
+      { language: 'zh', content: chinese },
+    ]);
+
+    const find = async (query: string) => {
+      const found = await searchGlossaryAuthorities({ client, query });
+      expect(found).not.toBeNull();
+      return (found ?? []).find((a) => a.uuid === uuid);
+    };
+
+    expect(await find(headword)).toBeDefined();
+    expect((await find(`zqeng${tag}`))?.matchedName?.content).toBe(english);
+    expect((await find(wylie))?.matchedName?.contentTransformed).toBe(script);
+    expect((await find(`zqwyl${tag}`))?.matchedName?.content).toBe(wylie);
+    expect((await find(script))?.matchedName?.content).toBe(wylie);
+    expect((await find(chinese))?.matchedName?.content).toBe(chinese);
+    expect(await find(`zqeng${tag.toUpperCase()}`)).toBeDefined();
   });
 });

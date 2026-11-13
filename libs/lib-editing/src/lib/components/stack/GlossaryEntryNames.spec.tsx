@@ -20,11 +20,12 @@ jest.mock('resend', () => ({ Resend: class {} }));
 
 const mockSave = jest.fn();
 const mockShared = jest.fn();
+const mockRead = jest.fn();
 jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
   createBrowserClient: () => ({}),
   saveGlossaryEntry: (args: unknown) => mockSave(args),
-  getGlossaryEntry: jest.fn(),
+  getGlossaryEntry: (args: unknown) => mockRead(args),
   getGlossaryEntrySharedNames: (args: unknown) => mockShared(args),
 }));
 
@@ -124,6 +125,7 @@ const savedNames = (call = 0) =>
 beforeEach(() => {
   mockSave.mockReset();
   mockShared.mockReset();
+  mockRead.mockReset();
   mockSave.mockImplementation(
     async ({ after }: { after: { names: GlossaryEntryName[] } }) => ({
       success: true,
@@ -163,6 +165,28 @@ describe('GlossaryEntryNames', () => {
       glossaryUuid: 'g-Indra',
       content: 'Śakra the god',
     });
+  });
+
+  it('refuses an emptied main name, keeping the one it has', async () => {
+    const controller = await setup();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Edit Indra' }));
+    });
+    fireEvent.change(screen.getByDisplayValue('Indra'), {
+      target: { value: '   ' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Enter the name first.',
+    );
+    const mains = (
+      controller.getGlossaryEntry('e1') as GlossaryEntry
+    ).names.filter((n) => n.termType === 'translationMain');
+    expect(mains).toHaveLength(1);
+    expect(mains[0].content).toBe('Indra');
   });
 
   it('removes an alternative, saving the names without it', async () => {
@@ -243,6 +267,58 @@ describe('GlossaryEntryNames', () => {
     expect(savedNames().find((n) => n.content === 'Śakra')?.attestation).toBe(
       'reconstructedPhonetic',
     );
+  });
+
+  it('clears an attestation back to none, saving it as null', async () => {
+    await setup();
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Attestation of brgya byin'), {
+        target: { value: '' },
+      });
+    });
+    expect(
+      savedNames().find((n) => n.content === 'brgya byin')?.attestation,
+    ).toBeNull();
+  });
+
+  it('keeps a name added over a name list changed elsewhere, offering theirs', async () => {
+    const theirs = entryOf([
+      MAIN,
+      ALTERNATIVE,
+      TIBETAN,
+      SANSKRIT,
+      name('added elsewhere', 'en', { termType: 'translationAlternative' }),
+    ]);
+    mockSave.mockResolvedValue({
+      success: false,
+      reason: 'stale',
+      error: 'changed elsewhere',
+    });
+    mockRead.mockResolvedValue({ status: 'found', entry: theirs });
+    const controller = await setup();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /an alternative/ }));
+    });
+    fireEvent.change(screen.getByLabelText(/New English alternatives name/), {
+      target: { value: 'added by me' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    });
+
+    expect(screen.getByRole('button', { name: 'Use theirs' })).toBeTruthy();
+    expect(row('added by me')).toBeTruthy();
+    const held = () =>
+      (controller.getGlossaryEntry('e1') as GlossaryEntry).names.map(
+        (n) => n.content,
+      );
+    expect(held()).not.toContain('added by me');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use theirs' }));
+    });
+    expect(held()).toContain('added elsewhere');
+    expect(held()).not.toContain('added by me');
   });
 
   it('marks a shared name, which can be removed and attested but not edited', async () => {

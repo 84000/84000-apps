@@ -104,7 +104,7 @@ const setup = ({ saving = false, readOnly = false } = {}) => {
     );
     await act(async () => undefined);
   };
-  return { remove, openDialog, controller };
+  return { remove, openDialog, controller, onClose };
 };
 
 beforeEach(() => {
@@ -113,11 +113,12 @@ beforeEach(() => {
 
 describe('GlossaryRowMenu', () => {
   it('opens the entry panel on the row’s entry', async () => {
-    const { controller } = setup();
+    const { controller, onClose } = setup();
     await act(async () => {
       fireEvent.click(screen.getByText('Edit Entry'));
     });
     expect(glossaryEntryPanelOf(controller).get()).toBe('e1');
+    expect(onClose).toHaveBeenCalled();
   });
 
   it('offers the entry panel but no delete when read-only', () => {

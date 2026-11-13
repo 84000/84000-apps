@@ -15,7 +15,11 @@ import {
   uid,
 } from '../../../live.fixture';
 import type { DataClient } from '../../types';
-import { getGlossaryEntries, getGlossaryEntry } from './read';
+import {
+  getGlossaryEntries,
+  getGlossaryEntry,
+  getGlossaryEntrySharedNames,
+} from './read';
 import {
   createGlossaryEntry,
   deleteGlossaryEntry,
@@ -655,6 +659,102 @@ describeLive('glossary entry saves against the database', () => {
       names: [en('del again new')],
     });
     expect(again.uuid).toBe(e.uuid);
+  });
+
+  it('reads as shared only the names another entry, in any work, or a creator uses', async () => {
+    const byCreator = await s.name({
+      authorityUuid: authA,
+      language: 'en',
+      content: 'shared by creator',
+    });
+    await s.creator({
+      workUuid: workB,
+      authorityUuid: authA,
+      nameUuid: byCreator,
+    });
+    const e = await makeEntry({
+      workUuid: workA,
+      authorityUuid: authA,
+      names: [
+        en('shared read root', { termType: 'translationMain' }),
+        en('own only', { language: 'Sa-Ltn' }),
+        en('by other entry', { language: 'Sa-Ltn' }),
+        en('by other work', { language: 'Pi-Ltn' }),
+        en('shared by creator', { nameUuid: byCreator }),
+      ],
+    });
+    const byEntry = nameOf(e, 'by other entry').nameUuid;
+    const acrossWorks = nameOf(e, 'by other work').nameUuid;
+    await makeEntry({
+      workUuid: workA,
+      authorityUuid: authA,
+      names: [
+        en('shared read other', { termType: 'translationMain' }),
+        en('by other entry', { language: 'Sa-Ltn', nameUuid: byEntry }),
+      ],
+    });
+    await makeEntry({
+      workUuid: workB,
+      authorityUuid: authA,
+      names: [
+        en('shared read elsewhere', { termType: 'translationMain' }),
+        en('by other work', { language: 'Pi-Ltn', nameUuid: acrossWorks }),
+      ],
+    });
+
+    const entry = await readEntry(workA, e.uuid);
+    const shared = await getGlossaryEntrySharedNames({ client: db, entry });
+    expect(shared).not.toBeNull();
+    expect([...(shared as Set<string>)].sort()).toEqual(
+      [byEntry, acrossWorks, byCreator].sort(),
+    );
+    expect(shared?.has(nameOf(entry, 'own only').nameUuid)).toBe(false);
+    expect(shared?.has(entry.names[0].nameUuid)).toBe(false);
+  });
+
+  it('refuses a save over a value or a name list changed elsewhere, writing nothing', async () => {
+    const e = await makeEntry({
+      workUuid: workA,
+      authorityUuid: authA,
+      names: [en('conflict root', { termType: 'translationMain' })],
+    });
+
+    check(
+      (
+        await db
+          .from('glossaries')
+          .update({ definition_rend: 'overrideWithStandard' })
+          .eq('uuid', e.uuid)
+      ).error,
+      'change elsewhere',
+    );
+    let before = await s.snapshot();
+    const value = await save(workA, e, {
+      definitionRend: 'appendWithStandard',
+    });
+    expect(value).toMatchObject({ success: false, reason: 'stale' });
+    expect(await s.snapshot()).toEqual(before);
+    expect((await readEntry(workA, e.uuid)).definitionRend).toBe(
+      'overrideWithStandard',
+    );
+
+    const read = await readEntry(workA, e.uuid);
+    const alternative = (content: string) =>
+      en(content, { termType: 'translationAlternative' });
+    succeeded(
+      await save(workA, read, {
+        names: [...read.names, alternative('theirs')],
+      }),
+    );
+    before = await s.snapshot();
+    const mine = await save(workA, read, {
+      names: [...read.names, alternative('mine')],
+    });
+    expect(mine).toMatchObject({ success: false, reason: 'stale' });
+    expect(await s.snapshot()).toEqual(before);
+    const stored = await readEntry(workA, e.uuid);
+    expect(stored.names.some((n) => n.content === 'theirs')).toBe(true);
+    expect(stored.names.some((n) => n.content === 'mine')).toBe(false);
   });
 
   it('refuses a caller without permission as forbidden, writing nothing', async () => {
