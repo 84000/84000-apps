@@ -131,7 +131,7 @@ export const GlossaryAuthoritySearch = ({
 
   const search: Search = !trimmed
     ? { status: 'idle' }
-    : answer?.query !== trimmed
+    : answer?.query !== trimmed || answer.attempt !== attempt
       ? { status: 'searching', query: trimmed }
       : answer.results
         ? { status: 'done', query: trimmed, results: answer.results }

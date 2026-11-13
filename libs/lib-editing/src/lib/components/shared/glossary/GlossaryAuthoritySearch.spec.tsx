@@ -122,6 +122,19 @@ describe('GlossaryAuthoritySearch', () => {
     expect(screen.getByText('Mañjuśrī')).toBeTruthy();
   });
 
+  it('shows the search under way again while it retries', async () => {
+    mockSearch
+      .mockResolvedValueOnce(null)
+      .mockReturnValueOnce(new Promise(() => undefined));
+    render(<GlossaryAuthoritySearch onSelect={jest.fn()} />);
+    await typeQuery('manjusri');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    });
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    expect(screen.getByText(/Searching/)).toBeTruthy();
+  });
+
   it('shows only the latest query’s results', async () => {
     let answerFirst: (value: GlossaryAuthorityMatch[]) => void = () => null;
     mockSearch

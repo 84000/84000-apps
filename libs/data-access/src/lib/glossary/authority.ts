@@ -77,10 +77,10 @@ export const authoritySearchWords = (text: string): string[] =>
     .map((word) => (TIBETAN.test(word) ? word : removeDiacritics(word)))
     .filter(Boolean);
 
-/** Every word as a prefix, as `to_tsquery` reads it. */
 /** An `ilike` pattern matching `text` exactly, case aside. */
 const likePattern = (text: string) => text.replace(/[\\%_]/g, '\\$&');
 
+/** Every word as a prefix, as `to_tsquery` reads it. */
 const prefixQuery = (words: string[]) =>
   words.map((word) => `${word}:*`).join(' & ');
 
@@ -222,7 +222,8 @@ export const searchGlossaryAuthorities = async ({
       .textSearch(column, tsquery, { config: 'simple' })
       .limit(CANDIDATES);
   // A broad query's candidates may leave out the text typed as it is stored,
-  // so that is read on its own.
+  // so that is read on its own, within the same vector match so it uses the
+  // vector's index.
   const typed = query.trim().replace(/[་།\s]+$/u, '');
 
   try {
@@ -237,18 +238,23 @@ export const searchGlossaryAuthorities = async ({
       client
         .from('authorities')
         .select(AUTHORITY_COLUMNS)
+        .textSearch('headword_tsv', tsquery, { config: 'simple' })
         .ilike('headword', likePattern(typed))
         .limit(CANDIDATES),
       tibetan
         ? client
             .from('names')
             .select(NAME_COLUMNS)
+            .textSearch('content_transformed_tsv', tsquery, {
+              config: 'simple',
+            })
             // Script is stored with its closing shad.
             .in('content_transformed', [typed, `${typed}${SHAD}`])
             .limit(CANDIDATES)
         : client
             .from('names')
             .select(NAME_COLUMNS)
+            .textSearch('content_tsv', tsquery, { config: 'simple' })
             .ilike('content', likePattern(typed))
             .limit(CANDIDATES),
     ]);
