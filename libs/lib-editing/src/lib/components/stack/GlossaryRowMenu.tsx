@@ -276,6 +276,7 @@ export const GlossaryRowMenu = ({
       <Dialog open={creating} onOpenChange={setCreating}>
         {creating && (
           <DialogContent
+            className="max-w-readable"
             // The new row takes focus, not the menu the dialog came from.
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
