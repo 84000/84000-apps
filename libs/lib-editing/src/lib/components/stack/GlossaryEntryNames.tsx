@@ -1,35 +1,23 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useState } from 'react';
 import {
-  createBrowserClient,
   formatAttestation,
-  getGlossaryEntrySharedNames,
-  GLOSSARY_ATTESTATIONS,
   type GlossaryEntry,
 } from '@eightyfourthousand/data-access';
-import {
-  Button,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@eightyfourthousand/design-system';
-import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
-import { cn } from '@eightyfourthousand/lib-utils';
-import {
-  CheckIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-  XIcon,
-} from 'lucide-react';
+import { Button } from '@eightyfourthousand/design-system';
+import { PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 
 import {
   nameLanguageLabel,
   tibetanScript,
 } from '../shared/glossary/glossary-languages';
+import { GlossaryNameAttestation } from './GlossaryNameAttestation';
+import {
+  GlossaryNameForm,
+  NameWarnings,
+  type EnteredName,
+} from './GlossaryNameForm';
 import {
   GlossaryEntrySaveStatus,
   type GlossaryEntrySaves,
@@ -37,76 +25,16 @@ import {
 import {
   enteredText,
   groupEntryNames,
-  hasSameName,
+  groupTitle,
   isRootName,
   newName,
   replacingName,
   takesAttestation,
   withName,
   withoutName,
-  type NameGroup,
   type PanelName,
 } from './glossary-entry-names';
-
-const TIBETAN = 'Bo-Ltn';
-
-type Shared =
-  | { status: 'reading' }
-  | { status: 'error' }
-  | { status: 'read'; uuids: Set<string> };
-
-/** Which of the entry's names rows are shared, read again when its names change. */
-const useSharedNames = (entry: GlossaryEntry): Shared => {
-  const key = entry.names.map((n) => n.nameUuid).join(',');
-  // Read by the effect below, so a save of another field doesn't read again.
-  const current = useRef(entry);
-  useEffect(() => {
-    current.current = entry;
-  });
-  const [read, setRead] = useState<{
-    key: string;
-    uuids: Set<string> | null;
-  } | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    getGlossaryEntrySharedNames({
-      client: createBrowserClient(),
-      entry: current.current,
-    }).then((uuids) => {
-      if (live) setRead({ key, uuids });
-    });
-    return () => {
-      live = false;
-    };
-  }, [key]);
-
-  if (read?.key !== key) return { status: 'reading' };
-  return read.uuids
-    ? { status: 'read', uuids: read.uuids }
-    : { status: 'error' };
-};
-
-const isShared = (shared: Shared, name: PanelName) =>
-  'nameUuid' in name &&
-  !!name.nameUuid &&
-  shared.status === 'read' &&
-  shared.uuids.has(name.nameUuid);
-
-/** Whether a name's text may be edited here: not while that is unknown. */
-const textEditable = (shared: Shared, name: PanelName) =>
-  !('nameUuid' in name && name.nameUuid) ||
-  (shared.status === 'read' && !shared.uuids.has(name.nameUuid));
-
-const GROUP_TITLES: Record<
-  NameGroup['kind'],
-  (language: string | null) => string
-> = {
-  main: () => 'Main English name',
-  alternatives: () => 'English alternatives',
-  language: (language) => nameLanguageLabel(language),
-  other: (language) => language ?? 'No language',
-};
+import { isShared, textEditable, useSharedNames } from './useSharedNames';
 
 const keyOf = (name: PanelName, index: number) =>
   name.glossaryUuid ?? `new-${index}`;
@@ -122,177 +50,6 @@ const NameText = ({ name }: { name: PanelName }) => (
     </span>
   </span>
 );
-
-type Entered = { content: string; contentTransformed: string | null };
-
-/**
- * The text of a name being added or edited. A Tibetan name is entered as
- * script, its Wylie shown as it is generated.
- */
-const NameForm = ({
-  group,
-  name,
-  disabled,
-  onSubmit,
-  onCancel,
-}: {
-  group: NameGroup;
-  /** The name being edited, or none to add one. */
-  name?: PanelName;
-  disabled: boolean;
-  onSubmit: (entered: Entered, warnings: string[]) => void;
-  onCancel: () => void;
-}) => {
-  const tibetan = group.language === TIBETAN;
-  const [text, setText] = useState(
-    (tibetan ? name?.contentTransformed : name?.content) ?? '',
-  );
-  const [refused, setRefused] = useState<string | null>(null);
-  const id = useId();
-  const trimmed = text.trim();
-  const converted =
-    tibetan && trimmed
-      ? toEwtsWithWarnings(trimmed, { finalShad: 'drop' })
-      : null;
-  const entered: Entered = converted
-    ? { content: converted.ewts, contentTransformed: trimmed }
-    : { content: trimmed, contentTransformed: null };
-
-  const submit = () => {
-    if (!trimmed || (tibetan && !converted?.ewts.trim())) {
-      setRefused('Enter the name first.');
-      return;
-    }
-    if (hasSameName(group, entered, name)) {
-      setRefused(`This group already has “${trimmed}”.`);
-      return;
-    }
-    onSubmit(entered, converted?.warnings ?? []);
-  };
-
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      submit();
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      onCancel();
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-1.5" data-glossary-name-form="">
-      <div className="flex items-center gap-2">
-        {/* Not the design system's Input, whose debounce Enter could outrun. */}
-        <input
-          id={id}
-          value={text}
-          autoFocus
-          disabled={disabled}
-          aria-label={
-            tibetan
-              ? 'Tibetan name in script'
-              : `${name ? 'Edit' : 'New'} ${GROUP_TITLES[group.kind](group.language)} name`
-          }
-          placeholder={tibetan ? 'Tibetan script' : 'Name'}
-          className={cn(
-            'border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-md border px-3 text-sm focus-visible:outline-none disabled:opacity-50',
-            tibetan && 'font-tibetan text-base',
-          )}
-          onChange={(event) => {
-            setText(event.target.value);
-            setRefused(null);
-          }}
-          onKeyDown={onKeyDown}
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label={name ? 'Save' : 'Add'}
-          disabled={disabled}
-          onClick={submit}
-        >
-          <CheckIcon className="text-success" />
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          aria-label="Cancel"
-          onClick={onCancel}
-        >
-          <XIcon />
-        </Button>
-      </div>
-      {converted && (
-        <p className="text-sm" data-glossary-name-wylie="">
-          <span className="text-muted-foreground text-xs">Wylie </span>
-          <span className="italic">{converted.ewts}</span>
-        </p>
-      )}
-      {converted && <NameWarnings warnings={converted.warnings} />}
-      {refused && (
-        <p role="alert" className="text-destructive text-xs">
-          {refused}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const NameWarnings = ({ warnings }: { warnings: string[] }) =>
-  warnings.length ? (
-    <ul
-      className="text-xs text-amber-700 dark:text-amber-400"
-      data-glossary-name-warnings=""
-    >
-      {warnings.map((warning) => (
-        <li key={warning}>{warning}</li>
-      ))}
-    </ul>
-  ) : null;
-
-/** The select's value for no attestation, which Radix can't give as ''. */
-const ATTESTATION_NONE = 'none';
-
-const AttestationPicker = ({
-  name,
-  disabled,
-  onChange,
-}: {
-  name: PanelName;
-  disabled: boolean;
-  onChange: (attestation: string | null) => void;
-}) => {
-  const value = name.attestation ?? ATTESTATION_NONE;
-  const offered: string[] = [...GLOSSARY_ATTESTATIONS];
-  const stored = name.attestation;
-  if (stored && !offered.includes(stored)) offered.push(stored);
-  return (
-    <Select
-      value={value}
-      disabled={disabled}
-      onValueChange={(chosen) =>
-        onChange(chosen === ATTESTATION_NONE ? null : chosen)
-      }
-    >
-      <SelectTrigger
-        aria-label={`Attestation of ${name.content}`}
-        className="w-56 self-start"
-      >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ATTESTATION_NONE}>No attestation</SelectItem>
-        {offered.map((attestation) => (
-          <SelectItem key={attestation} value={attestation}>
-            {formatAttestation(attestation)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-};
 
 /**
  * An entry's names in their groups, each added, removed, edited or given an
@@ -326,7 +83,7 @@ export const GlossaryEntryNames = ({
     saves.save('names', { names: next });
   };
 
-  const remember = (entered: Entered, warnings: string[]) => {
+  const remember = (entered: EnteredName, warnings: string[]) => {
     if (!entered.contentTransformed) return;
     const script = entered.contentTransformed;
     setWarned((was) => new Map(was).set(script, warnings));
@@ -357,7 +114,7 @@ export const GlossaryEntryNames = ({
             {/* An empty language group's add button already names it. */}
             {(group.kind !== 'language' || !!group.names.length || adding) && (
               <h4 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                {GROUP_TITLES[group.kind](group.language)}
+                {groupTitle(group)}
               </h4>
             )}
             {group.kind === 'alternatives' && (
@@ -386,7 +143,7 @@ export const GlossaryEntryNames = ({
                     data-glossary-name={name.content}
                   >
                     {isEditing ? (
-                      <NameForm
+                      <GlossaryNameForm
                         group={group}
                         name={name}
                         disabled={disabled}
@@ -455,7 +212,7 @@ export const GlossaryEntryNames = ({
                               </span>
                             )
                           ) : (
-                            <AttestationPicker
+                            <GlossaryNameAttestation
                               name={name}
                               disabled={disabled}
                               onChange={(attestation) =>
@@ -477,7 +234,7 @@ export const GlossaryEntryNames = ({
             </ul>
             {canAdd &&
               (adding ? (
-                <NameForm
+                <GlossaryNameForm
                   group={group}
                   disabled={disabled}
                   onCancel={() => setEditing(null)}
