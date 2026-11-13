@@ -1,9 +1,9 @@
+import { storedGlossaryDefinition } from '../glossary/entry/definition';
 import { readEntries } from '../glossary/entry/stored';
 import {
   glossaryEntryChange,
   NO_CHANGES,
   saveGlossaryEntries,
-  storedGlossaryDefinition,
 } from '../glossary/entry/save';
 import type {
   GlossaryEntry,

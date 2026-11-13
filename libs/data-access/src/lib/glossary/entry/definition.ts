@@ -1,3 +1,25 @@
+import {
+  GLOSSARY_DEFINITION_ALLOWLIST,
+  htmlHasText,
+  sanitizeHtml,
+} from '../../html';
+
+/**
+ * A definition as it is written: reduced to the glossary allowlist, and `null`
+ * when no text is left.
+ */
+export const storedGlossaryDefinition = (
+  definition: string | null,
+): string | null => {
+  if (definition === null) return null;
+  const html = sanitizeHtml({
+    html: definition,
+    allowlist: GLOSSARY_DEFINITION_ALLOWLIST,
+    trim: false,
+  });
+  return htmlHasText(html) ? html : null;
+};
+
 /** Plain text of a definition, as the glossary view compares them. */
 const stripHtml = (html: string): string =>
   html
