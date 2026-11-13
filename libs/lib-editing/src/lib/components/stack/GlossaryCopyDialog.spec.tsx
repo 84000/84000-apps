@@ -83,6 +83,7 @@ const controllerWith = (copy = jest.fn()) =>
     getMeta: (uuid: string) =>
       uuid === 'mine' ? { uuid, label: 'g.4', type: 'glossary' } : null,
     getGlossaryEntry: () => null,
+    isReadOnly: () => false,
     copyGlossaryEntry: copy,
   }) as unknown as StackController;
 
@@ -388,5 +389,22 @@ describe('GlossaryRowMenu: Copy from Another Work', () => {
       'Copy from Another Work',
     );
     expect(screen.getByLabelText('Search other works')).toBeTruthy();
+  });
+
+  it('is not offered where the stack is read-only', () => {
+    const controller = {
+      ...controllerWith(),
+      getMeta: (uuid: string) => ({ uuid, label: 'g.4', type: 'glossary' }),
+      isReadOnly: () => true,
+    } as unknown as StackController;
+    render(
+      <GlossaryRowMenu
+        controller={controller}
+        target={{ uuid: 'e1', rect: { top: 0, left: 0, width: 1, height: 1 } }}
+        onClose={() => undefined}
+      />,
+    );
+    expect(screen.getByText('Copy Link')).toBeTruthy();
+    expect(screen.queryByText('Copy from Another Work')).toBeNull();
   });
 });

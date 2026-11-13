@@ -84,6 +84,7 @@ const controllerWith = (copy = jest.fn()) =>
     getMeta: (uuid: string) =>
       uuid === 'mine' ? { uuid, label: 'g.4', type: 'glossary' } : null,
     getGlossaryEntry: () => null,
+    isReadOnly: () => false,
     copyGlossaryEntry: copy,
   }) as unknown as StackController;
 

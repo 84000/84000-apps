@@ -75,6 +75,7 @@ const open = async (threads: string[] = []) => {
   const controller = {
     getMeta: (uuid: string) => ({ uuid, label: 'g.4', type: 'glossary' }),
     getGlossaryEntry: () => ENTRY,
+    isReadOnly: () => false,
   } as unknown as StackController;
   const onClose = jest.fn();
   const target = { uuid: 'e1', rect: { top: 0, left: 0, width: 1, height: 1 } };

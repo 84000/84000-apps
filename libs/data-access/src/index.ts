@@ -10,6 +10,10 @@ export * from './lib/content-source';
 export * from './lib/folio';
 export * from './lib/glossary';
 export * from './lib/html/comment-marks';
+export {
+  GLOSSARY_DEFINITION_ALLOWLIST,
+  sanitizeHtml,
+} from './lib/html/sanitize';
 export * from './lib/harness';
 export * from './lib/imprint';
 export * from './lib/import-preview';

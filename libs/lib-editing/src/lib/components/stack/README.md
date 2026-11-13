@@ -783,12 +783,27 @@ whole words, and also definitions, as `search_entities` does. A fallback name
 the save cannot accept (no language, say) refuses the whole copy, with the
 planner's reason.
 
+"Edit Entry" in the label menu opens `GlossaryEntryPanel`, a dialog for
+what the row does not hold: the names, the linked authority, relinked through
+`GlossaryAuthoritySearch` after a confirmation in place, and the definition
+relation. A stored null relation renders as the entry's own definition, so the
+panel shows it as "Custom definition". Which entry it shows is per controller
+(`glossary-entry-panel`). A read-only stack mounts the editing menus for
+glossary rows too, offering only "Copy Link" and "Edit Entry", and the panel
+shows its values without controls. Each change saves on its own
+(`GlossaryEntrySaves`) through `saveGlossaryEntry`, guarded by the entry in
+`glossary.entries`, one at a time. A saved entry becomes the row's through
+`settleGlossaryEntry`, which keeps the row's definition, the guard of its own
+save. A refused save keeps the editor's value in the field, beside what is
+stored now, with "Use theirs" and "Keep mine".
+
 What later glossary work builds on:
 
-- **Names, attestations, alternatives, matching mode and authority.** The
-  row's header (`glossaryRowChrome`), where `GlossaryRowNames` draws them
-  read-only. The entry they would save from is `glossary.entries`, already
-  the guard for `saveGlossaryEntry`.
+- **Names, attestations, alternatives and authority.** Edited in
+  `GlossaryEntryPanel`; the matching mode is left to the import. The row's
+  header (`glossaryRowChrome`) still draws the names read-only with
+  `GlossaryRowNames`. A field saved from the panel goes through
+  `useGlossaryEntrySaves`.
 - **Creating an entry.** An item in `GlossaryRowMenu`, beside "Delete", that
   puts a row into the spine. That row has no entry and no sort yet.
 - **Placing a new entry's row.** `placeGlossaryRow` (`glossary-place.ts`)

@@ -8,6 +8,7 @@ import type {
 import { EditorContext } from '../editor/editor-context';
 import { GlossaryRowMenu } from './GlossaryRowMenu';
 import type { StackController } from './StackController';
+import { glossaryEntryPanelOf } from './glossary-entry-panel';
 
 // See PassageStackController.spec.ts — the stack's barrels reach
 // `data-access/ssr`, which leaks these.
@@ -68,11 +69,15 @@ const Saving = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const setup = ({ saving = false } = {}) => {
+const setup = ({ saving = false, readOnly = false } = {}) => {
   const remove = jest.fn().mockResolvedValue({ deleted: true });
   const controller = {
     getMeta: (uuid: string) => ({ uuid, label: 'g.4', type: 'glossary' }),
     getGlossaryEntry: () => ENTRY,
+    getFocusedUuid: () => null,
+    subscribe: () => () => undefined,
+    isReadOnly: () => readOnly,
+    focusPassage: jest.fn(),
     deleteGlossaryEntry: remove,
   } as unknown as StackController;
   const target = { uuid: 'e1', rect: { top: 0, left: 0, width: 1, height: 1 } };
@@ -99,7 +104,7 @@ const setup = ({ saving = false } = {}) => {
     );
     await act(async () => undefined);
   };
-  return { remove, openDialog };
+  return { remove, openDialog, controller };
 };
 
 beforeEach(() => {
@@ -107,6 +112,21 @@ beforeEach(() => {
 });
 
 describe('GlossaryRowMenu', () => {
+  it('opens the entry panel on the row’s entry', async () => {
+    const { controller } = setup();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Edit Entry'));
+    });
+    expect(glossaryEntryPanelOf(controller).get()).toBe('e1');
+  });
+
+  it('offers the entry panel but no delete when read-only', () => {
+    setup({ readOnly: true });
+    expect(screen.getByText('Edit Entry')).toBeTruthy();
+    expect(screen.getByText('Copy Link')).toBeTruthy();
+    expect(screen.queryByText('Delete')).toBeNull();
+  });
+
   it('offers delete, which asks first and lists the passages with instances', async () => {
     mockExcerpts.mockResolvedValue(PAGE);
     const { remove, openDialog } = setup();

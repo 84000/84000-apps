@@ -6,6 +6,7 @@ import { ySyncPluginKey } from '@tiptap/y-tiptap';
 import { MentionAdvancedOverlay } from '../editor/extensions/Mention/MentionAdvancedOverlay';
 import { BibliographyBubbleMenu, TranslationBubbleMenu } from '../editor/menus';
 import { BibliographyRowMenu } from './BibliographyRowMenu';
+import { GlossaryEntryPanel } from './GlossaryEntryPanel';
 import { GlossaryRowMenu } from './GlossaryRowMenu';
 import { StackPassageEditor } from './StackPassageEditor';
 import { StackPassageMenu } from './StackPassageMenu';
@@ -31,6 +32,21 @@ const StackEditingMenus = ({
   const focused = controller.getFocusedUuid() ?? 'none';
   const focusedMeta = controller.getMeta(controller.getFocusedUuid() ?? '');
   const focusedKind = focusedMeta ? rowKindOf(focusedMeta.type) : null;
+  // A reader may look at an entry, but not edit it.
+  if (controller.isReadOnly()) {
+    return (
+      controller.getRows() === 'glossary' && (
+        <>
+          <GlossaryRowMenu
+            controller={controller}
+            target={target}
+            onClose={onClose}
+          />
+          <GlossaryEntryPanel controller={controller} />
+        </>
+      )
+    );
+  }
   return (
     <>
       {controller.getRows() === 'bibliography' ? (
@@ -60,11 +76,14 @@ const StackEditingMenus = ({
         />
       )}
       {controller.getRows() === 'glossary' && (
-        <GlossaryRowMenu
-          controller={controller}
-          target={target}
-          onClose={onClose}
-        />
+        <>
+          <GlossaryRowMenu
+            controller={controller}
+            target={target}
+            onClose={onClose}
+          />
+          <GlossaryEntryPanel controller={controller} />
+        </>
       )}
       {editor && (
         <MentionAdvancedOverlay key={`mention-${focused}`} editor={editor} />

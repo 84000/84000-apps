@@ -316,7 +316,8 @@ export const PassageStack = ({
       translate={readOnly ? 'yes' : 'no'}
       data-stack-read-only={readOnly ? '' : undefined}
     >
-      {editing && !readOnly && (
+      {/* A read-only glossary keeps its menus, to show an entry's panel. */}
+      {editing && (!readOnly || controller.getRows() === 'glossary') && (
         <editing.Menus
           controller={controller}
           editor={menuEditor}

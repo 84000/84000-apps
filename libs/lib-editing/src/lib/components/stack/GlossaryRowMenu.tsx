@@ -23,12 +23,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@eightyfourthousand/design-system';
-import { CopyIcon, FilesIcon, Trash2Icon } from 'lucide-react';
+import { CopyIcon, FilesIcon, PencilIcon, Trash2Icon } from 'lucide-react';
 
 import { useEditorState } from '../editor/EditorProvider';
 import { GlossaryCopyDialog } from './GlossaryCopyDialog';
 import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
+import { openGlossaryEntryPanel } from './glossary-entry-panel';
 import { englishNameOf } from './glossary-row';
 import {
   GlossaryCommentDialog,
@@ -46,9 +47,10 @@ type Instances =
   | { uuid: string; status: 'read'; page: GlossaryExcerptsPage };
 
 /**
- * A glossary row's label menu: copy a link to the row, copy an entry from
- * another work, and delete its entry.
- * Mounted once for the stack, as `StackPassageMenu` is for passages.
+ * A glossary row's label menu: copy a link to the row, open its entry in the
+ * entry panel, comment on it, copy an entry from another work, and delete its
+ * entry. Mounted once for the stack, as `StackPassageMenu` is for passages; a
+ * read-only stack offers only the link and the entry panel.
  */
 export const GlossaryRowMenu = ({
   controller,
@@ -73,6 +75,7 @@ export const GlossaryRowMenu = ({
 
   const meta = target ? controller.getMeta(target.uuid) : null;
   const uuid = meta?.uuid ?? '';
+  const readOnly = controller.isReadOnly();
   const instances = deleting && read?.uuid === deleting.uuid ? read : null;
   const name =
     deleting &&
@@ -198,32 +201,46 @@ export const GlossaryRowMenu = ({
               <DropdownMenuItem onSelect={copyLink}>
                 <CopyIcon className="text-primary" /> Copy Link
               </DropdownMenuItem>
-              <GlossaryCommentMenuItem
-                comments={comments}
-                controller={controller}
-                uuid={uuid}
-                onClose={onClose}
-              />
-              <DropdownMenuItem
-                onSelect={() => {
-                  const entry = controller.getGlossaryEntry(uuid);
-                  setCopying((entry && englishNameOf(entry)?.content) ?? '');
-                  onClose();
-                }}
-              >
-                <FilesIcon className="text-primary" /> Copy from Another Work
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => {
-                  setDeleting(meta);
-                  onClose();
-                }}
-                className="text-destructive"
-              >
-                <Trash2Icon className="text-destructive" />
-                Delete
-              </DropdownMenuItem>
+              {controller.getGlossaryEntry(uuid) && (
+                <DropdownMenuItem
+                  onSelect={() => openGlossaryEntryPanel(controller, uuid)}
+                >
+                  <PencilIcon className="text-primary" /> Edit Entry
+                </DropdownMenuItem>
+              )}
+              {!readOnly && (
+                <>
+                  <GlossaryCommentMenuItem
+                    comments={comments}
+                    controller={controller}
+                    uuid={uuid}
+                    onClose={onClose}
+                  />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      const entry = controller.getGlossaryEntry(uuid);
+                      setCopying(
+                        (entry && englishNameOf(entry)?.content) ?? '',
+                      );
+                      onClose();
+                    }}
+                  >
+                    <FilesIcon className="text-primary" /> Copy from Another
+                    Work
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setDeleting(meta);
+                      onClose();
+                    }}
+                    className="text-destructive"
+                  >
+                    <Trash2Icon className="text-destructive" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </>
           )}
         </DropdownMenuContent>
