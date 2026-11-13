@@ -14,7 +14,7 @@ import {
 } from '@eightyfourthousand/design-system';
 import { cn, htmlToText } from '@eightyfourthousand/lib-utils';
 
-import { nameLanguageLabel } from './glossary-languages';
+import { nameLanguageLabel, tibetanScript } from './glossary-languages';
 
 /** Names a result shows besides its headword. */
 const SHOWN_NAMES = 4;
@@ -79,8 +79,8 @@ export const AuthorityNameLabel = ({
     <span className="text-muted-foreground text-xs">
       {nameLanguageLabel(name.language)}
     </span>
-    {name.contentTransformed && (
-      <span className="font-tibetan">{name.contentTransformed}</span>
+    {tibetanScript(name) && (
+      <span className="font-tibetan">{tibetanScript(name)}</span>
     )}
     <span className={name.language === 'en' ? '' : 'italic'}>
       {name.content}

@@ -74,6 +74,23 @@ describe('GlossaryAuthoritySearch', () => {
     expect(result.textContent).toContain('The bodhisattva of wisdom.');
   });
 
+  it('draws script only for Tibetan names', async () => {
+    mockSearch.mockResolvedValue([
+      {
+        ...MANJUSRI,
+        names: [
+          name('n1', 'Bo-Ltn', '’jam dpal', 'འཇམ་དཔལ།'),
+          name('n4', 'en', 'Gentle Glory', 'null'),
+        ],
+      },
+    ]);
+    render(<GlossaryAuthoritySearch onSelect={jest.fn()} />);
+    await typeQuery('gentle');
+    const result = screen.getByRole('button', { name: /Mañjuśrī/ });
+    expect(result.textContent).toContain('འཇམ་དཔལ།');
+    expect(result.textContent).not.toContain('null');
+  });
+
   it('hands the picked authority to onSelect', async () => {
     mockSearch.mockResolvedValue([MANJUSRI, OTHER]);
     const onSelect = jest.fn();

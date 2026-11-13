@@ -24,3 +24,15 @@ export const nameLanguageLabel = (language: string | null): string => {
     NAME_LANGUAGE_LABELS[language as ExtendedTranslationLanguage] ?? language
   );
 };
+
+/**
+ * A name's Tibetan script, or null. Only Tibetan names keep script: some
+ * other names hold placeholder text in that column.
+ */
+export const tibetanScript = (name: {
+  language: string | null;
+  contentTransformed: string | null;
+}): string | null =>
+  name.language === 'Bo-Ltn' || name.language === 'bo'
+    ? name.contentTransformed || null
+    : null;
