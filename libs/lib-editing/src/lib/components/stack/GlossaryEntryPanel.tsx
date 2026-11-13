@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   createBrowserClient,
   getGlossaryAuthorities,
@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@eightyfourthousand/design-system';
-import { PencilIcon, XIcon } from 'lucide-react';
+import { CheckIcon, PencilIcon, XIcon } from 'lucide-react';
 
 import { GlossaryAuthoritySearch } from '../shared/glossary/GlossaryAuthoritySearch';
 import { nameLanguageLabel } from '../shared/glossary/glossary-languages';
@@ -168,8 +168,8 @@ const Section = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <section className="flex flex-col gap-2 border-t py-3">
-    <h3 className="text-sm font-semibold">{title}</h3>
+  <section className="flex flex-col gap-3 border-t py-4">
+    <h3 className="text-base font-semibold">{title}</h3>
     {children}
   </section>
 );
@@ -216,10 +216,12 @@ const DefinitionRend = ({
   );
 };
 
-/** The authority's headword, with its language beneath. */
+/** The authority's headword, styled as the search results show one. */
 const AuthorityHeading = ({ authority }: { authority: GlossaryAuthority }) => (
-  <span className="flex flex-col">
-    <span className="font-semibold">{authority.headword}</span>
+  <span className="flex flex-wrap items-baseline gap-x-2">
+    <span className="text-primary font-sans text-base font-bold">
+      {authority.headword}
+    </span>
     <span className="text-muted-foreground text-xs">
       {nameLanguageLabel(authority.headwordLanguage)}
     </span>
@@ -230,58 +232,104 @@ const AuthorityHeading = ({ authority }: { authority: GlossaryAuthority }) => (
 const RelinkConfirm = ({
   from,
   to,
+  drawsOnStandard,
   onConfirm,
   onCancel,
 }: {
   from: string | undefined;
   to: GlossaryAuthorityMatch;
+  /** Whether readers see the authority's standard definition. */
+  drawsOnStandard: boolean;
   onConfirm: () => void;
   onCancel: () => void;
-}) => (
-  <div
-    role="group"
-    aria-label={`Link to ${to.headword}?`}
-    className="flex flex-col gap-2 rounded-md border p-3"
-    data-glossary-entry-relink=""
-  >
-    <p className="text-sm font-medium">Link to {to.headword}?</p>
-    <p className="text-muted-foreground text-sm">
-      The entry moves from <strong>{from ?? 'its authority'}</strong> to{' '}
-      <strong>{to.headword}</strong>. The definition readers see may change, as
-      it can draw on the authority’s standard definition.
-    </p>
-    <div className="flex gap-2">
-      <Button size="sm" onClick={onConfirm}>
-        Link
-      </Button>
-      <Button size="sm" variant="outline" onClick={onCancel}>
-        Cancel
-      </Button>
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  // The result that opened it is hidden now, so focus moves here.
+  useEffect(() => ref.current?.focus(), []);
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      role="group"
+      aria-label={`Link to ${to.headword}?`}
+      className="flex items-start gap-2 rounded-md border p-3 outline-none"
+      data-glossary-entry-relink=""
+    >
+      <div className="flex flex-1 flex-col gap-1">
+        <p className="text-sm font-medium">Link to {to.headword}?</p>
+        <p className="text-muted-foreground text-sm">
+          The entry moves from <strong>{from ?? 'its authority'}</strong> to{' '}
+          <strong>{to.headword}</strong>.
+          {drawsOnStandard &&
+            ' The definition readers see will change, as it draws on the authority’s standard definition.'}
+        </p>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Link"
+          onClick={onConfirm}
+        >
+          <CheckIcon className="text-success" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Cancel"
+          onClick={onCancel}
+        >
+          <XIcon />
+        </Button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /** The entry's authority, and the search that relinks it. */
 const LinkedAuthority = ({
   read,
   saves,
   readOnly,
+  drawsOnStandard,
 }: {
   read: AuthorityRead;
   saves: GlossaryEntrySaves;
   readOnly: boolean;
+  drawsOnStandard: boolean;
 }) => {
   const [searching, setSearching] = useState(false);
   const [relinking, setRelinking] = useState<GlossaryAuthorityMatch | null>(
     null,
   );
   const current = read.status === 'read' ? read.authority : null;
+  const headingRef = useRef<HTMLDivElement>(null);
+  const searchingRef = useRef<HTMLDivElement>(null);
+
+  // Focus moves once the button or result it lands on is drawn.
+  const focusLater = (find: () => HTMLElement | null | undefined) =>
+    requestAnimationFrame(() => find()?.focus());
+
+  const stop = () => {
+    setRelinking(null);
+    setSearching(false);
+    focusLater(() => headingRef.current?.querySelector('button'));
+  };
+
+  const cancelRelink = () => {
+    const uuid = relinking?.uuid;
+    setRelinking(null);
+    focusLater(() =>
+      searchingRef.current?.querySelector<HTMLElement>(
+        `[data-authority-uuid="${uuid}"]`,
+      ),
+    );
+  };
 
   const confirm = () => {
     if (!relinking) return;
     saves.save('authorityUuid', { authorityUuid: relinking.uuid });
-    setRelinking(null);
-    setSearching(false);
+    stop();
   };
 
   return (
@@ -300,19 +348,29 @@ const LinkedAuthority = ({
         </p>
       )}
       {(current || !readOnly) && (
-        <div className="flex items-start gap-2">
+        <div ref={headingRef} className="flex items-center gap-2">
           {current ? <AuthorityHeading authority={current} /> : <span />}
-          {!readOnly && !searching && (
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label="Link another authority"
-              disabled={!saves.canSave}
-              onClick={() => setSearching(true)}
-            >
-              <PencilIcon />
-            </Button>
-          )}
+          {!readOnly &&
+            (searching ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Stop searching"
+                onClick={stop}
+              >
+                <XIcon />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label="Link another authority"
+                disabled={!saves.canSave}
+                onClick={() => setSearching(true)}
+              >
+                <PencilIcon />
+              </Button>
+            ))}
         </div>
       )}
       {current && (
@@ -323,40 +381,44 @@ const LinkedAuthority = ({
         />
       )}
       <GlossaryEntrySaveStatus saves={saves} field="authorityUuid" />
-      {!readOnly &&
-        searching &&
-        (relinking ? (
-          <RelinkConfirm
-            from={current?.headword}
-            to={relinking}
-            onConfirm={confirm}
-            onCancel={() => setRelinking(null)}
-          />
-        ) : (
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <GlossaryAuthoritySearch
-                autoFocus
-                currentUuid={current?.uuid}
-                disabled={!saves.canSave}
-                onSelect={setRelinking}
-              />
-            </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              aria-label="Stop searching"
-              onClick={() => setSearching(false)}
-            >
-              <XIcon />
-            </Button>
+      {!readOnly && searching && (
+        <div
+          ref={searchingRef}
+          className="flex flex-col gap-2"
+          onKeyDown={(event) => {
+            // The dialog leaves Escape here: it steps back, not out.
+            if (event.key !== 'Escape') return;
+            if (relinking) cancelRelink();
+            else stop();
+          }}
+          data-glossary-entry-searching=""
+        >
+          {relinking && (
+            <RelinkConfirm
+              from={current?.headword}
+              to={relinking}
+              drawsOnStandard={drawsOnStandard}
+              onConfirm={confirm}
+              onCancel={cancelRelink}
+            />
+          )}
+          {/* Kept while confirming, so cancelling returns to the results. */}
+          <div hidden={!!relinking}>
+            <GlossaryAuthoritySearch
+              autoFocus
+              boundedResults={false}
+              currentUuid={current?.uuid}
+              disabled={!saves.canSave}
+              onSelect={setRelinking}
+            />
           </div>
-        ))}
+        </div>
+      )}
     </div>
   );
 };
 
-/** The entry the panel shows: its names, authority and definition relation. */
+/** The entry the panel shows: its definition relation, names and authority. */
 const GlossaryEntryPanelBody = ({
   controller,
   entry,
@@ -385,14 +447,6 @@ const GlossaryEntryPanelBody = ({
 
   return (
     <div className="flex flex-col" data-glossary-entry-panel-body="">
-      <Section title="Names">
-        <GlossaryEntryNames entry={entry} saves={saves} readOnly={readOnly} />
-      </Section>
-
-      <Section title="Authority">
-        <LinkedAuthority read={authority} saves={saves} readOnly={readOnly} />
-      </Section>
-
       <Section title="Definition relation">
         <DefinitionRend
           value={rend}
@@ -423,6 +477,20 @@ const GlossaryEntryPanelBody = ({
             theirs.definitionRend ??
             ''
           }
+        />
+      </Section>
+
+      <Section title="Names">
+        <GlossaryEntryNames entry={entry} saves={saves} readOnly={readOnly} />
+      </Section>
+
+      {/* Last, so its search results grow into the dialog's own scroll. */}
+      <Section title="Authority">
+        <LinkedAuthority
+          read={authority}
+          saves={saves}
+          readOnly={readOnly}
+          drawsOnStandard={rend !== CUSTOM_REND}
         />
       </Section>
     </div>
@@ -458,11 +526,13 @@ export const GlossaryEntryPanel = ({
         className="max-w-readable"
         onOpenAutoFocus={(event) => event.preventDefault()}
         onEscapeKeyDown={(event) => {
-          // Radix hears Escape before the name form does; there it
-          // cancels the name, not the dialog.
+          // Radix hears Escape before the name form and the authority
+          // search do; there it steps back, not out of the dialog.
           if (
             event.target instanceof Element &&
-            event.target.closest('[data-glossary-name-form]')
+            event.target.closest(
+              '[data-glossary-name-form], [data-glossary-entry-searching]',
+            )
           ) {
             event.preventDefault();
           }

@@ -29,7 +29,12 @@ type Answer = {
 
 type Search =
   | { status: 'idle' }
-  | { status: 'searching'; query: string }
+  | {
+      status: 'searching';
+      query: string;
+      /** The last results, shown dimmed until the new ones arrive. */
+      previous: GlossaryAuthorityMatch[] | null;
+    }
   | { status: 'error'; query: string }
   | { status: 'done'; query: string; results: GlossaryAuthorityMatch[] };
 
@@ -75,12 +80,12 @@ export const AuthorityNameLabel = ({
 }: {
   name: GlossaryAuthorityName;
 }) => (
-  <span className="inline-flex flex-wrap items-baseline gap-x-1.5">
-    <span className="text-muted-foreground text-xs">
+  <span className="inline-flex flex-wrap items-baseline gap-x-2">
+    <span className="text-muted-foreground">
       {nameLanguageLabel(name.language)}
     </span>
     {tibetanScript(name) && (
-      <span className="font-tibetan">{tibetanScript(name)}</span>
+      <span className="font-tibetan text-base">{tibetanScript(name)}</span>
     )}
     <span className={name.language === 'en' ? '' : 'italic'}>
       {name.content}
@@ -97,6 +102,7 @@ export const GlossaryAuthoritySearch = ({
   currentUuid,
   autoFocus,
   disabled,
+  boundedResults = true,
   className,
 }: {
   /** Called with the result the editor picks. */
@@ -105,6 +111,11 @@ export const GlossaryAuthoritySearch = ({
   currentUuid?: string;
   autoFocus?: boolean;
   disabled?: boolean;
+  /**
+   * Whether the results scroll in a box of their own. A host that scrolls,
+   * such as a dialog, turns this off so the results scroll with it.
+   */
+  boundedResults?: boolean;
   className?: string;
 }) => {
   const [query, setQuery] = useState('');
@@ -132,7 +143,11 @@ export const GlossaryAuthoritySearch = ({
   const search: Search = !trimmed
     ? { status: 'idle' }
     : answer?.query !== trimmed || answer.attempt !== attempt
-      ? { status: 'searching', query: trimmed }
+      ? {
+          status: 'searching',
+          query: trimmed,
+          previous: answer?.results ?? null,
+        }
       : answer.results
         ? { status: 'done', query: trimmed, results: answer.results }
         : { status: 'error', query: trimmed };
@@ -152,6 +167,8 @@ export const GlossaryAuthoritySearch = ({
         aria-controls={listId}
         autoFocus={autoFocus}
         disabled={disabled}
+        // The browser's own clear button; the host offers a way out.
+        className="[&::-webkit-search-cancel-button]:appearance-none"
       />
       <div id={listId} aria-live="polite">
         <AuthoritySearchResults
@@ -160,6 +177,7 @@ export const GlossaryAuthoritySearch = ({
           onSelect={onSelect}
           onRetry={() => setAttempt((n) => n + 1)}
           disabled={disabled}
+          bounded={boundedResults}
         />
       </div>
     </div>
@@ -172,16 +190,34 @@ const AuthoritySearchResults = ({
   onSelect,
   onRetry,
   disabled,
+  bounded,
 }: {
   search: Search;
   currentUuid?: string;
   onSelect: (authority: GlossaryAuthorityMatch) => void;
   onRetry: () => void;
   disabled?: boolean;
+  bounded: boolean;
 }) => {
   if (search.status === 'idle') return null;
   if (search.status === 'searching') {
-    return <p className="text-muted-foreground text-sm">Searching…</p>;
+    if (!search.previous?.length) {
+      return <p className="text-muted-foreground text-sm">Searching…</p>;
+    }
+    // The dimmed list shows the search; the line is for screen readers.
+    return (
+      <div>
+        <p className="sr-only">Searching…</p>
+        <AuthorityResultList
+          results={search.previous}
+          currentUuid={currentUuid}
+          onSelect={onSelect}
+          disabled={disabled}
+          bounded={bounded}
+          stale
+        />
+      </div>
+    );
   }
   if (search.status === 'error') {
     return (
@@ -203,42 +239,74 @@ const AuthoritySearchResults = ({
     );
   }
   return (
-    <ul
-      className="flex max-h-96 flex-col gap-1 overflow-y-auto"
-      aria-label="Matching authorities"
-    >
-      {search.results.map((authority) => {
-        const linked = authority.uuid === currentUuid;
-        return (
-          <li key={authority.uuid}>
-            <button
-              type="button"
-              disabled={disabled || linked}
-              onClick={() => onSelect(authority)}
-              className="hover:bg-accent focus-visible:bg-accent flex w-full flex-col gap-1 rounded-md border p-2 text-left text-sm disabled:cursor-default disabled:opacity-60"
-              data-authority-uuid={authority.uuid}
-            >
-              <span className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-semibold">{authority.headword}</span>
-                <span className="text-muted-foreground text-xs">
-                  {nameLanguageLabel(authority.headwordLanguage)}
-                </span>
-                {linked && (
-                  <span className="text-primary text-xs">Linked now</span>
-                )}
-              </span>
-              {shownAuthorityNames(authority).map((name) => (
-                <AuthorityNameLabel key={name.uuid} name={name} />
-              ))}
-              {authority.definition && (
-                <span className="text-muted-foreground text-xs leading-snug">
-                  {definitionStart(authority.definition)}
-                </span>
-              )}
-            </button>
-          </li>
-        );
-      })}
-    </ul>
+    <AuthorityResultList
+      results={search.results}
+      currentUuid={currentUuid}
+      onSelect={onSelect}
+      disabled={disabled}
+      bounded={bounded}
+    />
   );
 };
+
+/** The results to pick from; stale ones are dimmed while a search runs. */
+const AuthorityResultList = ({
+  results,
+  currentUuid,
+  onSelect,
+  disabled,
+  bounded,
+  stale,
+}: {
+  results: GlossaryAuthorityMatch[];
+  currentUuid?: string;
+  onSelect: (authority: GlossaryAuthorityMatch) => void;
+  disabled?: boolean;
+  bounded: boolean;
+  stale?: boolean;
+}) => (
+  <ul
+    className={cn(
+      '-mx-2 flex flex-col gap-1',
+      bounded && 'max-h-96 overflow-y-auto',
+      stale && 'opacity-60',
+    )}
+    aria-label="Matching authorities"
+    aria-busy={stale || undefined}
+  >
+    {results.map((authority) => {
+      const linked = authority.uuid === currentUuid;
+      return (
+        <li key={authority.uuid}>
+          <button
+            type="button"
+            disabled={disabled || linked}
+            onClick={() => onSelect(authority)}
+            className="hover:bg-muted focus-visible:bg-muted flex w-full cursor-pointer flex-col gap-1 rounded-md p-2 text-left text-sm transition-colors disabled:cursor-default disabled:opacity-60"
+            data-authority-uuid={authority.uuid}
+          >
+            <span className="flex flex-wrap items-baseline gap-x-2">
+              <span className="text-primary font-sans text-base font-bold">
+                {authority.headword}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                {nameLanguageLabel(authority.headwordLanguage)}
+              </span>
+              {linked && (
+                <span className="text-primary text-xs">Linked now</span>
+              )}
+            </span>
+            {shownAuthorityNames(authority).map((name) => (
+              <AuthorityNameLabel key={name.uuid} name={name} />
+            ))}
+            {authority.definition && (
+              <span className="leading-relaxed">
+                {definitionStart(authority.definition)}
+              </span>
+            )}
+          </button>
+        </li>
+      );
+    })}
+  </ul>
+);

@@ -421,9 +421,17 @@ describe('GlossaryEntryPanel', () => {
     await open(controller);
     await choose('Append standard');
     await act(async () => {
-      fireEvent.change(screen.getByLabelText('Attestation of bodhicitta'), {
-        target: { value: 'attestedOther' },
+      fireEvent.keyDown(screen.getByLabelText('Attestation of bodhicitta'), {
+        key: 'Enter',
       });
+    });
+    await act(async () => {
+      fireEvent.keyDown(
+        screen.getByRole('option', { name: 'Attested Other' }),
+        {
+          key: 'Enter',
+        },
+      );
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /an alternative/ }));
@@ -608,13 +616,17 @@ describe('GlossaryEntryPanel', () => {
     const confirm = screen.getByRole('group', { name: 'Link to Śakra?' });
     expect(confirm.textContent).toContain('Indra');
     expect(confirm.textContent).toContain('Śakra');
-    expect(confirm.textContent).toContain('definition readers see may change');
-    expect(screen.queryByLabelText('Search authorities')).toBeNull();
+    // A custom definition doesn't draw on the authority, so nothing changes.
+    expect(confirm.textContent).not.toContain('definition readers see');
+    // The search stays, hidden, so cancelling returns to its results.
+    expect(
+      screen.getByLabelText('Search authorities').closest('[hidden]'),
+    ).not.toBeNull();
     expect(mockSave).not.toHaveBeenCalled();
     expect(
       within(confirm)
         .getAllByRole('button')
-        .map((button) => button.textContent),
+        .map((button) => button.getAttribute('aria-label')),
     ).toEqual(['Link', 'Cancel']);
     await act(async () => {
       fireEvent.click(within(confirm).getByRole('button', { name: 'Link' }));
@@ -627,6 +639,34 @@ describe('GlossaryEntryPanel', () => {
     expect(screen.queryByRole('group', { name: /Link to/ })).toBeNull();
     expect(screen.queryByLabelText('Search authorities')).toBeNull();
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('warns that the definition changes when it draws on the standard', async () => {
+    const { controller } = setup({
+      entries: [entry('e1', { definitionRend: 'appendWithStandard' })],
+    });
+    mockSearch.mockResolvedValue([{ ...AUTHORITIES.a2, matchedName: null }]);
+    await open(controller);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Link another authority' }),
+      );
+    });
+    jest.useFakeTimers();
+    fireEvent.change(screen.getByLabelText('Search authorities'), {
+      target: { value: 'sakra' },
+    });
+    await act(async () => {
+      jest.runAllTimers();
+    });
+    jest.useRealTimers();
+    await act(async () => undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Śakra'));
+    });
+    expect(
+      screen.getByRole('group', { name: 'Link to Śakra?' }).textContent,
+    ).toContain('definition readers see will change');
   });
 
   it('changes nothing when a relink is cancelled', async () => {
