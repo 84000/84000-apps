@@ -207,7 +207,7 @@ export const GlossaryCopyDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      <DialogContent>
+      <DialogContent className="max-w-readable">
         <DialogHeader>
           <DialogTitle>Copy from Another Work</DialogTitle>
           <DialogDescription>
