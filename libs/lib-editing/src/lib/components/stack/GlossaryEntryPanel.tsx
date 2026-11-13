@@ -13,8 +13,10 @@ import {
 import {
   Button,
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   Select,
@@ -475,6 +477,11 @@ export const GlossaryEntryPanel = ({
             This entry is no longer in the glossary.
           </p>
         )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button>Done</Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
