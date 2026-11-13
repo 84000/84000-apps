@@ -110,6 +110,18 @@ describe('GlossaryAuthoritySearch', () => {
     );
   });
 
+  it('searches the same query again after a failure', async () => {
+    mockSearch.mockResolvedValueOnce(null).mockResolvedValueOnce([MANJUSRI]);
+    render(<GlossaryAuthoritySearch onSelect={jest.fn()} />);
+    await typeQuery('manjusri');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    });
+    expect(mockSearch).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('Mañjuśrī')).toBeTruthy();
+  });
+
   it('shows only the latest query’s results', async () => {
     let answerFirst: (value: GlossaryAuthorityMatch[]) => void = () => null;
     mockSearch

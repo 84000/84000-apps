@@ -7,7 +7,11 @@ import {
   type GlossaryAuthorityMatch,
   type GlossaryAuthorityName,
 } from '@eightyfourthousand/data-access';
-import { DebounceLevel, Input } from '@eightyfourthousand/design-system';
+import {
+  Button,
+  DebounceLevel,
+  Input,
+} from '@eightyfourthousand/design-system';
 import { cn, htmlToText } from '@eightyfourthousand/lib-utils';
 
 import { nameLanguageLabel } from './glossary-languages';
@@ -17,7 +21,11 @@ const SHOWN_NAMES = 4;
 /** Characters of the standard definition a result shows. */
 const DEFINITION_START = 160;
 
-type Answer = { query: string; results: GlossaryAuthorityMatch[] | null };
+type Answer = {
+  query: string;
+  attempt: number;
+  results: GlossaryAuthorityMatch[] | null;
+};
 
 type Search =
   | { status: 'idle' }
@@ -30,9 +38,7 @@ export const definitionStart = (
   definition: string | null,
   length = DEFINITION_START,
 ): string => {
-  const text = htmlToText(definition ?? '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const text = htmlToText(definition ?? '');
   if (text.length <= length) return text;
   const cut = text.slice(0, length);
   const space = cut.lastIndexOf(' ');
@@ -104,6 +110,8 @@ export const GlossaryAuthoritySearch = ({
   const [query, setQuery] = useState('');
   // The last answer, kept by the query it answers.
   const [answer, setAnswer] = useState<Answer | null>(null);
+  // Bumped to search the same query again after a failure.
+  const [attempt, setAttempt] = useState(0);
   const listId = useId();
   const trimmed = query.trim();
 
@@ -114,12 +122,12 @@ export const GlossaryAuthoritySearch = ({
       client: createBrowserClient(),
       query: trimmed,
     }).then((results) => {
-      if (current) setAnswer({ query: trimmed, results });
+      if (current) setAnswer({ query: trimmed, attempt, results });
     });
     return () => {
       current = false;
     };
-  }, [trimmed]);
+  }, [trimmed, attempt]);
 
   const search: Search = !trimmed
     ? { status: 'idle' }
@@ -150,6 +158,7 @@ export const GlossaryAuthoritySearch = ({
           search={search}
           currentUuid={currentUuid}
           onSelect={onSelect}
+          onRetry={() => setAttempt((n) => n + 1)}
           disabled={disabled}
         />
       </div>
@@ -161,11 +170,13 @@ const AuthoritySearchResults = ({
   search,
   currentUuid,
   onSelect,
+  onRetry,
   disabled,
 }: {
   search: Search;
   currentUuid?: string;
   onSelect: (authority: GlossaryAuthorityMatch) => void;
+  onRetry: () => void;
   disabled?: boolean;
 }) => {
   if (search.status === 'idle') return null;
@@ -174,9 +185,14 @@ const AuthoritySearchResults = ({
   }
   if (search.status === 'error') {
     return (
-      <p role="alert" className="text-destructive text-sm">
-        The authorities could not be searched. Try again.
-      </p>
+      <div role="alert" className="flex items-center gap-2 text-sm">
+        <span className="text-destructive">
+          The authorities could not be searched.
+        </span>
+        <Button size="sm" variant="outline" onClick={onRetry}>
+          Try again
+        </Button>
+      </div>
     );
   }
   if (!search.results.length) {

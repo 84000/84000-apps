@@ -38,6 +38,14 @@ const fakeClient = (tables: Tables, fail?: string) => {
           rows = rows.filter((row) => tsMatch(row[field], tsquery));
           return query;
         },
+        ilike(column: string, pattern: string) {
+          filter = filter || `ilike:${column}`;
+          const text = pattern.replace(/\\(.)/g, '$1').toLowerCase();
+          rows = rows.filter(
+            (row) => String(row[column] ?? '').toLowerCase() === text,
+          );
+          return query;
+        },
         in(column: string, values: string[]) {
           filter = filter || `in:${column}`;
           rows = rows.filter((row) => values.includes(row[column] as string));
@@ -198,6 +206,28 @@ describe('searchGlossaryAuthorities', () => {
       'byang chub kyi sems',
       'mind of awakening',
     ]);
+  });
+
+  it('finds the headword as typed past a broad query’s candidates', async () => {
+    const many = Array.from({ length: 205 }, (_, i) =>
+      authority(`a-${i}`, `Buddha ${i}`),
+    );
+    const { client } = fakeClient({
+      authorities: [...many, authority('a-buddha', 'Buddha')],
+      names: [],
+    });
+    const found = await searchGlossaryAuthorities({ client, query: 'buddha' });
+    expect(found?.[0]?.uuid).toBe('a-buddha');
+  });
+
+  it('finds Tibetan script as typed, without its closing shad', async () => {
+    const { client } = fakeClient(TABLES);
+    const found = await searchGlossaryAuthorities({
+      client,
+      query: 'བྱང་ཆུབ་ཀྱི་སེམས',
+    });
+    expect(found?.[0]?.uuid).toBe('a-bodhicitta');
+    expect(found?.[0]?.matchedName?.uuid).toBe('n3');
   });
 
   it('keeps to the limit', async () => {

@@ -62,6 +62,7 @@ type NameRow = {
 };
 
 const TIBETAN = /[ༀ-࿿]/;
+const SHAD = '།';
 
 /**
  * A text as the search vectors hold it: lowercased words, diacritics removed
@@ -77,6 +78,9 @@ export const authoritySearchWords = (text: string): string[] =>
     .filter(Boolean);
 
 /** Every word as a prefix, as `to_tsquery` reads it. */
+/** An `ilike` pattern matching `text` exactly, case aside. */
+const likePattern = (text: string) => text.replace(/[\\%_]/g, '\\$&');
+
 const prefixQuery = (words: string[]) =>
   words.map((word) => `${word}:*`).join(' & ');
 
@@ -191,9 +195,9 @@ export const getGlossaryAuthorities = async ({
  * start of one. Diacritics and case are ignored.
  *
  * Best matches first: the whole text, then its start, then whole words, then
- * word starts; among equals, shorter headwords first. Reads the search
- * vectors' indexes only, so it is cheap for any query, but a query matching
- * thousands of names ranks only the first of them. Null when the read fails.
+ * word starts; among equals, shorter headwords first. A query matching
+ * thousands of names ranks only the first of them, besides any headword or
+ * name that is the query as typed. Null when the read fails.
  */
 export const searchGlossaryAuthorities = async ({
   client,
@@ -217,6 +221,9 @@ export const searchGlossaryAuthorities = async ({
       .select(NAME_COLUMNS)
       .textSearch(column, tsquery, { config: 'simple' })
       .limit(CANDIDATES);
+  // A broad query's candidates may leave out the text typed as it is stored,
+  // so that is read on its own.
+  const typed = query.trim().replace(/[་།\s]+$/u, '');
 
   try {
     const reads = await Promise.all([
@@ -227,10 +234,33 @@ export const searchGlossaryAuthorities = async ({
         .select(AUTHORITY_COLUMNS)
         .textSearch('headword_tsv', tsquery, { config: 'simple' })
         .limit(CANDIDATES),
+      client
+        .from('authorities')
+        .select(AUTHORITY_COLUMNS)
+        .ilike('headword', likePattern(typed))
+        .limit(CANDIDATES),
+      tibetan
+        ? client
+            .from('names')
+            .select(NAME_COLUMNS)
+            // Script is stored with its closing shad.
+            .in('content_transformed', [typed, `${typed}${SHAD}`])
+            .limit(CANDIDATES)
+        : client
+            .from('names')
+            .select(NAME_COLUMNS)
+            .ilike('content', likePattern(typed))
+            .limit(CANDIDATES),
     ]);
     const failed = reads.find((read) => read?.error);
     if (failed?.error) throw new Error(failed.error.message);
-    const [byContent, byScript, byHeadword] = reads;
+    const [byContent, byScript, byPrefix, byExactHeadword, byExactName] = reads;
+    const byHeadword = {
+      data: [
+        ...((byPrefix?.data ?? []) as AuthorityRow[]),
+        ...((byExactHeadword?.data ?? []) as AuthorityRow[]),
+      ],
+    };
 
     // The best rank each authority reaches, and the name that reached it.
     const best = new Map<
@@ -253,6 +283,10 @@ export const searchGlossaryAuthorities = async ({
     }
     for (const row of (byContent?.data ?? []) as NameRow[]) {
       consider(row.authority_uuid, matchRank(row.content, words), nameOf(row));
+    }
+    for (const row of (byExactName?.data ?? []) as NameRow[]) {
+      const text = tibetan ? (row.content_transformed ?? '') : row.content;
+      consider(row.authority_uuid, matchRank(text, words), nameOf(row));
     }
     for (const row of (byScript?.data ?? []) as NameRow[]) {
       consider(

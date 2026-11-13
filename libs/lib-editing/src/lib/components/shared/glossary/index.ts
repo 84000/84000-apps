@@ -1,4 +1,4 @@
-export * from './GlossaryAuthoritySearch';
+export { GlossaryAuthoritySearch } from './GlossaryAuthoritySearch';
 export * from './GlossaryInstanceBody';
 export * from './GlossaryPaginationProvider';
 export * from './GlossaryPassagesDialog';
