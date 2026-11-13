@@ -1,10 +1,11 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import type {
-  ExtendedTranslationLanguage,
-  GlossaryEntry,
-  GlossaryEntryName,
+import {
+  englishNameOf,
+  type ExtendedTranslationLanguage,
+  type GlossaryEntry,
+  type GlossaryEntryName,
 } from '@eightyfourthousand/data-access';
 import { Button } from '@eightyfourthousand/design-system';
 
@@ -17,18 +18,13 @@ import {
   keepMyGlossaryEntry,
   takeTheirGlossaryEntry,
 } from './glossary-save';
+import { GlossaryRowComment } from './GlossaryRowComment';
 import { renderGlossaryRow, type GlossaryWork } from './glossary-work';
 import { useStackWork } from './stack-work-context';
 
 const ALTERNATIVE = 'translationAlternative';
 
-/** The entry's English name: its main translation, else its first English. */
-export const englishNameOf = (
-  entry: GlossaryEntry,
-): GlossaryEntryName | undefined => {
-  const english = entry.names.filter(({ language }) => language === 'en');
-  return english.find(({ termType }) => termType !== ALTERNATIVE) ?? english[0];
-};
+export { englishNameOf };
 
 /**
  * A name's language without its script: a row draws a Tibetan name in both

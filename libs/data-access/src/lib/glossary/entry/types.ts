@@ -52,6 +52,17 @@ export type GlossaryEntry = {
   names: GlossaryEntryName[];
 };
 
+/** The entry's English name: its main translation, else its first English. */
+export const englishNameOf = (
+  entry: GlossaryEntry,
+): GlossaryEntryName | undefined => {
+  const english = entry.names.filter(({ language }) => language === 'en');
+  return (
+    english.find(({ termType }) => termType !== 'translationAlternative') ??
+    english[0]
+  );
+};
+
 /**
  * A name to save. Without `glossaryUuid` it is a new name of the entry;
  * `nameUuid` links an existing names row instead of making one.
