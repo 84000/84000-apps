@@ -303,6 +303,17 @@ export class StackController {
     this.glossary?.entries.get(uuid) ?? null;
 
   /**
+   * Record an entry the entry panel saved, or chose, as the row's entry. The
+   * definition stays as the row last read or saved it: it is the row's guard.
+   */
+  settleGlossaryEntry = (uuid: string, entry: GlossaryEntry) => {
+    const held = this.glossary?.entries.get(uuid);
+    if (!this.glossary || !held) return;
+    this.glossary.entries.set(uuid, { ...entry, definition: held.definition });
+    this.bump();
+  };
+
+  /**
    * Delete a glossary row's entry, and its instances in `passages`. Its row
    * leaves the view, and focus with it.
    */
