@@ -26,7 +26,8 @@ const SEARCH_COLUMNS = `glossary_uuid,
    pali,
    alternatives`;
 
-const escapeIlike = (input: string) =>
+/** `input` as a literal ILIKE pattern: its wildcards and escapes escaped. */
+export const escapeIlike = (input: string) =>
   input.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 
 export const searchWorkGlossaryTerms = async ({
