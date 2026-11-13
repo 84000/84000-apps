@@ -373,6 +373,13 @@ describe('GlossaryEntryNames', () => {
     ).toContain(warning);
   });
 
+  it('draws script only for Tibetan names', async () => {
+    await setup({
+      names: [MAIN, name('Śakra', 'Sa-Ltn', { contentTransformed: 'null' })],
+    });
+    expect(row('Śakra').textContent).not.toContain('null');
+  });
+
   it('shows the names without controls when read-only', async () => {
     await setup({ readOnly: true });
     expect(screen.queryAllByRole('button')).toHaveLength(0);

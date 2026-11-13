@@ -13,7 +13,10 @@ import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { PencilIcon, PlusIcon, XIcon } from 'lucide-react';
 
-import { nameLanguageLabel } from '../shared/glossary/glossary-languages';
+import {
+  nameLanguageLabel,
+  tibetanScript,
+} from '../shared/glossary/glossary-languages';
 import {
   GlossaryEntrySaveStatus,
   type GlossaryEntrySaves,
@@ -98,8 +101,8 @@ const keyOf = (name: PanelName, index: number) =>
 /** A name's text as the panel draws it: Tibetan as script and Wylie. */
 const NameText = ({ name }: { name: PanelName }) => (
   <span className="flex flex-wrap items-baseline gap-x-2">
-    {name.contentTransformed && (
-      <span className="font-tibetan text-base">{name.contentTransformed}</span>
+    {tibetanScript(name) && (
+      <span className="font-tibetan text-base">{tibetanScript(name)}</span>
     )}
     <span className={name.language === 'en' ? '' : 'italic'}>
       {name.content}
