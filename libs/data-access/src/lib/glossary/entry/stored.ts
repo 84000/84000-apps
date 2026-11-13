@@ -34,7 +34,8 @@ const NAME_COLUMNS =
 /** Rows one request returns at most (PostgREST's `max_rows`). */
 const PAGE = 1000;
 
-const unwrap = <T>(
+/** A read's rows, throwing its error with what was being read. */
+export const unwrap = <T>(
   { data, error }: { data: unknown; error: { message: string } | null },
   what: string,
 ): T[] => {

@@ -22,10 +22,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  toast,
 } from '@eightyfourthousand/design-system';
-import { CopyIcon, FilesIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import {
+  CopyIcon,
+  FilesIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+} from 'lucide-react';
 
 import { useEditorState } from '../editor/EditorProvider';
+import { GlossaryEntryForm } from '../shared/glossary/GlossaryEntryForm';
 import { GlossaryCopyDialog } from './GlossaryCopyDialog';
 import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
@@ -48,9 +56,10 @@ type Instances =
 
 /**
  * A glossary row's label menu: copy a link to the row, open its entry in the
- * entry panel, comment on it, copy an entry from another work, and delete its
- * entry. Mounted once for the stack, as `StackPassageMenu` is for passages; a
- * read-only stack offers only the link and the entry panel.
+ * entry panel, comment on it, copy an entry from another work, create a new
+ * entry, and delete its entry. Mounted once for the stack, as
+ * `StackPassageMenu` is for passages; a read-only stack offers only the link
+ * and the entry panel.
  */
 export const GlossaryRowMenu = ({
   controller,
@@ -69,8 +78,9 @@ export const GlossaryRowMenu = ({
   const [error, setError] = useState<string | null>(null);
   // The English term of the row the copy dialog was opened from.
   const [copying, setCopying] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const stack = useStackWork();
-  const { isSaving } = useEditorState();
+  const { isSaving, editPermitted, work } = useEditorState();
   const comments = useGlossaryRowComments(stack?.work.workUuid);
 
   const meta = target ? controller.getMeta(target.uuid) : null;
@@ -228,6 +238,16 @@ export const GlossaryRowMenu = ({
                     <FilesIcon className="text-primary" /> Copy from Another
                     Work
                   </DropdownMenuItem>
+                  {editPermitted === true && (
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setCreating(true);
+                        onClose();
+                      }}
+                    >
+                      <PlusIcon className="text-primary" /> New Entry
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={() => {
@@ -253,6 +273,41 @@ export const GlossaryRowMenu = ({
         onOpenChange={(open) => !open && setCopying(null)}
         term={copying ?? ''}
       />
+      <Dialog open={creating} onOpenChange={setCreating}>
+        {creating && (
+          <DialogContent
+            className="max-w-readable"
+            // The new row takes focus, not the menu the dialog came from.
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle>New glossary entry</DialogTitle>
+              <DialogDescription>
+                Its other names and settings are edited once it is created.
+              </DialogDescription>
+            </DialogHeader>
+            <GlossaryEntryForm
+              workUuid={work.uuid}
+              onCreated={async (entry) => {
+                setCreating(false);
+                const shown = await controller
+                  .addGlossaryRow(entry, { client: createBrowserClient() })
+                  .catch((error: unknown) => {
+                    console.error(
+                      'Failed to show the new glossary row:',
+                      error,
+                    );
+                    return false;
+                  });
+                if (!shown) {
+                  toast('Entry created. It appears when the glossary reloads.');
+                }
+              }}
+              onCancel={() => setCreating(false)}
+            />
+          </DialogContent>
+        )}
+      </Dialog>
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && close()}>
         {deleting && (

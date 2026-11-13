@@ -1,11 +1,11 @@
 'use client';
 
-import { Input, Separator } from '@eightyfourthousand/design-system';
+import { Button, Input, Separator } from '@eightyfourthousand/design-system';
 import {
   createGraphQLClient,
   searchWorkGlossaryTerms,
 } from '@eightyfourthousand/client-graphql';
-import { Loader2Icon } from 'lucide-react';
+import { Loader2Icon, PlusIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigation } from '../../../shared';
 
@@ -22,10 +22,13 @@ export const GlossarySearch = ({
   initialQuery = '',
   autoFocus = true,
   onSelect,
+  onCreate,
 }: {
   initialQuery?: string;
   autoFocus?: boolean;
   onSelect: (result: GlossarySearchResult) => void;
+  /** When given, "Create entry" is offered below the results. */
+  onCreate?: () => void;
 }) => {
   const { uuid: workUuid } = useNavigation();
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -137,6 +140,18 @@ export const GlossarySearch = ({
             No matching glossary terms found.
           </p>
         </>
+      )}
+
+      {onCreate && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="justify-start"
+          onClick={onCreate}
+        >
+          <PlusIcon className="text-primary" />
+          Create entry
+        </Button>
       )}
     </div>
   );

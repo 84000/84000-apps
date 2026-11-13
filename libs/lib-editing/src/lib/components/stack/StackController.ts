@@ -21,6 +21,7 @@ import {
   forgetGlossaryRow,
   type GlossaryRowDelete,
 } from './glossary-delete';
+import { placeGlossaryRow } from './glossary-place';
 import type { GlossaryWork } from './glossary-work';
 import { bibliographyRowStyle, type StackRowStyle } from './row-classes';
 import { StackHydration } from './stack-hydration';
@@ -354,6 +355,25 @@ export class StackController {
       );
     }
     return copy;
+  };
+
+  /**
+   * Show the row of an entry just created in this glossary, in its place,
+   * and focus its definition. False when it cannot be shown here.
+   */
+  addGlossaryRow = async (
+    entry: GlossaryEntry,
+    { client }: { client: DataClient },
+  ): Promise<boolean> => {
+    const glossary = this.glossary;
+    if (!glossary || this.readOnly) return false;
+    // Outside the window, revealing it reads the page around it instead.
+    await placeGlossaryRow({ glossary, uuid: entry.uuid, client }).catch(
+      (error: unknown) => console.error('Failed to place glossary row:', error),
+    );
+    if (!(await this.revealPassage(entry.uuid))) return false;
+    this.focusPassage(entry.uuid, 'start');
+    return true;
   };
 
   /**
