@@ -1,5 +1,5 @@
-import { glossaryEntryChange } from '../glossary/entry/save';
 import { storedGlossaryDefinition } from '../glossary/entry/definition';
+import { glossaryEntryChange } from '../glossary/entry/save';
 import type {
   GlossaryEntry,
   GlossaryEntryChange,
