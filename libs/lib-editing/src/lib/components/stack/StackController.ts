@@ -15,6 +15,7 @@ import {
 import type { PassageReference } from '../editor/extensions/Passage/PassageNode.ssr';
 
 import * as bibliography from './bibliography-structure';
+import { copyGlossaryRow, type GlossaryRowCopy } from './glossary-copy';
 import {
   deleteGlossaryRow,
   forgetGlossaryRow,
@@ -320,6 +321,23 @@ export class StackController {
       passages,
       letGo: () => this.releaseEditorsOf(uuid),
     });
+  };
+
+  /**
+   * Copy an entry of another work into this glossary as a new entry, and
+   * scroll its row into view.
+   */
+  copyGlossaryEntry = async (
+    source: GlossaryEntry,
+    { client }: { client: DataClient },
+  ): Promise<GlossaryRowCopy> => {
+    const glossary = this.glossary;
+    if (!glossary || this.readOnly) {
+      return { copied: false, error: 'The glossary cannot be edited here.' };
+    }
+    const copy = await copyGlossaryRow({ glossary, source, client });
+    if (copy.copied) await this.revealPassage(copy.entry.uuid);
+    return copy;
   };
 
   /**

@@ -769,14 +769,26 @@ no text for a thread to point at, so its threads are listed in the panel under
 Glossary tab. A thread outlives a deleted entry in the table but is no longer
 listed.
 
+"Copy from Another Work", also in the label menu, opens `GlossaryCopyDialog`.
+It searches other works' glossaries (`searchGlossaryEntriesToCopy`, over the
+library-wide `search_entities`) and, once an entry is chosen, shows this work's
+entries for the same authority before copying. `copyGlossaryEntry` saves a new
+entry in this work through `createGlossaryEntry`, with the source's authority,
+definition, rend, matching mode and the same names rows, so the source is not
+written. A name owned by another authority cannot be linked, and is written
+anew with the same text. The copy is read around to find its place, put into
+the spine between its loaded neighbours (renumbering the rows after it) and
+revealed; outside the loaded window the feed reaches it.
+
 What later glossary work builds on:
 
 - **Names, attestations, alternatives, matching mode and authority.** The
   row's header (`glossaryRowChrome`), where `GlossaryRowNames` draws them
   read-only. The entry they would save from is `glossary.entries`, already
   the guard for `saveGlossaryEntry`.
-- **Creating an entry, and copying one from another work.** Items in
-  `GlossaryRowMenu`, beside "Delete", that put a row into the spine. That row
-  has no entry and no sort yet.
+- **Creating an entry.** An item in `GlossaryRowMenu`, beside "Delete", that
+  puts a row into the spine. That row has no entry and no sort yet.
+- **Copying an entry from another work.** `placeGlossaryRow` puts a saved
+  entry's row into the spine in glossary order.
 - **Reviewing and deleting instances.** "Passages ›" in the footer opens the
   shared passages dialog, which this stack does not change.
