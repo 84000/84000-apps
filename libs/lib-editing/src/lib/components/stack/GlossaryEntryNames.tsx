@@ -11,7 +11,13 @@ import {
 import { Button } from '@eightyfourthousand/design-system';
 import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 import { cn } from '@eightyfourthousand/lib-utils';
-import { PencilIcon, PlusIcon, XIcon } from 'lucide-react';
+import {
+  CheckIcon,
+  PencilIcon,
+  PlusIcon,
+  Trash2Icon,
+  XIcon,
+} from 'lucide-react';
 
 import {
   nameLanguageLabel,
@@ -170,7 +176,7 @@ const NameForm = ({
 
   return (
     <div className="flex flex-col gap-1.5" data-glossary-name-form="">
-      <div className="flex gap-2">
+      <div className="flex items-center gap-1">
         {/* Not the design system's Input, whose debounce Enter could outrun. */}
         <input
           id={id}
@@ -193,11 +199,22 @@ const NameForm = ({
           }}
           onKeyDown={onKeyDown}
         />
-        <Button size="sm" disabled={disabled} onClick={submit}>
-          {name ? 'Save' : 'Add'}
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label={name ? 'Save' : 'Add'}
+          disabled={disabled}
+          onClick={submit}
+        >
+          <CheckIcon className="text-success" />
         </Button>
-        <Button size="sm" variant="ghost" onClick={onCancel}>
-          Cancel
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Cancel"
+          onClick={onCancel}
+        >
+          <XIcon />
         </Button>
       </div>
       {converted && (
@@ -248,7 +265,7 @@ const AttestationPicker = ({
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value || null)}
-      className="border-input bg-background h-7 rounded-md border px-1 text-xs"
+      className="border-input bg-background h-8 self-start rounded-md border px-2 text-xs"
     >
       <option value={ATTESTATION_NONE}>No attestation</option>
       {offered.map((attestation) => (
@@ -329,7 +346,7 @@ export const GlossaryEntryNames = ({
                 and search.
               </p>
             )}
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col divide-y">
               {group.names.map((name, index) => {
                 const root = isRootName(names, name);
                 const isEditing =
@@ -345,7 +362,7 @@ export const GlossaryEntryNames = ({
                 return (
                   <li
                     key={keyOf(name, index)}
-                    className="flex flex-col gap-1"
+                    className="flex flex-col gap-1 py-1"
                     data-glossary-name={name.content}
                   >
                     {isEditing ? (
@@ -365,72 +382,72 @@ export const GlossaryEntryNames = ({
                         }}
                       />
                     ) : (
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                        <NameText name={name} />
-                        {root && group.kind !== 'main' && (
-                          <span className="text-muted-foreground text-xs">
-                            Root name
+                      <>
+                        <div className="flex min-h-10 items-center gap-2 text-sm">
+                          <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2">
+                            <NameText name={name} />
+                            {root && group.kind !== 'main' && (
+                              <span className="text-muted-foreground text-xs">
+                                Root name
+                              </span>
+                            )}
+                            {isShared(shared, name) && (
+                              <span
+                                className="rounded bg-muted px-1.5 text-xs"
+                                title="Another entry or a creator uses this name, so its text can’t be edited here."
+                                data-glossary-name-shared=""
+                              >
+                                Shared
+                              </span>
+                            )}
                           </span>
-                        )}
-                        {isShared(shared, name) && (
-                          <span
-                            className="rounded bg-muted px-1.5 text-xs"
-                            title="Another entry or a creator uses this name, so its text can’t be edited here."
-                            data-glossary-name-shared=""
-                          >
-                            Shared
-                          </span>
-                        )}
-                        <span className="ml-auto flex items-center gap-1">
-                          {takesAttestation(group) &&
-                            (readOnly ? (
-                              name.attestation && (
-                                <span className="text-muted-foreground text-xs">
-                                  {formatAttestation(name.attestation)}
-                                </span>
-                              )
-                            ) : (
-                              <AttestationPicker
-                                name={name}
-                                disabled={disabled}
-                                onChange={(attestation) =>
-                                  save(
-                                    replacingName(names, name, {
-                                      ...name,
-                                      attestation,
-                                    }),
-                                  )
-                                }
-                              />
-                            ))}
                           {editable && (
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="size-7"
                               aria-label={`Edit ${name.content}`}
                               disabled={disabled}
                               onClick={() =>
                                 setEditing({ group: groupKey, name })
                               }
                             >
-                              <PencilIcon className="size-3.5" />
+                              <PencilIcon />
                             </Button>
                           )}
                           {removable && (
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="size-7"
                               aria-label={`Remove ${name.content}`}
                               disabled={disabled}
                               onClick={() => save(withoutName(names, name))}
                             >
-                              <XIcon className="size-3.5" />
+                              <Trash2Icon className="text-destructive" />
                             </Button>
                           )}
-                        </span>
-                      </div>
+                        </div>
+                        {takesAttestation(group) &&
+                          (readOnly ? (
+                            name.attestation && (
+                              <span className="text-muted-foreground text-xs">
+                                {formatAttestation(name.attestation)}
+                              </span>
+                            )
+                          ) : (
+                            <AttestationPicker
+                              name={name}
+                              disabled={disabled}
+                              onChange={(attestation) =>
+                                save(
+                                  replacingName(names, name, {
+                                    ...name,
+                                    attestation,
+                                  }),
+                                )
+                              }
+                            />
+                          ))}
+                      </>
                     )}
                     {warnings && <NameWarnings warnings={warnings} />}
                   </li>
