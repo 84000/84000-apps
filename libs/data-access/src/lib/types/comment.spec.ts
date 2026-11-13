@@ -136,7 +136,9 @@ describe('normalizeCommentTag', () => {
 describe('isCommentEntityType', () => {
   it.each([
     ['passage', true],
-    ['glossary', false],
+    ['bibliography', true],
+    ['glossary', true],
+    ['authority', false],
     ['', false],
     [undefined, false],
     [42, false],

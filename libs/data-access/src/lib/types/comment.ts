@@ -19,7 +19,11 @@ import type { UserInfo } from './user';
  * than an enum, following the `work_notes.note_type` precedent, so this list
  * can grow without a migration.
  */
-export const COMMENT_ENTITY_TYPES = ['passage', 'bibliography'] as const;
+export const COMMENT_ENTITY_TYPES = [
+  'passage',
+  'bibliography',
+  'glossary',
+] as const;
 
 export type CommentEntityType = (typeof COMMENT_ENTITY_TYPES)[number];
 
