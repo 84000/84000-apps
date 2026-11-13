@@ -285,6 +285,7 @@ describe('GlossaryRowMenu: New Entry', () => {
       getGlossaryEntry: () => undefined,
       deleteGlossaryEntry: jest.fn(),
       addGlossaryRow,
+      isReadOnly: () => false,
     } as unknown as StackController;
     const target = {
       uuid: 'e1',
