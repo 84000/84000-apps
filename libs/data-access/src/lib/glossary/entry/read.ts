@@ -1,5 +1,5 @@
 import type { DataClient } from '../../types';
-import { readEntries } from './stored';
+import { readCreatorNames, readEntries, readNamesUsedOutside } from './stored';
 import type { GlossaryEntry } from './types';
 
 /**
@@ -39,4 +39,30 @@ export const getGlossaryEntry = async ({
   if (!read.ok) return { status: 'failed', error: read.error };
   const [entry] = read.entries;
   return entry ? { status: 'found', entry } : { status: 'not-found' };
+};
+
+/**
+ * The names rows of an entry that are shared: also used by another entry, in
+ * any work, or by a creator. A save that changes a shared name's text copies
+ * it for this entry rather than editing it. `null` when the read fails.
+ */
+export const getGlossaryEntrySharedNames = async ({
+  client,
+  entry,
+}: {
+  client: DataClient;
+  entry: GlossaryEntry;
+}): Promise<Set<string> | null> => {
+  const nameUuids = [...new Set(entry.names.map((n) => n.nameUuid))];
+  if (!nameUuids.length) return new Set();
+  try {
+    const [creators, outside] = await Promise.all([
+      readCreatorNames(client, nameUuids),
+      readNamesUsedOutside(client, entry, nameUuids),
+    ]);
+    return new Set([...creators, ...outside]);
+  } catch (thrown) {
+    console.error(`Error reading shared names of entry ${entry.uuid}:`, thrown);
+    return null;
+  }
 };
