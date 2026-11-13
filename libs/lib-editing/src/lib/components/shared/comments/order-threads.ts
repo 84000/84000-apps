@@ -12,6 +12,8 @@ export interface PanelThread {
    * unanchored thread.
    */
   anchors: CommentAnchor[];
+  /** The passage or entry the thread sits on, or was born on if unanchored. */
+  passageUuid?: string;
   /** The label of the passage holding the first anchor, for the list heading. */
   passageLabel?: string;
   /** That passage's type, which is what decides the panel and tab it is read in. */
@@ -53,18 +55,19 @@ export const mergeContiguous = (anchors: CommentAnchor[]): CommentAnchor[] => {
  *
  * Position is the first anchor: earliest passage, then earliest offset. Not
  * `createdAt` — the panel reads as a margin, so it follows the text.
- * Bibliography entries come after every passage, in the order given.
+ * Bibliography and glossary entries come after every passage, in the order
+ * given.
  */
 export const orderThreads = (
   passages: PassageComments[],
-  bibliography: PassageComments[] = [],
+  entries: PassageComments[] = [],
 ): { anchored: PanelThread[]; unanchored: PanelThread[] } => {
   const anchored = new Map<string, PanelThread>();
   const unanchored = new Map<string, PanelThread>();
 
   const inWorkOrder = [
     ...[...passages].sort((a, b) => a.sort - b.sort),
-    ...bibliography,
+    ...entries,
   ];
 
   for (const passage of inWorkOrder) {
@@ -80,6 +83,7 @@ export const orderThreads = (
         anchored.set(thread.uuid, {
           thread,
           anchors: [...anchors],
+          passageUuid: passage.passageUuid,
           passageLabel: passage.label,
           passageType: passage.type,
         });
@@ -93,6 +97,7 @@ export const orderThreads = (
         unanchored.set(thread.uuid, {
           thread,
           anchors: [],
+          passageUuid: passage.passageUuid,
           passageLabel: passage.label,
           passageType: passage.type,
         });

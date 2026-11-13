@@ -759,6 +759,14 @@ entry that no longer exists. A row whose entry was deleted elsewhere shows that
 in place of a conflict, with "Remove it", which does the same without the
 request, and "Discard my edit".
 
+The row's footer holds "Passages ›" and, in the studio, "Comment"
+(`GlossaryRowComment`): a composer that starts a thread on the entry
+(`comments.entity_type` `glossary`, `entity_uuid` the entry's uuid) and opens
+it in the comments panel. An entry has no text for a thread to point at, so its
+threads are listed by `Work.glossaryComments` under "Glossary <name>" and are
+never unanchored; clicking one opens the entry in the Glossary tab. A thread
+outlives a deleted entry in the table but is no longer listed.
+
 What later glossary work builds on:
 
 - **Names, attestations, alternatives, matching mode and authority.** The
@@ -768,7 +776,5 @@ What later glossary work builds on:
 - **Creating an entry, and copying one from another work.** Items in
   `GlossaryRowMenu`, beside "Delete", that put a row into the spine. That row
   has no entry and no sort yet.
-- **Comments.** The row's footer, beside "Passages ›", and the same actions
-  area of the header.
 - **Reviewing and deleting instances.** "Passages ›" in the footer opens the
   shared passages dialog, which this stack does not change.

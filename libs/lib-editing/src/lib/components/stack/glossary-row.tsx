@@ -204,10 +204,13 @@ export const glossaryRowChrome = (
       </>
     ),
     footer: (
-      <GlossaryPassagesLink
-        uuid={entry.uuid}
-        english={englishNameOf(entry)?.content}
-      />
+      <div className="flex flex-col gap-1">
+        <GlossaryPassagesLink
+          uuid={entry.uuid}
+          english={englishNameOf(entry)?.content}
+        />
+        <GlossaryRowComment uuid={entry.uuid} />
+      </div>
     ),
   };
 };
