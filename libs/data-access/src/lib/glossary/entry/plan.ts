@@ -7,8 +7,13 @@ import {
   stale,
 } from './plan-check';
 import { diffNames, readOrder, sameText, staleExpect } from './plan-compare';
-import { must, nameText, NameOps, pick, type EntryNames } from './plan-names';
-import { elementsOf, entryValues, planRow, type Element } from './plan-rows';
+import { nameText, NameOps, type EntryNames } from './plan-names';
+import {
+  elementsOf,
+  entryValues,
+  planRow,
+  type PlannedName,
+} from './plan-rows';
 import type {
   AuthorityInsert,
   GlossaryPlan,
@@ -16,6 +21,7 @@ import type {
   PlannedSave,
   StoredState,
 } from './plan-types';
+import { must, pick } from './plan-util';
 import type {
   GlossaryEntry,
   GlossaryEntryDelete,
@@ -58,11 +64,12 @@ const emptyPlan = (): GlossaryPlan => ({
   p_edges_insert: [],
   p_edges_delete: [],
 });
+
 /** Checks the save's names against the stored state. */
 const checkElements = (
   call: CallState,
   save: GlossaryEntrySave,
-  elements: readonly Element[],
+  elements: readonly PlannedName[],
   authorityUuid: string,
 ): PlanFailure | null => {
   for (const el of elements) {
@@ -122,6 +129,7 @@ const checkExpect = (
       )
     : null;
 };
+
 /**
  * Plans one save into the call's plan. Every check that needs stored values
  * happens before anything is added.
@@ -200,7 +208,7 @@ const planEntry = (
   });
 
   // Rows the entry keeps or adds, with the names row each ends up using.
-  const names: EntryNames = {
+  const at: EntryNames = {
     stored,
     names: call.names,
     linkedInCall: call.linkedInCall,
@@ -210,9 +218,7 @@ const planEntry = (
     relink,
     moved: new Set(),
   };
-  const projected = elements.map((el) =>
-    planRow(plan, save, values, el, names),
-  );
+  const projected = elements.map((el) => planRow(plan, save, values, el, at));
 
   for (const gone of removed) {
     const row = must(stored.rows, gone.glossaryUuid);

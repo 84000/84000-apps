@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 import type { diffNames } from './plan-compare';
+import { must, pick } from './plan-util';
 import type {
   ElementInput,
   GlossaryPlan,
@@ -18,28 +19,6 @@ import type {
  * Planning the `names` rows of a save: which row each of an entry's names
  * ends up using, and the links, edits, moves and copies that takes.
  */
-
-/**
- * A stored value `readStored` guarantees: it refuses reads that disagree, so
- * a missing one is a bug, not a concurrent change.
- */
-export const must = <K, V>(map: ReadonlyMap<K, V>, key: K): V => {
-  const value = map.get(key);
-  if (value === undefined) {
-    throw new Error(`The stored state has nothing for ${String(key)}`);
-  }
-  return value;
-};
-
-/** `row`'s values of `keys`. */
-export const pick = <T extends object, K extends keyof T>(
-  row: T,
-  keys: readonly K[],
-): Pick<T, K> => {
-  const out = {} as Pick<T, K>;
-  for (const key of keys) out[key] = row[key];
-  return out;
-};
 
 /** The names row a name ends up using. */
 export type NamePlan = {

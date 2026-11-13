@@ -2,8 +2,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { storedGlossaryDefinition } from './definition';
 import { diffNames, sameMode } from './plan-compare';
-import { must, pick, planName, type EntryNames } from './plan-names';
+import { planName, type EntryNames } from './plan-names';
 import type { ElementInput, GlossaryPlan, RowCols } from './plan-types';
+import { must, pick } from './plan-util';
 import type {
   GlossaryEntry,
   GlossaryEntryName,
@@ -26,7 +27,7 @@ export type EntryValues = {
 };
 
 /** A name of the save, matched to the stored row it keeps. */
-export type Element = ReturnType<typeof diffNames>[number] & {
+export type PlannedName = ReturnType<typeof diffNames>[number] & {
   i: number;
   /** The `glossaries` row of the name after the save. */
   row: string;
@@ -68,7 +69,7 @@ export const entryValues = (
 export const elementsOf = (
   save: GlossaryEntrySave,
   entry: GlossaryEntry | undefined,
-): Element[] => {
+): PlannedName[] => {
   const list: ElementInput[] = save.change.names ?? entry?.names ?? [];
   return diffNames(entry, list).map((d, i) => ({
     ...d,
@@ -85,12 +86,12 @@ export const planRow = (
   plan: GlossaryPlan,
   save: GlossaryEntrySave,
   values: EntryValues,
-  el: Element,
-  names: EntryNames,
+  el: PlannedName,
+  at: EntryNames,
 ): GlossaryEntryName => {
   const { change } = save;
   const { authorityUuid, definition } = values;
-  const target = planName(names, el);
+  const target = planName(at, el);
   const isRoot = el.row === save.uuid;
   const termType = el.name.termType ?? null;
   const attestation = el.name.attestation ?? null;
@@ -107,7 +108,7 @@ export const planRow = (
     });
     plan.p_edges_insert.push({ parent_uuid: save.uuid, child_uuid: el.row });
   } else {
-    const row = must(names.stored.rows, el.was.glossaryUuid);
+    const row = must(at.stored.rows, el.was.glossaryUuid);
     const set: RowCols = {};
     if (values.relink) set.authority_uuid = authorityUuid;
     if (target.nameUuid !== row.name_uuid) set.name_uuid = target.nameUuid;
