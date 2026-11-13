@@ -771,7 +771,7 @@ listed.
 
 "Copy from Another Work", also in the label menu, opens `GlossaryCopyDialog`.
 It searches other works' glossaries (`searchGlossaryEntriesToCopy`, over the
-library-wide `search_entities`) and, once an entry is chosen, shows this work's
+library-wide `search_entities`), starting with the row's English name, and, once an entry is chosen, shows this work's
 entries for the same authority before copying. `copyGlossaryEntry` saves a new
 entry in this work through `createGlossaryEntry`, with the source's authority,
 definition, rend, matching mode and the same names rows, so the source is not

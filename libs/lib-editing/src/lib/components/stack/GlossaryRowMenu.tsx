@@ -65,7 +65,8 @@ export const GlossaryRowMenu = ({
   const [read, setRead] = useState<Instances | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copying, setCopying] = useState(false);
+  // The English term of the row the copy dialog was opened from.
+  const [copying, setCopying] = useState<string | null>(null);
   const stack = useStackWork();
   const { isSaving } = useEditorState();
   const comments = useGlossaryRowComments(stack?.work.workUuid);
@@ -205,7 +206,8 @@ export const GlossaryRowMenu = ({
               />
               <DropdownMenuItem
                 onSelect={() => {
-                  setCopying(true);
+                  const entry = controller.getGlossaryEntry(uuid);
+                  setCopying((entry && englishNameOf(entry)?.content) ?? '');
                   onClose();
                 }}
               >
@@ -230,8 +232,9 @@ export const GlossaryRowMenu = ({
       <GlossaryCommentDialog comments={comments} />
       <GlossaryCopyDialog
         controller={controller}
-        open={copying}
-        onOpenChange={setCopying}
+        open={copying !== null}
+        onOpenChange={(open) => !open && setCopying(null)}
+        term={copying ?? ''}
       />
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && close()}>

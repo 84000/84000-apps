@@ -57,17 +57,21 @@ type ExistingRead = { authority: string; entries: GlossaryEntry[] | null };
 /**
  * Search other works' glossaries and copy one of their entries into this
  * one, saying first when this work already has an entry for its authority.
+ * The search starts with `term`, if given.
  */
 export const GlossaryCopyDialog = ({
   controller,
   open,
   onOpenChange,
+  term = '',
 }: {
   controller: StackController;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  term?: string;
 }) => {
-  const [query, setQuery] = useState('');
+  // Null until something is typed: the search box shows `term` till then.
+  const [typed, setTyped] = useState<string | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [chosen, setChosen] = useState<GlossaryCopySource | null>(null);
   const [read, setRead] = useState<ExistingRead | null>(null);
@@ -75,6 +79,7 @@ export const GlossaryCopyDialog = ({
   const [error, setError] = useState<string | null>(null);
   const latest = useRef('');
   const workUuid = open ? controller.getGlossary()?.work.workUuid : undefined;
+  const query = typed ?? (open ? term : '');
 
   const trimmed = query.trim();
   // Shown for the query typed, never an earlier one's answer.
@@ -93,32 +98,43 @@ export const GlossaryCopyDialog = ({
     setError(null);
   }, []);
 
-  // The input waits for typing to pause; a later query's answer replaces it.
+  /** Search for `text`; a later query's answer replaces it. */
+  const runSearch = useCallback((work: string, text: string) => {
+    latest.current = text;
+    searchGlossaryEntriesToCopy({
+      client: createBrowserClient(),
+      workUuid: work,
+      query: text,
+    })
+      .catch((cause) => {
+        console.error('Failed to search other works:', cause);
+        return null;
+      })
+      .then((results) => {
+        // An earlier query's late answer must not replace a later one's.
+        if (latest.current === text) setAnswer({ query: text, results });
+      });
+  }, []);
+
+  // The term the dialog opens with is searched at once.
+  const initial = open ? term.trim() : '';
+  useEffect(() => {
+    if (workUuid && initial) runSearch(workUuid, initial);
+  }, [workUuid, initial, runSearch]);
+
+  // The input waits for typing to pause.
   const changeQuery = useCallback(
     (next: string) => {
       // The input reports its last value as it closes, after the reset.
       if (!open) return;
-      setQuery(next);
-      const typed = next.trim();
-      if (typed === latest.current) return;
+      setTyped(next);
+      const text = next.trim();
+      if (text === latest.current) return;
       back();
-      latest.current = typed;
-      if (!workUuid || !typed) return;
-      searchGlossaryEntriesToCopy({
-        client: createBrowserClient(),
-        workUuid,
-        query: typed,
-      })
-        .catch((cause) => {
-          console.error('Failed to search other works:', cause);
-          return null;
-        })
-        .then((results) => {
-          // An earlier query's late answer must not replace a later one's.
-          if (latest.current === typed) setAnswer({ query: typed, results });
-        });
+      latest.current = text;
+      if (workUuid && text) runSearch(workUuid, text);
     },
-    [open, workUuid, back],
+    [open, workUuid, back, runSearch],
   );
 
   const authority = chosen?.entry.authorityUuid;
@@ -151,7 +167,7 @@ export const GlossaryCopyDialog = ({
   }, [authority, workUuid]);
 
   const reset = useCallback(() => {
-    setQuery('');
+    setTyped(null);
     latest.current = '';
     setAnswer(null);
     setChosen(null);
@@ -191,10 +207,7 @@ export const GlossaryCopyDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      <DialogContent
-        className="max-w-readable w-full font-serif"
-        showCloseButton={false}
-      >
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Copy from Another Work</DialogTitle>
           <DialogDescription>
@@ -232,25 +245,19 @@ export const GlossaryCopyDialog = ({
           )}
         </div>
 
-        <DialogFooter>
-          {chosen ? (
-            <>
-              <Button variant="outline" disabled={pending} onClick={back}>
-                Back
-              </Button>
-              <Button
-                disabled={pending || existing?.status === 'reading'}
-                onClick={handleCopy}
-              >
-                {pending ? 'Copying…' : already.length ? 'Copy anyway' : 'Copy'}
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={close}>
-              Cancel
+        {chosen && (
+          <DialogFooter>
+            <Button variant="outline" disabled={pending} onClick={back}>
+              Back
             </Button>
-          )}
-        </DialogFooter>
+            <Button
+              disabled={pending || existing?.status === 'reading'}
+              onClick={handleCopy}
+            >
+              {pending ? 'Copying…' : already.length ? 'Copy anyway' : 'Copy'}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -262,7 +269,7 @@ const GlossaryCopySourceCard = ({ source }: { source: GlossaryCopySource }) => {
   const definition = definitionStart(entry.definition);
   return (
     <div className="flex flex-col gap-1 text-left" data-glossary-copy-source="">
-      <div className="text-muted-foreground flex flex-wrap gap-x-2 font-sans text-xs">
+      <div className="text-muted-foreground flex flex-wrap gap-x-2 text-xs">
         {work.toh && <span className="font-bold">{parseToh(work.toh)}</span>}
         {work.title && <span>{work.title}</span>}
         <span>{label}</span>
@@ -305,7 +312,7 @@ const GlossaryCopyResults = ({
   }
   return (
     <ul
-      className="flex max-h-96 flex-col gap-1 overflow-y-auto rounded-md border p-1"
+      className="flex max-h-96 flex-col gap-1 overflow-y-auto"
       aria-label="Entries in other works"
     >
       {search.results.map((source) => (
@@ -366,9 +373,7 @@ const GlossaryCopyExisting = ({
           return (
             <li key={entry.uuid} className="flex flex-col gap-1">
               {label && (
-                <span className="text-muted-foreground font-sans text-xs">
-                  {label}
-                </span>
+                <span className="text-muted-foreground text-xs">{label}</span>
               )}
               <GlossaryRowNames entry={entry} />
               {definition && <p className="leading-relaxed">{definition}</p>}
