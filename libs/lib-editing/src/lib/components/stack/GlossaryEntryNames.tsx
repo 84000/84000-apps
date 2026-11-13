@@ -183,7 +183,7 @@ const NameForm = ({
 
   return (
     <div className="flex flex-col gap-1.5" data-glossary-name-form="">
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         {/* Not the design system's Input, whose debounce Enter could outrun. */}
         <input
           id={id}
@@ -197,7 +197,7 @@ const NameForm = ({
           }
           placeholder={tibetan ? 'Tibetan script' : 'Name'}
           className={cn(
-            'border-input bg-background placeholder:text-muted-foreground flex h-8 w-full rounded-md border px-2 text-sm focus-visible:outline-none disabled:opacity-50',
+            'border-input bg-background placeholder:text-muted-foreground flex h-10 w-full rounded-md border px-3 text-sm focus-visible:outline-none disabled:opacity-50',
             tibetan && 'font-tibetan text-base',
           )}
           onChange={(event) => {
@@ -354,9 +354,12 @@ export const GlossaryEntryNames = ({
             data-glossary-name-group={group.kind}
             data-language={group.language ?? undefined}
           >
-            <h4 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-              {GROUP_TITLES[group.kind](group.language)}
-            </h4>
+            {/* An empty language group's add button already names it. */}
+            {(group.kind !== 'language' || !!group.names.length || adding) && (
+              <h4 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                {GROUP_TITLES[group.kind](group.language)}
+              </h4>
+            )}
             {group.kind === 'alternatives' && (
               <p className="text-muted-foreground text-xs">
                 Readers never see these names. They are used only for matching

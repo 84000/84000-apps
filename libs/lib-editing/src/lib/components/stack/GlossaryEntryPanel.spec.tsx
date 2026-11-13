@@ -616,7 +616,8 @@ describe('GlossaryEntryPanel', () => {
     const confirm = screen.getByRole('group', { name: 'Link to Śakra?' });
     expect(confirm.textContent).toContain('Indra');
     expect(confirm.textContent).toContain('Śakra');
-    expect(confirm.textContent).toContain('definition readers see may change');
+    // A custom definition doesn't draw on the authority, so nothing changes.
+    expect(confirm.textContent).not.toContain('definition readers see');
     // The search stays, hidden, so cancelling returns to its results.
     expect(
       screen.getByLabelText('Search authorities').closest('[hidden]'),
@@ -638,6 +639,34 @@ describe('GlossaryEntryPanel', () => {
     expect(screen.queryByRole('group', { name: /Link to/ })).toBeNull();
     expect(screen.queryByLabelText('Search authorities')).toBeNull();
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
+  });
+
+  it('warns that the definition changes when it draws on the standard', async () => {
+    const { controller } = setup({
+      entries: [entry('e1', { definitionRend: 'appendWithStandard' })],
+    });
+    mockSearch.mockResolvedValue([{ ...AUTHORITIES.a2, matchedName: null }]);
+    await open(controller);
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Link another authority' }),
+      );
+    });
+    jest.useFakeTimers();
+    fireEvent.change(screen.getByLabelText('Search authorities'), {
+      target: { value: 'sakra' },
+    });
+    await act(async () => {
+      jest.runAllTimers();
+    });
+    jest.useRealTimers();
+    await act(async () => undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Śakra'));
+    });
+    expect(
+      screen.getByRole('group', { name: 'Link to Śakra?' }).textContent,
+    ).toContain('definition readers see will change');
   });
 
   it('changes nothing when a relink is cancelled', async () => {

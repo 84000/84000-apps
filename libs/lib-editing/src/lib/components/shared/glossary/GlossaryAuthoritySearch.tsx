@@ -201,13 +201,13 @@ const AuthoritySearchResults = ({
 }) => {
   if (search.status === 'idle') return null;
   if (search.status === 'searching') {
-    const searching = (
-      <p className="text-muted-foreground text-sm">Searching…</p>
-    );
-    if (!search.previous?.length) return searching;
+    if (!search.previous?.length) {
+      return <p className="text-muted-foreground text-sm">Searching…</p>;
+    }
+    // The dimmed list shows the search; the line is for screen readers.
     return (
-      <div className="flex flex-col gap-2">
-        {searching}
+      <div>
+        <p className="sr-only">Searching…</p>
         <AuthorityResultList
           results={search.previous}
           currentUuid={currentUuid}
