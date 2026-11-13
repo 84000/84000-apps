@@ -96,9 +96,12 @@ export const GlossaryCopyDialog = ({
   // The input waits for typing to pause; a later query's answer replaces it.
   const changeQuery = useCallback(
     (next: string) => {
+      // The input reports its last value as it closes, after the reset.
+      if (!open) return;
       setQuery(next);
-      back();
       const typed = next.trim();
+      if (typed === latest.current) return;
+      back();
       latest.current = typed;
       if (!workUuid || !typed) return;
       searchGlossaryEntriesToCopy({
@@ -115,7 +118,7 @@ export const GlossaryCopyDialog = ({
           if (latest.current === typed) setAnswer({ query: typed, results });
         });
     },
-    [workUuid, back],
+    [open, workUuid, back],
   );
 
   const authority = chosen?.entry.authorityUuid;
