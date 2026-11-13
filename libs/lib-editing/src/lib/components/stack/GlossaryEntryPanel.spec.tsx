@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type {
   GlossaryAuthority,
   GlossaryEntry,
@@ -75,6 +75,7 @@ const fakeController = ({
 } = {}) => {
   const held = new Map(entries.map((e) => [e.uuid, e]));
   let version = 0;
+  let focused: string | null = null;
   const listeners = new Set<() => void>();
   const bump = () => {
     version += 1;
@@ -88,6 +89,11 @@ const fakeController = ({
       return () => listeners.delete(listener);
     },
     getVersion: () => version,
+    getFocusedUuid: () => focused,
+    focusPassage: (uuid: string) => {
+      focused = uuid;
+      bump();
+    },
     settleGlossaryEntry: jest.fn((uuid: string, next: GlossaryEntry) => {
       held.set(uuid, next);
       bump();
@@ -96,6 +102,7 @@ const fakeController = ({
   return {
     controller: controller as unknown as StackController,
     settle: controller.settleGlossaryEntry,
+    select: controller.focusPassage,
     held,
   };
 };
@@ -154,6 +161,20 @@ describe('GlossaryEntryPanel', () => {
     await open(controller);
     expect(panel()).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Indra' })).toBeTruthy();
+    // A dialog, not a side sheet.
+    expect(screen.getByRole('dialog')).toBe(panel());
+  });
+
+  it('shows the entry it was opened on, whichever row is selected after', async () => {
+    const { controller, select } = setup();
+    await open(controller, 'e1');
+    await act(async () => {
+      select('e2');
+    });
+    expect(screen.getByRole('heading', { name: 'Indra' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Brahmā' })).toBeNull();
+    expect(panel()?.textContent).toContain('Indra');
+    expect(panel()?.textContent).not.toContain('Brahmā');
   });
 
   it('shows the linked authority with its headword, language and standard definition', async () => {
@@ -164,7 +185,18 @@ describe('GlossaryEntryPanel', () => {
     ) as HTMLElement;
     expect(shown.textContent).toContain('Indra');
     expect(shown.textContent).toContain('Sanskrit');
+    // The language sits below the headword.
+    expect(shown.textContent?.indexOf('Sanskrit')).toBeGreaterThan(
+      shown.textContent?.indexOf('Indra') as number,
+    );
     expect(shown.textContent).not.toContain('Standard definition');
+    // Relinking is an icon button beside the headword, with no text of its own.
+    const relink = within(shown).getByRole('button', {
+      name: 'Link another authority',
+    });
+    expect(relink.textContent).toBe('');
+    expect(relink.querySelector('svg')).toBeTruthy();
+    expect(relink.parentElement?.textContent).toContain('Indra');
     expect(
       document.querySelector('[data-glossary-entry-standard]')?.textContent,
     ).toContain('The standard Indra.');
@@ -191,6 +223,41 @@ describe('GlossaryEntryPanel', () => {
     expect(mockSave).not.toHaveBeenCalled();
   });
 
+  it('saves each relation as its stored value', async () => {
+    const { controller } = setup();
+    mockSave.mockImplementation(
+      async ({
+        before,
+        after,
+      }: {
+        before: GlossaryEntry;
+        after: Partial<GlossaryEntry>;
+      }) => ({ success: true, entries: [{ ...before, ...after }] }),
+    );
+    await open(controller);
+    await choose('Append standard');
+    await choose('Prepend standard');
+    await choose('Use standard');
+    await choose('Custom definition');
+    expect(mockSave.mock.calls.map(([args]) => args.after)).toEqual([
+      { definitionRend: 'appendWithStandard' },
+      { definitionRend: 'prependWithStandard' },
+      { definitionRend: 'overrideWithStandard' },
+      { definitionRend: 'incompatibleWithStandard' },
+    ]);
+    expect(relation().textContent).toBe('Custom definition');
+  });
+
+  it('has no matching control, radios or preview of what readers see', async () => {
+    const { controller } = setup();
+    await open(controller);
+    expect(screen.queryAllByRole('radio')).toHaveLength(0);
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(panel()?.textContent).not.toContain('Matching');
+    expect(panel()?.textContent).not.toContain('What readers will see');
+    expect(screen.queryByText('None')).toBeNull();
+  });
+
   it('warns when the standard is used and the authority has none', async () => {
     mockAuthorities.mockResolvedValue([{ ...AUTHORITIES.a1, definition: ' ' }]);
     const { controller } = setup({
@@ -203,6 +270,44 @@ describe('GlossaryEntryPanel', () => {
     expect(
       document.querySelector('[data-glossary-entry-standard]')?.textContent,
     ).toBe('This authority has no standard definition.');
+  });
+
+  it('warns only once the standard is used, saying the authority has none', async () => {
+    mockAuthorities.mockResolvedValue([
+      { ...AUTHORITIES.a1, definition: null },
+    ]);
+    const { controller } = setup();
+    mockSave.mockImplementation(
+      async ({
+        before,
+        after,
+      }: {
+        before: GlossaryEntry;
+        after: Partial<GlossaryEntry>;
+      }) => ({ success: true, entries: [{ ...before, ...after }] }),
+    );
+    await open(controller);
+    const standard = () =>
+      document.querySelector('[data-glossary-entry-standard]');
+    expect(standard()?.textContent).toBe(
+      'This authority has no standard definition.',
+    );
+    expect(
+      document.querySelector('[data-glossary-entry-no-standard]'),
+    ).toBeNull();
+    for (const other of ['Append standard', 'Prepend standard']) {
+      await choose(other);
+      expect(
+        document.querySelector('[data-glossary-entry-no-standard]'),
+      ).toBeNull();
+    }
+    await choose('Use standard');
+    expect(
+      document.querySelector('[data-glossary-entry-no-standard]'),
+    ).toBeTruthy();
+    expect(standard()?.textContent).toBe(
+      'This authority has no standard definition.',
+    );
   });
 
   it('does not warn when the authority has a standard definition', async () => {
@@ -312,13 +417,9 @@ describe('GlossaryEntryPanel', () => {
         return { success: true, entries: [saved] };
       },
     );
+    mockSearch.mockResolvedValue([{ ...AUTHORITIES.a2, matchedName: null }]);
     await open(controller);
-    await act(async () => {
-      fireEvent.click(radio('Append'));
-    });
-    await act(async () => {
-      fireEvent.click(radio('Marked'));
-    });
+    await choose('Append standard');
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Attestation of bodhicitta'), {
         target: { value: 'attestedOther' },
@@ -334,18 +435,34 @@ describe('GlossaryEntryPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     });
     await act(async () => {
-      fireEvent.click(radio('Prepend'));
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Link another authority' }),
+      );
+    });
+    jest.useFakeTimers();
+    fireEvent.change(screen.getByLabelText('Search authorities'), {
+      target: { value: 'sakra' },
     });
     await act(async () => {
-      fireEvent.click(radio('None'));
+      jest.runAllTimers();
     });
+    jest.useRealTimers();
+    await act(async () => undefined);
+    await act(async () => {
+      fireEvent.click(screen.getByText('Śakra'));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Link' }));
+    });
+    await choose('Prepend standard');
+    await choose('Custom definition');
 
     const calls = mockSave.mock.calls.map(([args]) => args);
     expect(calls.map((call) => Object.keys(call.after))).toEqual([
       ['definitionRend'],
-      ['glossMode'],
       ['names'],
       ['names'],
+      ['authorityUuid'],
       ['definitionRend'],
       ['definitionRend'],
     ]);
@@ -357,7 +474,11 @@ describe('GlossaryEntryPanel', () => {
     expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Use theirs' })).toBeNull();
     const stored = held.get('e1') as GlossaryEntry;
-    expect(stored).toMatchObject({ definitionRend: null, glossMode: 'marked' });
+    expect(stored).toMatchObject({
+      definitionRend: 'incompatibleWithStandard',
+      authorityUuid: 'a2',
+      glossMode: 'match',
+    });
     expect(
       stored.names.find((n) => n.content === 'bodhicitta')?.attestation,
     ).toBe('attestedOther');
@@ -486,16 +607,26 @@ describe('GlossaryEntryPanel', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     const confirm = screen.getByRole('group', { name: 'Link to Śakra?' });
     expect(confirm.textContent).toContain('Indra');
+    expect(confirm.textContent).toContain('Śakra');
     expect(confirm.textContent).toContain('definition readers see may change');
     expect(screen.queryByLabelText('Search authorities')).toBeNull();
+    expect(mockSave).not.toHaveBeenCalled();
+    expect(
+      within(confirm)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Link', 'Cancel']);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Link' }));
+      fireEvent.click(within(confirm).getByRole('button', { name: 'Link' }));
     });
     expect(mockSave.mock.calls[0][0].after).toEqual({ authorityUuid: 'a2' });
     await act(async () => undefined);
     expect(
       document.querySelector('[data-glossary-entry-authority]')?.textContent,
     ).toContain('Śakra');
+    expect(screen.queryByRole('group', { name: /Link to/ })).toBeNull();
+    expect(screen.queryByLabelText('Search authorities')).toBeNull();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
   it('changes nothing when a relink is cancelled', async () => {
@@ -519,12 +650,17 @@ describe('GlossaryEntryPanel', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('Śakra'));
     });
+    const confirm = screen.getByRole('group', { name: 'Link to Śakra?' });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
     });
     expect(mockSave).not.toHaveBeenCalled();
     expect(screen.queryByRole('group', { name: /Link to/ })).toBeNull();
     expect(screen.getByLabelText('Search authorities')).toBeTruthy();
+    expect(
+      document.querySelector('[data-glossary-entry-authority]')?.textContent,
+    ).toContain('Indra');
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
   });
 
   it('shows values without controls when read-only', async () => {
