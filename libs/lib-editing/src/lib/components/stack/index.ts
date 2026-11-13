@@ -9,10 +9,6 @@ export * from './bibliography-extensions';
 export * from './bibliography-editor-extensions';
 export * from './glossary-codec';
 export * from './glossary-extensions';
-export {
-  GlossaryTibetanProvider,
-  type TibetanToWylie,
-} from './glossary-tibetan';
 export * from './passage-source';
 export * from './spine-feed';
 export * from './PassageStack';

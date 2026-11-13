@@ -33,6 +33,10 @@ export type NameGroup = {
   names: PanelName[];
 };
 
+/** The group a name's language belongs in: any Chinese code is Chinese. */
+const groupLanguage = (language: string | null) =>
+  language && /^zh(-|$)/i.test(language) ? 'zh' : language;
+
 const collator = new Intl.Collator();
 // Case aside, a name differing only in a diacritic is another name.
 const sameText = new Intl.Collator(undefined, { sensitivity: 'accent' });
@@ -66,13 +70,17 @@ export const groupEntryNames = (names: readonly PanelName[]): NameGroup[] => {
     groups.push({
       kind: 'language',
       language,
-      names: rest.filter((name) => name.language === language).sort(byText),
+      names: rest
+        .filter((name) => groupLanguage(name.language) === language)
+        .sort(byText),
     });
   }
   const known = new Set<string | null>(['en', ...NAME_GROUP_LANGUAGES]);
   const others = [
     ...new Set(
-      rest.map(({ language }) => language).filter((l) => !known.has(l)),
+      rest
+        .map(({ language }) => language)
+        .filter((l) => !known.has(groupLanguage(l))),
     ),
   ].sort((a, b) => collator.compare(a ?? '', b ?? ''));
   for (const language of others) {
@@ -87,21 +95,39 @@ export const groupEntryNames = (names: readonly PanelName[]): NameGroup[] => {
 
 const normal = (text: string) => text.normalize('NFC').trim();
 
-/** The text a duplicate is judged by: the script for Tibetan. */
-const nameKey = (name: Pick<PanelName, 'content' | 'contentTransformed'>) =>
-  normal(name.contentTransformed || name.content);
+type NameText = Pick<PanelName, 'content' | 'contentTransformed'>;
 
-/** Whether a group already has a name with this text, besides `except`. */
+const same = (a: string | null, b: string | null) =>
+  !!a && !!b && sameText.compare(normal(a), normal(b)) === 0;
+
+// Case is meaningful in Wylie: "Ta" and "ta" are different letters.
+const sameWylie = (a: string, b: string) => normal(a) === normal(b);
+
+/**
+ * Whether a group already has a name with this text, besides `except`. A
+ * Tibetan name matches by its script or its Wylie, since some stored names
+ * have no script.
+ */
 export const hasSameName = (
   group: NameGroup,
-  text: Pick<PanelName, 'content' | 'contentTransformed'>,
+  text: NameText,
   except?: PanelName,
-) => {
-  const key = nameKey(text);
-  return group.names.some(
-    (name) => name !== except && sameText.compare(nameKey(name), key) === 0,
+) =>
+  group.names.some(
+    (name) =>
+      name !== except &&
+      (group.language === 'Bo-Ltn'
+        ? sameWylie(name.content, text.content) ||
+          same(name.contentTransformed, text.contentTransformed)
+        : same(name.content, text.content)),
   );
-};
+
+/** A name's text as entered, normalized as stored. */
+export const enteredText = (text: NameText): NameText => ({
+  content: normal(text.content),
+  contentTransformed:
+    text.contentTransformed && normal(text.contentTransformed),
+});
 
 /** A new name for a group, with no attestation. */
 export const newName = (
@@ -110,8 +136,7 @@ export const newName = (
   contentTransformed: string | null = null,
 ): GlossaryEntryNameInput => ({
   language: group.language ?? '',
-  content: normal(content),
-  contentTransformed: contentTransformed && normal(contentTransformed),
+  ...enteredText({ content, contentTransformed }),
   termType: group.kind === 'alternatives' ? ALTERNATIVE : null,
   attestation: null,
 });

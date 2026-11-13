@@ -1,14 +1,14 @@
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useSyncExternalStore } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type {
   GlossaryEntry,
   GlossaryEntryName,
 } from '@eightyfourthousand/data-access';
+import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 
 import { GlossaryEntryNames } from './GlossaryEntryNames';
 import { useGlossaryEntrySaves } from './GlossaryEntrySaves';
 import type { StackController } from './StackController';
-import { GlossaryTibetanProvider } from './glossary-tibetan';
 
 // See PassageStackController.spec.ts — the stack's barrels reach
 // `data-access/ssr`, which leaks these.
@@ -98,28 +98,14 @@ const Harness = ({
   return <GlossaryEntryNames entry={entry} saves={saves} readOnly={readOnly} />;
 };
 
-const toWylie = jest.fn((script: string) => ({
-  ewts: script === 'སེམས།' ? 'sems' : 'odd',
-  warnings: script === 'སེམས།' ? [] : ['check this syllable'],
-}));
-
 const setup = async ({
   names = [MAIN, ALTERNATIVE, TIBETAN, SANSKRIT],
   readOnly = false,
   shared = [] as string[] | null,
-  tibetan = false,
 } = {}) => {
   mockShared.mockResolvedValue(shared && new Set(shared));
   const controller = fakeController(entryOf(names), readOnly);
-  const wrap = (children: ReactNode) =>
-    tibetan ? (
-      <GlossaryTibetanProvider toWylie={toWylie}>
-        {children}
-      </GlossaryTibetanProvider>
-    ) : (
-      children
-    );
-  render(wrap(<Harness controller={controller} readOnly={readOnly} />));
+  render(<Harness controller={controller} readOnly={readOnly} />);
   await act(async () => undefined);
   return controller;
 };
@@ -138,7 +124,6 @@ const savedNames = (call = 0) =>
 beforeEach(() => {
   mockSave.mockReset();
   mockShared.mockReset();
-  toWylie.mockClear();
   mockSave.mockImplementation(
     async ({ after }: { after: { names: GlossaryEntryName[] } }) => ({
       success: true,
@@ -304,19 +289,45 @@ describe('GlossaryEntryNames', () => {
     expect(screen.queryByText(/main English/i)).toBeNull();
   });
 
-  it('adds no Tibetan name without a conversion', async () => {
+  it('edits a Tibetan name by its script, its Wylie generated again', async () => {
     await setup();
-    expect(screen.queryByRole('button', { name: /a Tibetan name/ })).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: 'Edit brgya byin' }),
-    ).toBeNull();
-    expect(
-      screen.getByRole('button', { name: 'Remove brgya byin' }),
-    ).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Edit brgya byin' }));
+    });
+    const input = screen.getByLabelText(
+      'Tibetan name in script',
+    ) as HTMLInputElement;
+    expect(input.value).toBe('བརྒྱ་བྱིན།');
+    fireEvent.change(input, { target: { value: 'སེམས།' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    });
+    expect(savedNames().find((n) => n.language === 'Bo-Ltn')).toMatchObject({
+      glossaryUuid: TIBETAN.glossaryUuid,
+      content: 'sems',
+      contentTransformed: 'སེམས།',
+    });
+  });
+
+  it('refuses a Tibetan name whose Wylie a stored name has', async () => {
+    await setup({
+      names: [MAIN, name('sems', 'Bo-Ltn')],
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /a Tibetan name/ }));
+    });
+    fireEvent.change(screen.getByLabelText('Tibetan name in script'), {
+      target: { value: 'སེམས།' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    });
+    expect(screen.getByRole('alert').textContent).toContain('already has');
+    expect(mockSave).not.toHaveBeenCalled();
   });
 
   it('enters a Tibetan name as script, its Wylie shown before saving', async () => {
-    await setup({ tibetan: true });
+    await setup();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /a Tibetan name/ }));
     });
@@ -337,30 +348,33 @@ describe('GlossaryEntryNames', () => {
   });
 
   it('shows conversion warnings beside the name, and still saves it', async () => {
-    await setup({ tibetan: true });
+    const odd = toEwtsWithWarnings('ཀཨི', { finalShad: 'drop' });
+    const [warning] = odd.warnings;
+    expect(warning).toBeTruthy();
+    await setup();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /a Tibetan name/ }));
     });
     fireEvent.change(screen.getByLabelText('Tibetan name in script'), {
-      target: { value: 'ཨཨཨ' },
+      target: { value: 'ཀཨི' },
     });
     expect(
       document.querySelector('[data-glossary-name-warnings]')?.textContent,
-    ).toContain('check this syllable');
+    ).toContain(warning);
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     });
     expect(savedNames().at(-1)).toMatchObject({
-      content: 'odd',
-      contentTransformed: 'ཨཨཨ',
+      content: odd.ewts,
+      contentTransformed: 'ཀཨི',
     });
     expect(
-      row('odd').querySelector('[data-glossary-name-warnings]')?.textContent,
-    ).toContain('check this syllable');
+      row(odd.ewts).querySelector('[data-glossary-name-warnings]')?.textContent,
+    ).toContain(warning);
   });
 
   it('shows the names without controls when read-only', async () => {
-    await setup({ readOnly: true, tibetan: true });
+    await setup({ readOnly: true });
     expect(screen.queryAllByRole('button')).toHaveLength(0);
     expect(document.querySelectorAll('select')).toHaveLength(0);
     expect(row('brgya byin').textContent).toContain('Attested Source');

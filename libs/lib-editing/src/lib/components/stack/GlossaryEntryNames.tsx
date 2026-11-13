@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import {
   createBrowserClient,
   formatAttestation,
@@ -9,6 +9,7 @@ import {
   type GlossaryEntry,
 } from '@eightyfourthousand/data-access';
 import { Button } from '@eightyfourthousand/design-system';
+import { toEwtsWithWarnings } from '@eightyfourthousand/lib-tibetan';
 import { cn } from '@eightyfourthousand/lib-utils';
 import { PencilIcon, PlusIcon, XIcon } from 'lucide-react';
 
@@ -18,6 +19,7 @@ import {
   type GlossaryEntrySaves,
 } from './GlossaryEntrySaves';
 import {
+  enteredText,
   groupEntryNames,
   hasSameName,
   isRootName,
@@ -29,7 +31,6 @@ import {
   type NameGroup,
   type PanelName,
 } from './glossary-entry-names';
-import { useTibetanToWylie, type TibetanToWylie } from './glossary-tibetan';
 
 const TIBETAN = 'Bo-Ltn';
 
@@ -41,22 +42,28 @@ type Shared =
 /** Which of the entry's names rows are shared, read again when its names change. */
 const useSharedNames = (entry: GlossaryEntry): Shared => {
   const key = entry.names.map((n) => n.nameUuid).join(',');
+  // Read by the effect below, so a save of another field doesn't read again.
+  const current = useRef(entry);
+  useEffect(() => {
+    current.current = entry;
+  });
   const [read, setRead] = useState<{
     key: string;
     uuids: Set<string> | null;
   } | null>(null);
 
   useEffect(() => {
-    let current = true;
-    getGlossaryEntrySharedNames({ client: createBrowserClient(), entry }).then(
-      (uuids) => {
-        if (current) setRead({ key, uuids });
-      },
-    );
+    let live = true;
+    getGlossaryEntrySharedNames({
+      client: createBrowserClient(),
+      entry: current.current,
+    }).then((uuids) => {
+      if (live) setRead({ key, uuids });
+    });
     return () => {
-      current = false;
+      live = false;
     };
-  }, [entry, key]);
+  }, [key]);
 
   if (read?.key !== key) return { status: 'reading' };
   return read.uuids
@@ -109,7 +116,6 @@ type Entered = { content: string; contentTransformed: string | null };
 const NameForm = ({
   group,
   name,
-  toWylie,
   disabled,
   onSubmit,
   onCancel,
@@ -117,7 +123,6 @@ const NameForm = ({
   group: NameGroup;
   /** The name being edited, or none to add one. */
   name?: PanelName;
-  toWylie: TibetanToWylie | null;
   disabled: boolean;
   onSubmit: (entered: Entered, warnings: string[]) => void;
   onCancel: () => void;
@@ -129,7 +134,10 @@ const NameForm = ({
   const [refused, setRefused] = useState<string | null>(null);
   const id = useId();
   const trimmed = text.trim();
-  const converted = tibetan && toWylie && trimmed ? toWylie(trimmed) : null;
+  const converted =
+    tibetan && trimmed
+      ? toEwtsWithWarnings(trimmed, { finalShad: 'drop' })
+      : null;
   const entered: Entered = converted
     ? { content: converted.ewts, contentTransformed: trimmed }
     : { content: trimmed, contentTransformed: null };
@@ -262,7 +270,6 @@ export const GlossaryEntryNames = ({
   saves: GlossaryEntrySaves;
   readOnly: boolean;
 }) => {
-  const toWylie = useTibetanToWylie();
   const shared = useSharedNames(entry);
   // The form open, by group and the name it edits (none to add).
   const [editing, setEditing] = useState<{
@@ -300,9 +307,7 @@ export const GlossaryEntryNames = ({
         const groupKey = `${group.kind}:${group.language}`;
         const canAdd =
           !readOnly &&
-          (group.kind === 'alternatives' ||
-            (group.kind === 'language' &&
-              (group.language !== TIBETAN || !!toWylie)));
+          (group.kind === 'alternatives' || group.kind === 'language');
         const adding = editing?.group === groupKey && !editing.name;
         if (!group.names.length && !canAdd) return null;
         return (
@@ -329,7 +334,6 @@ export const GlossaryEntryNames = ({
                 const editable =
                   !readOnly &&
                   group.kind !== 'other' &&
-                  (group.language !== TIBETAN || !!toWylie) &&
                   textEditable(shared, name);
                 const removable = !readOnly && group.kind !== 'main' && !root;
                 const warnings = name.contentTransformed
@@ -345,13 +349,15 @@ export const GlossaryEntryNames = ({
                       <NameForm
                         group={group}
                         name={name}
-                        toWylie={toWylie}
                         disabled={disabled}
                         onCancel={() => setEditing(null)}
                         onSubmit={(entered, found) => {
                           remember(entered, found);
                           save(
-                            replacingName(names, name, { ...name, ...entered }),
+                            replacingName(names, name, {
+                              ...name,
+                              ...enteredText(entered),
+                            }),
                           );
                         }}
                       />
@@ -432,7 +438,6 @@ export const GlossaryEntryNames = ({
               (adding ? (
                 <NameForm
                   group={group}
-                  toWylie={toWylie}
                   disabled={disabled}
                   onCancel={() => setEditing(null)}
                   onSubmit={(entered, found) => {

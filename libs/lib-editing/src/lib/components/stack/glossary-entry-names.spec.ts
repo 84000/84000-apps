@@ -60,10 +60,22 @@ describe('groupEntryNames', () => {
   it('lists other languages under their code, after the rest', () => {
     const groups = groupEntryNames([
       MAIN,
-      name('帝釋天', 'Zh-Hant'),
       name('Taishakuten', 'ja'),
+      name('Indra', 'de'),
     ]);
-    expect(kinds(groups).slice(-2)).toEqual(['other:ja', 'other:Zh-Hant']);
+    expect(kinds(groups).slice(-2)).toEqual(['other:de', 'other:ja']);
+  });
+
+  it('lists any Chinese code with the Chinese names', () => {
+    const groups = groupEntryNames([
+      MAIN,
+      name('帝釋天', 'Zh-Hant'),
+      name('帝釋', 'zh'),
+    ]);
+    expect(groups.some((g) => g.kind === 'other')).toBe(false);
+    expect(
+      groups.find((g) => g.language === 'zh')?.names.map((n) => n.content),
+    ).toEqual(['帝釋', '帝釋天']);
   });
 
   it('has no main group without an English main name, the root under its language', () => {
@@ -101,6 +113,13 @@ describe('hasSameName', () => {
         content: 'other wylie',
         contentTransformed: 'བརྒྱ་བྱིན།',
       }),
+    ).toBe(true);
+  });
+
+  it('matches Tibetan by its Wylie when a stored name has no script', () => {
+    const [, , bo] = groupEntryNames([MAIN, name('sems', 'Bo-Ltn')]);
+    expect(
+      hasSameName(bo, { content: 'sems', contentTransformed: 'སེམས།' }),
     ).toBe(true);
   });
 
