@@ -52,26 +52,34 @@ const fakeClient = ({
           },
   );
 
-  const query = (filters: ((row: Comment) => boolean)[] = []) => {
+  const query = (
+    filters: ((row: Comment) => boolean)[] = [],
+    window?: [number, number],
+  ) => {
     const builder = {
       select: () => builder,
       order: () => builder,
-      range: () => builder,
+      range: (from: number, to: number) => query(filters, [from, to]),
       eq: (column: keyof Comment, value: string) =>
-        query([...filters, (row) => row[column] === value]),
+        query([...filters, (row) => row[column] === value], window),
       is: (column: keyof Comment, value: null) =>
-        query([...filters, (row) => row[column] === value]),
-      then: (resolve: (value: unknown) => unknown) =>
-        resolve(
+        query([...filters, (row) => row[column] === value], window),
+      then: (resolve: (value: unknown) => unknown) => {
+        const matching = [...comments]
+          .sort((a, b) => a.entity_uuid.localeCompare(b.entity_uuid))
+          .filter((row) => filters.every((f) => f(row)));
+        return resolve(
           commentsError
             ? { data: null, error: commentsError }
             : {
-                data: comments
-                  .filter((row) => filters.every((f) => f(row)))
-                  .map(({ entity_uuid }) => ({ entity_uuid })),
+                data: (window
+                  ? matching.slice(window[0], window[1] + 1)
+                  : matching
+                ).map(({ entity_uuid }) => ({ entity_uuid })),
                 error: null,
               },
-        ),
+        );
+      },
     };
     return builder;
   };
@@ -80,6 +88,42 @@ const fakeClient = ({
 };
 
 describe('getGlossaryCommentEntries', () => {
+  const manyEntries = (count: number) =>
+    Array.from({ length: count }, (_, i) => `e${String(i).padStart(5, '0')}`);
+
+  it('reads every page of threads', async () => {
+    const uuids = manyEntries(1500);
+    const { client } = fakeClient({
+      comments: uuids.map((uuid, i) => comment(`c${i}`, uuid)),
+      entries: { w1: uuids },
+    });
+
+    const entries = await getGlossaryCommentEntries({
+      client,
+      workUuid: 'w1',
+    });
+
+    expect(entries).toHaveLength(1500);
+  });
+
+  it('reads entries in batches that fit a request', async () => {
+    const uuids = manyEntries(450);
+    const { client, rpc } = fakeClient({
+      comments: uuids.map((uuid, i) => comment(`c${i}`, uuid)),
+      entries: { w1: uuids },
+    });
+
+    const entries = await getGlossaryCommentEntries({
+      client,
+      workUuid: 'w1',
+    });
+
+    expect(entries).toHaveLength(450);
+    expect(rpc.mock.calls.map(([, args]) => args.p_uuids.length)).toEqual([
+      200, 200, 50,
+    ]);
+  });
+
   it("lists the work's entries that carry a thread", async () => {
     const { client } = fakeClient({
       comments: [comment('c1', 'e1'), comment('c2', 'e3')],
