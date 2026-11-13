@@ -23,19 +23,22 @@ import { nameLanguageLabel } from './glossary-languages';
 const MATCH_DELAY_MS = 300;
 
 /** A typed definition as stored HTML: a paragraph per blank-line block. */
-export const definitionFromText = (text: string): string | null => {
+const definitionFromText = (text: string): string | null => {
   const paragraphs = text
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
   if (!paragraphs.length) return null;
   return paragraphs
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .map(
+      (paragraph) =>
+        `<p>${paragraph.split('\n').map(escapeHtml).join('<br>')}</p>`,
+    )
     .join('');
 };
 
-/** The duplicates found for one name and authority. */
-type Matches = { key: string; matches: GlossaryEntryMatch[] };
+/** The duplicates found for one name and authority; null when the check failed. */
+type Matches = { key: string; matches: GlossaryEntryMatch[] | null };
 
 const matchKey = (english: string, authority?: string) =>
   `${english.toLocaleLowerCase()}\n${authority ?? ''}`;
@@ -76,7 +79,8 @@ export const GlossaryEntryForm = ({
 
   const name = english.trim();
   const key = matchKey(name, authority?.uuid);
-  const matches = found?.key === key ? found.matches : [];
+  const checked = found?.key === key ? found : null;
+  const matches = checked?.matches ?? [];
 
   useEffect(() => {
     if (!name && !authority) return;
@@ -88,7 +92,7 @@ export const GlossaryEntryForm = ({
         english: name,
         authorityUuid: authority?.uuid,
       }).then((result) => {
-        if (current) setFound({ key, matches: result ?? [] });
+        if (current) setFound({ key, matches: result });
       });
     }, MATCH_DELAY_MS);
     return () => {
@@ -104,6 +108,7 @@ export const GlossaryEntryForm = ({
     if (!ready || !authority) return;
     setPending(true);
     setError(null);
+    let entry: GlossaryEntry | undefined;
     try {
       const result = await createGlossaryEntry({
         client: createBrowserClient(),
@@ -122,17 +127,23 @@ export const GlossaryEntryForm = ({
           ],
         },
       });
-      const [entry] = result.success ? result.entries : [];
+      [entry] = result.success ? result.entries : [];
       if (!entry) {
         setError(result.success ? 'The entry was not created.' : result.error);
         setPending(false);
         return;
       }
-      await onCreated(entry);
     } catch (cause) {
       console.error('Failed to create glossary entry:', cause);
       setError('Something went wrong.');
       setPending(false);
+      return;
+    }
+    // The entry exists now: a failure after this must not offer to create it again.
+    try {
+      await onCreated(entry);
+    } catch (cause) {
+      console.error('Failed after creating glossary entry:', cause);
     }
   };
 
@@ -189,6 +200,12 @@ export const GlossaryEntryForm = ({
           onPick={onPickExisting}
           disabled={pending}
         />
+      )}
+
+      {checked?.matches === null && (
+        <p className="text-muted-foreground text-xs">
+          Possible duplicates could not be checked.
+        </p>
       )}
 
       {error && (

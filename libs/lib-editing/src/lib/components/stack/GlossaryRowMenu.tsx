@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  toast,
 } from '@eightyfourthousand/design-system';
 import {
   CopyIcon,
@@ -274,7 +275,11 @@ export const GlossaryRowMenu = ({
       />
       <Dialog open={creating} onOpenChange={setCreating}>
         {creating && (
-          <DialogContent className="max-w-readable w-full">
+          <DialogContent
+            className="max-w-readable w-full"
+            // The new row takes focus, not the menu the dialog came from.
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>New glossary entry</DialogTitle>
               <DialogDescription>
@@ -284,10 +289,19 @@ export const GlossaryRowMenu = ({
             <GlossaryEntryForm
               workUuid={work.uuid}
               onCreated={async (entry) => {
-                await controller.addGlossaryRow(entry, {
-                  client: createBrowserClient(),
-                });
                 setCreating(false);
+                const shown = await controller
+                  .addGlossaryRow(entry, { client: createBrowserClient() })
+                  .catch((error: unknown) => {
+                    console.error(
+                      'Failed to show the new glossary row:',
+                      error,
+                    );
+                    return false;
+                  });
+                if (!shown) {
+                  toast('Entry created. It appears when the glossary reloads.');
+                }
               }}
               onCancel={() => setCreating(false)}
             />
