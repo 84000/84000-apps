@@ -769,14 +769,31 @@ no text for a thread to point at, so its threads are listed in the panel under
 Glossary tab. A thread outlives a deleted entry in the table but is no longer
 listed.
 
+"Copy from Another Work", also in the label menu, opens `GlossaryCopyDialog`.
+It searches other works' glossaries (`searchGlossaryEntriesToCopy`, over the
+library-wide `search_entities`), starting with the row's English name, and, once an entry is chosen, shows this work's
+entries for the same authority before copying. `copyGlossaryEntry` saves a new
+entry in this work through `createGlossaryEntry`, with the source's authority,
+definition, rend, matching mode and the same names rows, so the source is not
+written. A name owned by another authority cannot be linked, and is written
+anew with the same text. The copy is read around to find its place, put into
+the spine between its loaded neighbours (renumbering the rows after it) and
+revealed; outside the loaded window the feed reaches it. The search matches
+whole words, and also definitions, as `search_entities` does. A fallback name
+the save cannot accept (no language, say) refuses the whole copy, with the
+planner's reason.
+
 What later glossary work builds on:
 
 - **Names, attestations, alternatives, matching mode and authority.** The
   row's header (`glossaryRowChrome`), where `GlossaryRowNames` draws them
   read-only. The entry they would save from is `glossary.entries`, already
   the guard for `saveGlossaryEntry`.
-- **Creating an entry, and copying one from another work.** Items in
-  `GlossaryRowMenu`, beside "Delete", that put a row into the spine. That row
-  has no entry and no sort yet.
+- **Creating an entry.** An item in `GlossaryRowMenu`, beside "Delete", that
+  puts a row into the spine. That row has no entry and no sort yet.
+- **Placing a new entry's row.** `placeGlossaryRow` (`glossary-place.ts`)
+  puts the row of an entry just saved into the spine in glossary order, and
+  returns false when its neighbours are outside the window; the caller then
+  reveals it.
 - **Reviewing and deleting instances.** "Passages ›" in the footer opens the
   shared passages dialog, which this stack does not change.

@@ -23,9 +23,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@eightyfourthousand/design-system';
-import { CopyIcon, Trash2Icon } from 'lucide-react';
+import { CopyIcon, FilesIcon, Trash2Icon } from 'lucide-react';
 
 import { useEditorState } from '../editor/EditorProvider';
+import { GlossaryCopyDialog } from './GlossaryCopyDialog';
 import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 import { englishNameOf } from './glossary-row';
@@ -45,7 +46,8 @@ type Instances =
   | { uuid: string; status: 'read'; page: GlossaryExcerptsPage };
 
 /**
- * A glossary row's label menu: copy a link to the row, and delete its entry.
+ * A glossary row's label menu: copy a link to the row, copy an entry from
+ * another work, and delete its entry.
  * Mounted once for the stack, as `StackPassageMenu` is for passages.
  */
 export const GlossaryRowMenu = ({
@@ -63,6 +65,8 @@ export const GlossaryRowMenu = ({
   const [read, setRead] = useState<Instances | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The English term of the row the copy dialog was opened from.
+  const [copying, setCopying] = useState<string | null>(null);
   const stack = useStackWork();
   const { isSaving } = useEditorState();
   const comments = useGlossaryRowComments(stack?.work.workUuid);
@@ -200,6 +204,15 @@ export const GlossaryRowMenu = ({
                 uuid={uuid}
                 onClose={onClose}
               />
+              <DropdownMenuItem
+                onSelect={() => {
+                  const entry = controller.getGlossaryEntry(uuid);
+                  setCopying((entry && englishNameOf(entry)?.content) ?? '');
+                  onClose();
+                }}
+              >
+                <FilesIcon className="text-primary" /> Copy from Another Work
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => {
@@ -217,6 +230,12 @@ export const GlossaryRowMenu = ({
       </DropdownMenu>
 
       <GlossaryCommentDialog comments={comments} />
+      <GlossaryCopyDialog
+        controller={controller}
+        open={copying !== null}
+        onOpenChange={(open) => !open && setCopying(null)}
+        term={copying ?? ''}
+      />
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && close()}>
         {deleting && (

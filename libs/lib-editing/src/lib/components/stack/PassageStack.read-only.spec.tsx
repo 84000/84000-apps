@@ -71,15 +71,21 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-/** A hydrated two-passage stack, drawn. */
-const setup = async (readOnly: boolean) => {
-  const all = seeds(2);
+/** A hydrated two-row stack, drawn: passages, or glossary rows. */
+const setup = async (readOnly: boolean, { glossary = false } = {}) => {
+  const all = seeds(2).map((entry) =>
+    glossary ? { ...entry, meta: { ...entry.meta, type: 'glossary' } } : entry,
+  );
   const work = createStackWorkDocument({
     workUuid: 'work-1',
     loader: new PassageLoader({ sources: [source(all)], buffer: 0 }),
   });
   work.seedSpine(all.map((entry) => entry.meta));
-  const controller = new PassageStackController({ work, readOnly });
+  const controller = new PassageStackController({
+    work,
+    readOnly,
+    ...(glossary ? { rows: 'glossary' as const } : {}),
+  });
   controller.setVisibleRange({ start: 0, end: 2 });
   await flush();
   const view = render(<PassageStack controller={controller} />);
@@ -172,5 +178,41 @@ describe('PassageStack read-only', () => {
     });
     await waitFor(() => expect(controller.getFocusedUuid()).toBe('p1'));
     await waitFor(() => expect(editors().length).toBeGreaterThan(0));
+  });
+});
+
+describe('PassageStack glossary label menu', () => {
+  const openLabelMenu = async () => {
+    const label = document.querySelector('[data-stack-passage="p1"] .labeled');
+    expect(label).not.toBeNull();
+    await act(async () => {
+      label?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+  };
+
+  it('offers an editor Copy from Another Work, beside Copy Link and Delete', async () => {
+    await setup(false, { glossary: true });
+    await openLabelMenu();
+
+    expect(await screen.findByText('Copy Link')).toBeTruthy();
+    expect(screen.getByText('Delete')).toBeTruthy();
+    expect(screen.getByText('Copy from Another Work')).toBeTruthy();
+  });
+
+  it('offers a reader no editing items', async () => {
+    await setup(true, { glossary: true });
+    await openLabelMenu();
+
+    expect(screen.queryByText('Copy from Another Work')).toBeNull();
+    expect(screen.queryByText('Delete')).toBeNull();
+  });
+
+  it('drops Copy from Another Work when the view turns read-only', async () => {
+    const { controller } = await setup(false, { glossary: true });
+    await act(async () => controller.setReadOnly(true));
+    await act(flush);
+    await openLabelMenu();
+
+    expect(screen.queryByText('Copy from Another Work')).toBeNull();
   });
 });
