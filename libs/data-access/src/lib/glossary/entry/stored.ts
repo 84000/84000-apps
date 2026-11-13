@@ -2,18 +2,14 @@ import { isUuid } from '@eightyfourthousand/lib-utils';
 
 import { inBatches } from '../../passage/in-batches';
 import type { DataClient } from '../../types';
-import {
-  plannedReads,
-  usageCandidates,
-  type GlossaryRow,
-  type NameRow,
-  type StoredState,
-} from './plan';
+import { diffNames } from './plan-compare';
+import type { GlossaryRow, NameRow, StoredState } from './plan-types';
 import {
   glossaryEntryFromDTO,
   type GlossaryEntry,
   type GlossaryEntryDTO,
   type GlossaryEntryDelete,
+  type GlossaryEntryName,
   type GlossaryEntrySave,
   type GlossaryNewAuthority,
 } from './types';
@@ -176,6 +172,65 @@ const sameEntryRows = (
     );
   });
 };
+
+/** The uuids `readStored` needs to read for these saves and deletes. */
+const plannedReads = (
+  saves: readonly GlossaryEntrySave[],
+  deletes: readonly GlossaryEntryDelete[],
+  authorities: readonly GlossaryNewAuthority[],
+) => ({
+  entries: [
+    ...saves.filter((s) => !s.create).map((s) => s.uuid),
+    ...deletes.map((d) => d.uuid),
+  ],
+  creates: saves.filter((s) => s.create).map((s) => s.uuid),
+  authorities: [
+    ...new Set([
+      ...saves.flatMap((s) =>
+        s.change.authorityUuid ? [s.change.authorityUuid] : [],
+      ),
+      ...authorities.map((a) => a.uuid),
+    ]),
+  ],
+  links: [
+    ...new Set(
+      saves.flatMap((s) =>
+        (s.change.names ?? []).flatMap((n) => (n.nameUuid ? [n.nameUuid] : [])),
+      ),
+    ),
+  ],
+});
+
+/**
+ * For each existing saved entry, the names rows whose other users decide the
+ * plan: those whose text the save changes, and, on a relink, those of another
+ * authority. `usedOutside` must be read for these.
+ */
+const usageCandidates = (
+  saves: readonly GlossaryEntrySave[],
+  entries: Map<string, GlossaryEntry>,
+): { entry: GlossaryEntry; names: string[] }[] =>
+  saves.flatMap((save) => {
+    const entry = save.create ? undefined : entries.get(save.uuid);
+    if (!entry) return [];
+    const authorityUuid = save.change.authorityUuid ?? entry.authorityUuid;
+    const candidates = new Set<string>();
+    for (const was of entry.names) {
+      if (
+        authorityUuid !== entry.authorityUuid &&
+        was.nameAuthorityUuid !== authorityUuid
+      ) {
+        candidates.add(was.nameUuid);
+      }
+    }
+    for (const { was, textChanged } of diffNames(
+      entry,
+      save.change.names ?? [],
+    )) {
+      if (textChanged) candidates.add((was as GlossaryEntryName).nameUuid);
+    }
+    return candidates.size ? [{ entry, names: [...candidates] }] : [];
+  });
 
 /**
  * Reads everything `planSave` needs for these saves and deletes: the entries,

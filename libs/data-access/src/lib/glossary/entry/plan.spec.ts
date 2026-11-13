@@ -1,13 +1,13 @@
 import { isUuid } from '@eightyfourthousand/lib-utils';
 
-import {
-  checkInput,
-  planSave,
-  type NameRow,
-  type PlanFailure,
-  type PlannedSave,
-  type StoredState,
-} from './plan';
+import { planSave } from './plan';
+import { checkInput } from './plan-check';
+import type {
+  NameRow,
+  PlanFailure,
+  PlannedSave,
+  StoredState,
+} from './plan-types';
 import type {
   GlossaryEntry,
   GlossaryEntryDelete,

@@ -2,14 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 import type { DataClient } from '../../types';
 import { rolledBack } from '../../passage/save/commit';
-import {
-  checkInput,
-  ENTRY_FIELDS,
-  planSave,
-  unchangedField,
-  type PlanFailure,
-  type PlannedSave,
-} from './plan';
+import { planSave } from './plan';
+import { checkInput } from './plan-check';
+import { ENTRY_FIELDS, unchangedField } from './plan-compare';
+import type { PlanFailure, PlannedSave } from './plan-types';
 import { countCitingAnnotations, readStored } from './stored';
 import {
   glossaryEntryFromDTO,
@@ -26,8 +22,6 @@ import {
   type GlossarySaveResult,
   type GlossarySaveResultDTO,
 } from './types';
-
-export { storedGlossaryDefinition } from './plan';
 
 /** Row counts of a save that writes nothing. */
 export const NO_CHANGES: GlossarySaveChanges = {
