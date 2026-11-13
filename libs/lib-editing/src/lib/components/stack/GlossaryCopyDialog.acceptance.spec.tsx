@@ -220,16 +220,15 @@ describe('Copy from Another Work: the menu item and the dialog (criterion 1)', (
     setup();
     fireEvent.change(searchBox(), { target: { value: 'indra' } });
     await act(async () => {
-      jest.advanceTimersByTime(250);
+      jest.advanceTimersByTime(200);
     });
-    expect(mockSearch).not.toHaveBeenCalledWith(
-      expect.objectContaining({ query: 'indra' }),
-    );
+    expect(mockSearch).not.toHaveBeenCalled();
 
     await act(async () => {
-      jest.advanceTimersByTime(100);
+      jest.advanceTimersByTime(150);
     });
     // `workUuid` is the work copied into: the search leaves its entries out.
+    expect(mockSearch).toHaveBeenCalledTimes(1);
     expect(mockSearch).toHaveBeenCalledWith(
       expect.objectContaining({ workUuid: THIS_WORK, query: 'indra' }),
     );
