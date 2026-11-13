@@ -176,7 +176,7 @@ export const GlossaryCommentDialog = ({
   return (
     <Dialog open={!!adding} onOpenChange={(open) => !open && stopAdding()}>
       {adding && (
-        <DialogContent className="max-w-readable w-full font-serif">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Comment on {adding.title}</DialogTitle>
             <DialogDescription>
