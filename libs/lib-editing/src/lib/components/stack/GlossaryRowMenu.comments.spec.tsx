@@ -78,21 +78,31 @@ const open = async (threads: string[] = []) => {
   } as unknown as StackController;
   const onClose = jest.fn();
   const target = { uuid: 'e1', rect: { top: 0, left: 0, width: 1, height: 1 } };
+  const menu = () => (
+    <GlossaryRowMenu
+      controller={controller}
+      target={target}
+      onClose={onClose}
+    />
+  );
+  let view!: ReturnType<typeof render>;
   await act(async () => {
-    render(
-      <GlossaryRowMenu
-        controller={controller}
-        target={target}
-        onClose={onClose}
-      />,
-    );
+    view = render(menu());
   });
-  return { onClose };
+  return {
+    onClose,
+    /** Draws the menu again, as a changed revision would. */
+    redraw: () =>
+      act(async () => {
+        view.rerender(menu());
+      }),
+  };
 };
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockNavigation.editable = true;
+  mockNavigation.commentsRevision = 0;
 });
 
 describe('GlossaryRowMenu comment entry', () => {
@@ -103,6 +113,19 @@ describe('GlossaryRowMenu comment entry', () => {
     expect(mockGetComments).toHaveBeenCalledWith(
       expect.objectContaining({ workUuid: 'w1' }),
     );
+  });
+
+  it('reads again when a comment is written, so the label follows', async () => {
+    const { redraw } = await open();
+    expect(screen.getByText('Add comment')).toBeTruthy();
+
+    mockGetComments.mockResolvedValue(entriesWith('t1'));
+    mockNavigation.commentsRevision = 1;
+    await redraw();
+
+    expect(mockGetComments).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('See comments')).toBeTruthy();
+    expect(screen.queryByText('Add comment')).toBeNull();
   });
 
   it('says "Add comment" for an entry with no thread, and asks for the first', async () => {
