@@ -193,3 +193,16 @@ query GetBibliographyComments($uuid: ID!) {
     }
   }
 }
+
+query GetGlossaryComments($uuid: ID!) {
+  work(uuid: $uuid) {
+    uuid
+    glossaryComments {
+      uuid
+      label
+      comments {
+        ...CommentThreadFields
+      }
+    }
+  }
+}

@@ -1,7 +1,9 @@
 import {
+  englishNameOf,
   getBibliographyCommentAnchors,
   getCommentsByEntityUuids,
   getCommentThreadByUuid,
+  getGlossaryCommentEntries,
   getTaggedComments,
   getTaggedCommentWorks,
   type AnnotationDTO,
@@ -18,6 +20,13 @@ interface BibliographyEntryComments {
   anchors: HtmlCommentAnchor[];
   comments: Comment[];
   unanchoredComments: Comment[];
+}
+
+/** One entry's threads, as `GlossaryEntryComments` resolves them. */
+interface GlossaryEntryComments {
+  uuid: string;
+  label: string | null;
+  comments: Comment[];
 }
 
 /**
@@ -192,6 +201,50 @@ export const workBibliographyCommentsResolver = async (
         unanchoredComments,
       },
     ];
+  });
+};
+
+/**
+ * Field resolver for `Work.glossaryComments`.
+ *
+ * A glossary entry has no text to anchor a thread, so every thread in an
+ * entry's scope belongs to it.
+ */
+export const workGlossaryCommentsResolver = async (
+  parent: WorkParent,
+  _args: unknown,
+  ctx: GraphQLContext,
+): Promise<GlossaryEntryComments[]> => {
+  if (ctx.source === 'published') {
+    return [];
+  }
+
+  const entries = await getGlossaryCommentEntries({
+    client: ctx.supabase,
+    workUuid: parent.uuid,
+  });
+  if (!entries || entries.length === 0) {
+    return [];
+  }
+
+  const scope = await getCommentsByEntityUuids({
+    client: ctx.supabase,
+    entityUuids: entries.map(({ uuid }) => uuid),
+    entityType: 'glossary',
+    source: ctx.source,
+  });
+
+  return entries.flatMap((entry) => {
+    const comments = scope.get(entry.uuid) ?? [];
+    return comments.length === 0
+      ? []
+      : [
+          {
+            uuid: entry.uuid,
+            label: englishNameOf(entry)?.content ?? null,
+            comments,
+          },
+        ];
   });
 };
 

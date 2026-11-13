@@ -126,7 +126,8 @@ export type BibliographyEntryItem = {
 };
 
 /**
- * A comment thread on a passage or bibliography entry, or one reply within it.
+ * A comment thread on a passage, bibliography entry or glossary entry, or one
+ * reply within it.
  *
  * Carries no text range. The range a comment refers to lives on the mark
  * anchoring it, which is what places a thread: a thread's `entityUuid` records
@@ -202,9 +203,12 @@ export type CreateCommentInput = {
    * rejected, so a body that is nothing but such markup is refused as empty.
    */
   content: Scalars['String']['input'];
-  /** What kind of entity that is: `passage` or `bibliography`. */
+  /** What kind of entity that is: `passage`, `bibliography` or `glossary`. */
   entityType: Scalars['String']['input'];
-  /** The entity the thread hangs off: a passage or bibliography row uuid */
+  /**
+   * The entity the thread hangs off: a passage, bibliography row or glossary
+   * entry uuid
+   */
   entityUuid: Scalars['ID']['input'];
 };
 
@@ -363,6 +367,22 @@ export type FoliosAround = {
   hasMoreBefore: Scalars['Boolean']['output'];
   /** Absolute 0-indexed position of the first folio in the window */
   startIndex: Scalars['Int']['output'];
+};
+
+/**
+ * One glossary entry's comment threads.
+ *
+ * An entry has no text for a thread to point at, so every thread written on it
+ * belongs to the entry itself.
+ */
+export type GlossaryEntryComments = {
+  __typename?: 'GlossaryEntryComments';
+  /** The entry's threads. Roots only, replies nested. */
+  comments: Array<Comment>;
+  /** The entry's English name */
+  label?: Maybe<Scalars['String']['output']>;
+  /** The glossary entry */
+  uuid: Scalars['ID']['output'];
 };
 
 /** A page of the passages that cite a glossary term */
@@ -1735,6 +1755,11 @@ export type Work = {
    * @deprecated Use glossaryTerms for paginated access
    */
   glossary: Array<GlossaryTermInstance>;
+  /**
+   * The glossary entries that carry comment threads. Empty for a `published`
+   * content source.
+   */
+  glossaryComments: Array<GlossaryEntryComments>;
   /** Paginated glossary term instances for this work */
   glossaryTerms: GlossaryTermConnection;
   /**
@@ -2196,6 +2221,16 @@ export type GetBibliographyCommentsQuery = { __typename?: 'Query', work?: { __ty
         { __typename?: 'Comment' }
         & CommentThreadFieldsFragment
       )>, unanchoredComments: Array<(
+        { __typename?: 'Comment' }
+        & CommentThreadFieldsFragment
+      )> }> } | null };
+
+export type GetGlossaryCommentsQueryVariables = Exact<{
+  uuid: Scalars['ID']['input'];
+}>;
+
+
+export type GetGlossaryCommentsQuery = { __typename?: 'Query', work?: { __typename?: 'Work', uuid: string, glossaryComments: Array<{ __typename?: 'GlossaryEntryComments', uuid: string, label?: string | null, comments: Array<(
         { __typename?: 'Comment' }
         & CommentThreadFieldsFragment
       )> }> } | null };
@@ -2663,6 +2698,22 @@ export const GetBibliographyCommentsDocument = gql`
     ${CommentThreadFieldsFragmentDoc}
 ${CommentFieldsFragmentDoc}
 ${UserInfoFieldsFragmentDoc}`;
+export const GetGlossaryCommentsDocument = gql`
+    query GetGlossaryComments($uuid: ID!) {
+  work(uuid: $uuid) {
+    uuid
+    glossaryComments {
+      uuid
+      label
+      comments {
+        ...CommentThreadFields
+      }
+    }
+  }
+}
+    ${CommentThreadFieldsFragmentDoc}
+${CommentFieldsFragmentDoc}
+${UserInfoFieldsFragmentDoc}`;
 export const GetWorkByUuidDocument = gql`
     query GetWorkByUuid($uuid: ID!) {
   work(uuid: $uuid) {
@@ -2777,6 +2828,9 @@ export function getSdk(client: GraphQLClient, withWrapper: SdkFunctionWrapper = 
     },
     GetBibliographyComments(variables: GetBibliographyCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetBibliographyCommentsQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetBibliographyCommentsQuery>({ document: GetBibliographyCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetBibliographyComments', 'query', variables);
+    },
+    GetGlossaryComments(variables: GetGlossaryCommentsQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetGlossaryCommentsQuery> {
+      return withWrapper((wrappedRequestHeaders) => client.request<GetGlossaryCommentsQuery>({ document: GetGlossaryCommentsDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetGlossaryComments', 'query', variables);
     },
     GetWorkByUuid(variables: GetWorkByUuidQueryVariables, requestHeaders?: GraphQLClientRequestHeaders, signal?: RequestInit['signal']): Promise<GetWorkByUuidQuery> {
       return withWrapper((wrappedRequestHeaders) => client.request<GetWorkByUuidQuery>({ document: GetWorkByUuidDocument, variables, requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders }, signal }), 'GetWorkByUuid', 'query', variables);

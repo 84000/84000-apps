@@ -25,7 +25,10 @@ export interface CommentAnchor {
 /** A thread together with every anchor placing it in one passage. */
 export interface AnchoredCommentThread {
   thread: CommentThread;
-  /** In document order within the passage. Never empty. */
+  /**
+   * In document order within the passage. Empty for a thread on a glossary
+   * entry, which has no text to anchor it.
+   */
   anchors: CommentAnchor[];
 }
 

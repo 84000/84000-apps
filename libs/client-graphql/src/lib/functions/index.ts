@@ -114,6 +114,10 @@ export {
   getBibliographyComments,
 } from './get-bibliography-comments';
 export {
+  GLOSSARY_COMMENTS_TYPE,
+  getGlossaryComments,
+} from './get-glossary-comments';
+export {
   ensureWorkSnapshot,
   type EnsureWorkSnapshotResult,
   type SnapshotDownload,
