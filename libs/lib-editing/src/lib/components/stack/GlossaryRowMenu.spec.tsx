@@ -77,6 +77,7 @@ const setup = ({ saving = false, readOnly = false } = {}) => {
     getFocusedUuid: () => null,
     subscribe: () => () => undefined,
     isReadOnly: () => readOnly,
+    focusPassage: jest.fn(),
     deleteGlossaryEntry: remove,
   } as unknown as StackController;
   const target = { uuid: 'e1', rect: { top: 0, left: 0, width: 1, height: 1 } };
@@ -117,6 +118,8 @@ describe('GlossaryRowMenu', () => {
       fireEvent.click(screen.getByText('Edit Entry'));
     });
     expect(glossaryEntryPanelOf(controller).get()).toBe('e1');
+    // Selected, so that selecting another row moves the panel there.
+    expect(controller.focusPassage).toHaveBeenCalledWith('e1');
   });
 
   it('offers the entry panel but no delete when read-only', () => {

@@ -203,7 +203,11 @@ export const GlossaryRowMenu = ({
               </DropdownMenuItem>
               {controller.getGlossaryEntry(uuid) && (
                 <DropdownMenuItem
-                  onSelect={() => openGlossaryEntryPanel(controller, uuid)}
+                  onSelect={() => {
+                    // Selecting the row keeps the panel on it until another is.
+                    controller.focusPassage(uuid);
+                    openGlossaryEntryPanel(controller, uuid);
+                  }}
                 >
                   <PencilIcon className="text-primary" /> Edit Entry
                 </DropdownMenuItem>

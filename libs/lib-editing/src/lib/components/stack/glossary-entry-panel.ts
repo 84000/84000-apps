@@ -123,6 +123,7 @@ export const saveGlossaryEntryPanelChange = async ({
       return { status: 'conflict', theirs: read.entry };
     if (read.status === 'not-found')
       return { status: 'conflict', theirs: null };
+    console.error('Failed to read a refused glossary entry:', read.error);
     return { status: 'failed', error: result.error };
   }
   if (result.outcomeUnknown) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import {
   createBrowserClient,
   type GlossaryEntry,
@@ -51,17 +51,54 @@ export type GlossaryEntrySaves = {
   dismiss: () => void;
 };
 
+/** Each entry's latest save in a stack, kept while the panel switches rows. */
+class GlossaryEntrySaveStore {
+  private saves = new Map<string, GlossaryEntryPanelPending>();
+  private listeners = new Set<() => void>();
+
+  get = (uuid: string | undefined) => (uuid && this.saves.get(uuid)) || null;
+
+  set(uuid: string, pending: GlossaryEntryPanelPending | null) {
+    if (pending) this.saves.set(uuid, pending);
+    else this.saves.delete(uuid);
+    this.listeners.forEach((listener) => listener());
+  }
+
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
+}
+
+const stores = new WeakMap<StackController, GlossaryEntrySaveStore>();
+
+const saveStoreOf = (controller: StackController) => {
+  let store = stores.get(controller);
+  if (!store) {
+    store = new GlossaryEntrySaveStore();
+    stores.set(controller, store);
+  }
+  return store;
+};
+
 /**
  * Saves for the entry a panel shows. A save is guarded by the entry as the
- * row holds it; a saved entry becomes the row's.
+ * row holds it; a saved entry becomes the row's. A save still running, or
+ * refused, when the panel moves to another row is there on coming back.
  */
 export const useGlossaryEntrySaves = (
   controller: StackController,
   entry: GlossaryEntry | null,
 ): GlossaryEntrySaves => {
-  const [latest, setLatest] = useState<GlossaryEntryPanelPending | null>(null);
-  // Another entry's save does not show here.
-  const pending = latest && latest.uuid === entry?.uuid ? latest : null;
+  const store = saveStoreOf(controller);
+  const uuid = entry?.uuid;
+  const pending = useSyncExternalStore(
+    store.subscribe,
+    () => store.get(uuid),
+    () => null,
+  );
 
   const run = useCallback(
     async (
@@ -70,7 +107,7 @@ export const useGlossaryEntrySaves = (
       after: GlossaryEntryChange,
     ) => {
       const { uuid } = before;
-      setLatest({ uuid, field, after, status: 'saving' });
+      store.set(uuid, { uuid, field, after, status: 'saving' });
       const outcome = await saveGlossaryEntryPanelChange({
         client: createBrowserClient(),
         before,
@@ -78,14 +115,12 @@ export const useGlossaryEntrySaves = (
       });
       if (outcome.status === 'saved') {
         controller.settleGlossaryEntry(uuid, outcome.entry);
-        setLatest((was) => (was?.uuid === uuid ? null : was));
+        store.set(uuid, null);
         return;
       }
-      setLatest((was) =>
-        was?.uuid === uuid ? { uuid, field, after, ...outcome } : was,
-      );
+      store.set(uuid, { uuid, field, after, ...outcome });
     },
-    [controller],
+    [controller, store],
   );
 
   const save = useCallback(
@@ -101,8 +136,8 @@ export const useGlossaryEntrySaves = (
     if (pending.theirs) {
       controller.settleGlossaryEntry(pending.uuid, pending.theirs);
     }
-    setLatest(null);
-  }, [controller, pending]);
+    store.set(pending.uuid, null);
+  }, [controller, pending, store]);
 
   const keepMine = useCallback(() => {
     if (pending?.status !== 'conflict' || !pending.theirs) return;
@@ -111,7 +146,9 @@ export const useGlossaryEntrySaves = (
     if (before) void run(before, pending.field, pending.after);
   }, [controller, pending, run]);
 
-  const dismiss = useCallback(() => setLatest(null), []);
+  const dismiss = useCallback(() => {
+    if (pending) store.set(pending.uuid, null);
+  }, [pending, store]);
 
   return {
     pending,

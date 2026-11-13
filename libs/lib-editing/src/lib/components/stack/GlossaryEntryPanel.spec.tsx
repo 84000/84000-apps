@@ -272,6 +272,48 @@ describe('GlossaryEntryPanel', () => {
     expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
   });
 
+  it('keeps a refused save when the panel moves to another row and back', async () => {
+    const { controller, focus } = setup();
+    mockSave.mockResolvedValue({
+      success: false,
+      reason: 'stale',
+      error: 'changed',
+    });
+    mockRead.mockResolvedValue({
+      status: 'found',
+      entry: entry('e1', { definitionRend: 'prependWithStandard' }),
+    });
+    await open(controller);
+    await act(async () => {
+      fireEvent.click(radio('Override'));
+    });
+    await act(async () => focus('e2'));
+    expect(document.querySelector('[data-glossary-entry-conflict]')).toBeNull();
+    await act(async () => focus('e1'));
+    expect(
+      document.querySelector('[data-glossary-entry-conflict]'),
+    ).toBeTruthy();
+    expect(radio('Override').checked).toBe(true);
+  });
+
+  it('sanitizes the standard definition it draws', async () => {
+    mockAuthorities.mockResolvedValue([
+      {
+        ...AUTHORITIES.a1,
+        definition:
+          '<p onmouseover="alert(1)">Safe <img src=x onerror="alert(1)"></p>',
+      },
+    ]);
+    const { controller } = setup();
+    await open(controller);
+    const standard = document.querySelector(
+      '[data-glossary-entry-standard]',
+    ) as HTMLElement;
+    expect(standard.textContent).toContain('Safe');
+    expect(standard.innerHTML).not.toContain('onmouseover');
+    expect(standard.innerHTML).not.toContain('onerror');
+  });
+
   it('saves the editor’s value over theirs on Keep mine', async () => {
     const { controller } = setup();
     const theirs = entry('e1', { definitionRend: 'prependWithStandard' });

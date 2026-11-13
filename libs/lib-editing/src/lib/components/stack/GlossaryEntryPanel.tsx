@@ -10,6 +10,8 @@ import {
 import {
   createBrowserClient,
   getGlossaryAuthorities,
+  GLOSSARY_DEFINITION_ALLOWLIST,
+  sanitizeHtml,
   termDefinition,
   type GlossaryAuthority,
   type GlossaryAuthorityMatch,
@@ -96,11 +98,20 @@ export const GLOSSARY_MODE_CHOICES: Choice[] = [
   },
 ];
 
-/** A stored definition as the row draws it, through the glossary codec. */
+/**
+ * A stored definition as the row draws it, through the glossary codec. An
+ * authority's definition is not saved through the entry's sanitizing save, so
+ * it is sanitized here first.
+ */
 const definitionHtml = (definition: string | null) =>
   renderGlossaryRow({
     type: 'doc',
-    content: glossaryDefinitionToContent(definition),
+    content: glossaryDefinitionToContent(
+      sanitizeHtml({
+        html: definition ?? '',
+        allowlist: GLOSSARY_DEFINITION_ALLOWLIST,
+      }),
+    ),
   });
 
 const Definition = ({
@@ -448,11 +459,17 @@ const GlossaryEntryPanelBody = ({
         <span className="text-muted-foreground text-xs">
           What readers will see
         </span>
-        <Definition
-          html={termDefinition(entry.definition, standard, rend || null)}
-          empty="Readers see no definition."
-          data-glossary-entry-preview=""
-        />
+        {authority.status === 'reading' ? (
+          <p className="text-muted-foreground text-sm">
+            Reading the authority…
+          </p>
+        ) : (
+          <Definition
+            html={termDefinition(entry.definition, standard, rend || null)}
+            empty="Readers see no definition."
+            data-glossary-entry-preview=""
+          />
+        )}
       </Section>
 
       <Section title="Matching">
