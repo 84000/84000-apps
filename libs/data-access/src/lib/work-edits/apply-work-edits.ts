@@ -1,8 +1,11 @@
 import type { DataClient } from '../types';
+import { planGlossary } from './glossary';
 import { mixedPassageOpsError, planPassages } from './passages';
 import {
   WORK_EDIT_GROUPS,
   type ApplyWorkEditsResult,
+  type GlossaryChanges,
+  type GlossaryOp,
   type GroupPlan,
   type PassageChanges,
   type PassagesOp,
@@ -14,7 +17,9 @@ import {
 } from './types';
 import { planWorkMetadata } from './work-metadata';
 
-type AnyPlan = GroupPlan<WorkMetadataChanges | PassageChanges>;
+type AnyPlan = GroupPlan<
+  WorkMetadataChanges | PassageChanges | GlossaryChanges
+>;
 
 const GROUP_OF: Record<WorkEditOp['op'], WorkEditGroup> = {
   'update-work': 'work-metadata',
@@ -25,6 +30,10 @@ const GROUP_OF: Record<WorkEditOp['op'], WorkEditGroup> = {
   'delete-text': 'passages',
   'add-annotation': 'passages',
   'remove-annotation': 'passages',
+  'upsert-glossary-entry': 'glossary',
+  'patch-glossary-entry': 'glossary',
+  'relink-glossary-entry': 'glossary',
+  'delete-glossary-entry': 'glossary',
 };
 
 /** The group an op commits in. */
@@ -40,6 +49,8 @@ const planGroup = (
       return planWorkMetadata({ ...args, ops: args.ops as WorkMetadataOp[] });
     case 'passages':
       return planPassages({ ...args, ops: args.ops as PassagesOp[] });
+    case 'glossary':
+      return planGlossary({ ...args, ops: args.ops as GlossaryOp[] });
   }
 };
 

@@ -21,8 +21,9 @@ const sourceFiles = (dir: string): string[] =>
     if (entry.isDirectory()) {
       return skipped.has(entry.name) ? [] : sourceFiles(path);
     }
+    // Specs and their fixtures seed and clean up rows directly.
     return /\.(?:tsx?|m?js)$/.test(entry.name) &&
-      !/\.spec\.(?:tsx?|m?js)$/.test(entry.name)
+      !/\.(?:spec|fixture)\.(?:tsx?|m?js)$/.test(entry.name)
       ? [path]
       : [];
   });

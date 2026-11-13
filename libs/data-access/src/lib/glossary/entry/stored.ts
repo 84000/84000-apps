@@ -15,6 +15,7 @@ import {
   type GlossaryEntryDTO,
   type GlossaryEntryDelete,
   type GlossaryEntrySave,
+  type GlossaryNewAuthority,
 } from './types';
 
 /**
@@ -133,7 +134,7 @@ const sameEntryRows = (
 
 /**
  * Reads everything `planSave` needs for these saves and deletes: the entries,
- * their raw rows, the rows and authorities the input names, and who else uses
+ * their raw rows, the rows and authorities the input names or creates, and who else uses
  * the names rows the save could edit or move.
  */
 export const readStored = async (
@@ -141,9 +142,10 @@ export const readStored = async (
   workUuid: string,
   saves: readonly GlossaryEntrySave[],
   deletes: readonly GlossaryEntryDelete[],
+  newAuthorities: readonly GlossaryNewAuthority[] = [],
 ): Promise<StoredRead> => {
   try {
-    const reads = plannedReads(saves, deletes);
+    const reads = plannedReads(saves, deletes, newAuthorities);
 
     const read = reads.entries.length
       ? await readEntries(client, workUuid, reads.entries)

@@ -95,7 +95,8 @@ With `dryRun`, every group says `applied: false`: nothing was written.
 
 If the same call also changes the work's metadata (`update-work` and the
 other metadata ops), that group is written first. When it fails, the passages
-are listed in `notAttempted` and nothing of them was written.
+are listed in `notAttempted` and nothing of them was written. Glossary entry
+ops (`reference/import-model/glossary.md`) are written after the passages.
 
 The tool never retries for you. After `"unknown"`, do not resend the same call
 blindly:

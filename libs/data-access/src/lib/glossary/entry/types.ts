@@ -95,6 +95,41 @@ export type GlossaryEntryDelete = {
   expect?: GlossaryEntryExpect;
 };
 
+/**
+ * An authority a save creates, in the same transaction as the entries that
+ * use it. One that already exists is left as it is.
+ */
+export type GlossaryNewAuthority = {
+  uuid: string;
+  headword: string;
+  headwordLanguage: string;
+  definition?: string | null;
+};
+
+/** An authority a save creates. `xmlId` is assigned when it is written. */
+export type GlossaryCreatedAuthority = {
+  uuid: string;
+  headword: string;
+  headwordLanguage: string;
+  definition: string | null;
+  /** `null` on a dry run. */
+  xmlId: string | null;
+};
+
+/**
+ * A names row a save does not edit in place: `copied` when another entry,
+ * work or creator uses it (the entry gets a copy), `moved` when a relink moves
+ * it to the entry's new authority.
+ */
+export type GlossaryNameRowChange = {
+  entryUuid: string;
+  nameUuid: string;
+  /** The names row's text as stored before the save. */
+  language: string | null;
+  content: string;
+  action: 'copied' | 'moved';
+};
+
 export type GlossarySaveChanges = {
   glossaries: { inserted: number; updated: number; deleted: number };
   glossaryEdges: { inserted: number; deleted: number };
@@ -118,6 +153,10 @@ export type GlossarySaveResult =
       entries: GlossaryEntry[];
       deleted: string[];
       changes: GlossarySaveChanges;
+      /** Authorities the save creates; present when there are any. */
+      authorities?: GlossaryCreatedAuthority[];
+      /** Names rows copied or moved rather than kept or edited; present when there are any. */
+      nameRows?: GlossaryNameRowChange[];
     }
   | {
       success: false;
@@ -160,6 +199,8 @@ export type GlossarySaveResultDTO = {
     names: { inserted: number; updated: number };
     annotations: { deleted: number };
   };
+  /** The authorities the save created, with their assigned `xmlId`. */
+  authorities?: { uuid: string; xmlId: string }[];
 };
 
 export const glossaryEntryNameFromDTO = (
