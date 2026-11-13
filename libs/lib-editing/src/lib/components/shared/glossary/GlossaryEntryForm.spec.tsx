@@ -204,6 +204,8 @@ describe('GlossaryEntryForm', () => {
     expect(args.workUuid).toBe(WORK);
     expect(args.entry.authorityUuid).toBe('auth-1');
     expect(args.entry.definition).toBeNull();
+    // Blank once trimmed: the entry shows its authority's standard definition.
+    expect(args.entry.definitionRend).toBe('overrideWithStandard');
     expect(args.entry.names).toEqual([
       {
         language: 'en',
@@ -230,6 +232,24 @@ describe('GlossaryEntryForm', () => {
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     expect(mockCreate.mock.calls[0][0].entry.definition).toBe(
       '<p>King of &lt;b&gt;gods&lt;/b&gt;<br>and men.</p><p>Second.</p>',
+    );
+    // A typed definition is the entry's own: "Custom definition".
+    expect(mockCreate.mock.calls[0][0].entry.definitionRend).toBe(
+      'incompatibleWithStandard',
+    );
+  });
+
+  it('uses the standard definition when none is typed', async () => {
+    setup({ initialEnglish: 'Indra' });
+    await pickAuthority();
+    fireEvent.click(createButton());
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0].entry).toEqual(
+      expect.objectContaining({
+        definition: null,
+        definitionRend: 'overrideWithStandard',
+      }),
     );
   });
 

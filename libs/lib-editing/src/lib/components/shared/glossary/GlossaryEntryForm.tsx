@@ -5,6 +5,7 @@ import {
   createBrowserClient,
   createGlossaryEntry,
   findGlossaryEntryMatches,
+  GLOSSARY_DEFINITION_RENDS,
   type GlossaryAuthorityMatch,
   type GlossaryEntry,
   type GlossaryEntryMatch,
@@ -36,6 +37,15 @@ const definitionFromText = (text: string): string | null => {
     )
     .join('');
 };
+
+type DefinitionRend = (typeof GLOSSARY_DEFINITION_RENDS)[number];
+
+/**
+ * A new entry with no definition shows its authority's standard one ("Use
+ * standard"); one with a definition shows its own ("Custom definition").
+ */
+const rendFor = (definition: string | null): DefinitionRend =>
+  definition === null ? 'overrideWithStandard' : 'incompatibleWithStandard';
 
 /** The duplicates found for one name and authority; null when the check failed. */
 type Matches = { key: string; matches: GlossaryEntryMatch[] | null };
@@ -111,13 +121,15 @@ export const GlossaryEntryForm = ({
     setPending(true);
     setError(null);
     let entry: GlossaryEntry | undefined;
+    const stored = definitionFromText(definition);
     try {
       const result = await createGlossaryEntry({
         client: createBrowserClient(),
         workUuid,
         entry: {
           authorityUuid: authority.uuid,
-          definition: definitionFromText(definition),
+          definition: stored,
+          definitionRend: rendFor(stored),
           names: [
             {
               language: 'en',
