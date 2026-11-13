@@ -337,6 +337,7 @@ const LinkedAuthority = ({
             <div className="min-w-0 flex-1">
               <GlossaryAuthoritySearch
                 autoFocus
+                boundedResults={false}
                 currentUuid={current?.uuid}
                 disabled={!saves.canSave}
                 onSelect={setRelinking}
@@ -356,7 +357,7 @@ const LinkedAuthority = ({
   );
 };
 
-/** The entry the panel shows: its names, authority and definition relation. */
+/** The entry the panel shows: its definition relation, names and authority. */
 const GlossaryEntryPanelBody = ({
   controller,
   entry,
@@ -385,14 +386,6 @@ const GlossaryEntryPanelBody = ({
 
   return (
     <div className="flex flex-col" data-glossary-entry-panel-body="">
-      <Section title="Names">
-        <GlossaryEntryNames entry={entry} saves={saves} readOnly={readOnly} />
-      </Section>
-
-      <Section title="Authority">
-        <LinkedAuthority read={authority} saves={saves} readOnly={readOnly} />
-      </Section>
-
       <Section title="Definition relation">
         <DefinitionRend
           value={rend}
@@ -424,6 +417,15 @@ const GlossaryEntryPanelBody = ({
             ''
           }
         />
+      </Section>
+
+      <Section title="Names">
+        <GlossaryEntryNames entry={entry} saves={saves} readOnly={readOnly} />
+      </Section>
+
+      {/* Last, so its search results grow into the dialog's own scroll. */}
+      <Section title="Authority">
+        <LinkedAuthority read={authority} saves={saves} readOnly={readOnly} />
       </Section>
     </div>
   );

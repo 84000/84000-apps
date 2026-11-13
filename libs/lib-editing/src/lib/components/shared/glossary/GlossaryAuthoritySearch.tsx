@@ -97,6 +97,7 @@ export const GlossaryAuthoritySearch = ({
   currentUuid,
   autoFocus,
   disabled,
+  boundedResults = true,
   className,
 }: {
   /** Called with the result the editor picks. */
@@ -105,6 +106,11 @@ export const GlossaryAuthoritySearch = ({
   currentUuid?: string;
   autoFocus?: boolean;
   disabled?: boolean;
+  /**
+   * Whether the results scroll in a box of their own. A host that scrolls,
+   * such as a dialog, turns this off so the results scroll with it.
+   */
+  boundedResults?: boolean;
   className?: string;
 }) => {
   const [query, setQuery] = useState('');
@@ -160,6 +166,7 @@ export const GlossaryAuthoritySearch = ({
           onSelect={onSelect}
           onRetry={() => setAttempt((n) => n + 1)}
           disabled={disabled}
+          bounded={boundedResults}
         />
       </div>
     </div>
@@ -172,12 +179,14 @@ const AuthoritySearchResults = ({
   onSelect,
   onRetry,
   disabled,
+  bounded,
 }: {
   search: Search;
   currentUuid?: string;
   onSelect: (authority: GlossaryAuthorityMatch) => void;
   onRetry: () => void;
   disabled?: boolean;
+  bounded: boolean;
 }) => {
   if (search.status === 'idle') return null;
   if (search.status === 'searching') {
@@ -204,7 +213,10 @@ const AuthoritySearchResults = ({
   }
   return (
     <ul
-      className="flex max-h-96 flex-col gap-1 overflow-y-auto"
+      className={cn(
+        'flex flex-col gap-1',
+        bounded && 'max-h-96 overflow-y-auto',
+      )}
       aria-label="Matching authorities"
     >
       {search.results.map((authority) => {
@@ -215,7 +227,7 @@ const AuthoritySearchResults = ({
               type="button"
               disabled={disabled || linked}
               onClick={() => onSelect(authority)}
-              className="hover:bg-accent focus-visible:bg-accent flex w-full flex-col gap-1 rounded-md border p-2 text-left text-sm disabled:cursor-default disabled:opacity-60"
+              className="hover:bg-accent focus-visible:bg-accent flex w-full flex-col gap-1 rounded-md p-2 text-left text-sm disabled:cursor-default disabled:opacity-60"
               data-authority-uuid={authority.uuid}
             >
               <span className="flex flex-wrap items-baseline gap-x-2">
