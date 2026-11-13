@@ -362,7 +362,7 @@ export const GlossaryEntryNames = ({
                 return (
                   <li
                     key={keyOf(name, index)}
-                    className="flex flex-col gap-1 py-1"
+                    className="flex flex-col gap-1 py-2"
                     data-glossary-name={name.content}
                   >
                     {isEditing ? (
