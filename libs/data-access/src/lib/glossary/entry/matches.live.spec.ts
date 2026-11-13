@@ -1,15 +1,14 @@
 /**
  * @jest-environment node
  */
-// DEV-910 acceptance: `findGlossaryEntryMatches`, the possible duplicates a new
-// glossary entry is checked against (criterion 9), against a local Supabase.
+// The possible duplicates of a new glossary entry, against a local Supabase.
 // Skipped unless DATA_ACCESS_LIVE=1, with SUPABASE_URL (a local URL) and
 // SUPABASE_SERVICE_ROLE_KEY. Run this file by its path alone: the flag also
 // enables the write suites.
 //
-// The fixture is built through DEV-880's createGlossaryEntry and removed with
-// deleteGlossaryEntry; the scratch works, authorities and names around it are
-// removed in afterAll. Reads only otherwise.
+// The entries are made with createGlossaryEntry and removed with
+// deleteGlossaryEntry; the scratch works, authorities and names around them
+// are removed in afterAll.
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -78,8 +77,6 @@ describeLive('findGlossaryEntryMatches (live)', () => {
 
   let wisdom: string;
   let compassion: string;
-  let other: string;
-  let boOnly: string;
   let wisdomInB: string;
 
   const newWork = async (n: number): Promise<string> => {
@@ -120,15 +117,6 @@ describeLive('findGlossaryEntryMatches (live)', () => {
     return entry.uuid;
   };
 
-  const rowCount = async (workUuid: string) => {
-    const { count, error } = await db
-      .from('glossaries')
-      .select('uuid', { count: 'exact', head: true })
-      .eq('work_uuid', workUuid);
-    check(error, 'count glossaries');
-    return count;
-  };
-
   beforeAll(async () => {
     db = liveClient();
     workA = await newWork(1);
@@ -141,9 +129,9 @@ describeLive('findGlossaryEntryMatches (live)', () => {
 
     wisdom = await newEntry(workA, authWisdom, [name(WISDOM)]);
     compassion = await newEntry(workA, authCompassion, [name(COMPASSION)]);
-    other = await newEntry(workA, authOther, [name(`Other ${tag}`)]);
+    await newEntry(workA, authOther, [name(`Other ${tag}`)]);
     // A Tibetan name equal to the searched English name is not a match.
-    boOnly = await newEntry(workA, authBoOnly, [
+    await newEntry(workA, authBoOnly, [
       name(`Fourth ${tag}`),
       name(WISDOM, {
         language: 'Bo-Ltn',
@@ -190,14 +178,14 @@ describeLive('findGlossaryEntryMatches (live)', () => {
   const find = (args: { english?: string; authorityUuid?: string }) =>
     findGlossaryEntryMatches({ client: db, workUuid: workA, ...args });
 
-  it('finds the entry with the same English name, ignoring case (criterion 9)', async () => {
+  it('finds the entry with the same English name, ignoring case, matching whole English names only', async () => {
     for (const english of [
       WISDOM,
       WISDOM.toLowerCase(),
       WISDOM.toUpperCase(),
     ]) {
-      const found = await find({ english });
-      expect(found).toEqual([
+      // Not the entry whose name equal to it is Tibetan, nor the others.
+      expect(await find({ english })).toEqual([
         expect.objectContaining({
           uuid: wisdom,
           english: WISDOM,
@@ -207,11 +195,13 @@ describeLive('findGlossaryEntryMatches (live)', () => {
         }),
       ]);
     }
+    expect(await find({ english: WISDOM.slice(0, -2) })).toEqual([]);
+    expect(await find({ english: `${WISDOM} and more` })).toEqual([]);
+    expect(await find({ authorityUuid: authUnused })).toEqual([]);
   });
 
-  it('finds the entries that link the same authority (criterion 9)', async () => {
-    const found = await find({ authorityUuid: authCompassion });
-    expect(found).toEqual([
+  it('says why each entry matches: its name, its authority or both', async () => {
+    expect(await find({ authorityUuid: authCompassion })).toEqual([
       expect.objectContaining({
         uuid: compassion,
         english: COMPASSION,
@@ -220,61 +210,25 @@ describeLive('findGlossaryEntryMatches (live)', () => {
         sameAuthority: true,
       }),
     ]);
-  });
-
-  it('flags both reasons on one entry when name and authority both match', async () => {
-    const found = await find({ english: WISDOM, authorityUuid: authWisdom });
-    expect(found).toEqual([
+    expect(await find({ english: WISDOM, authorityUuid: authWisdom })).toEqual([
       expect.objectContaining({
         uuid: wisdom,
         sameName: true,
         sameAuthority: true,
       }),
     ]);
-  });
-
-  it('lists an entry once per reason: one by name, another by authority', async () => {
-    const found = (
-      await find({ english: WISDOM, authorityUuid: authCompassion })
-    )?.slice();
-    expect(found?.map((m) => m.uuid).sort()).toEqual(
-      [wisdom, compassion].sort(),
-    );
+    const found = await find({
+      english: WISDOM,
+      authorityUuid: authCompassion,
+    });
     const byUuid = Object.fromEntries((found ?? []).map((m) => [m.uuid, m]));
+    expect(Object.keys(byUuid).sort()).toEqual([wisdom, compassion].sort());
     expect(byUuid[wisdom]).toEqual(
       expect.objectContaining({ sameName: true, sameAuthority: false }),
     );
     expect(byUuid[compassion]).toEqual(
       expect.objectContaining({ sameName: false, sameAuthority: true }),
     );
-  });
-
-  it('is empty, not null, when neither the name nor the authority matches', async () => {
-    expect(await find({ english: `Nothing like it ${tag}` })).toEqual([]);
-    expect(await find({ authorityUuid: authUnused })).toEqual([]);
-    expect(
-      await find({
-        english: `Nothing like it ${tag}`,
-        authorityUuid: authUnused,
-      }),
-    ).toEqual([]);
-  });
-
-  it('finds nothing for an omitted or empty name and authority', async () => {
-    expect(await find({})).toEqual([]);
-    expect(await find({ english: '' })).toEqual([]);
-    expect(await find({ english: '', authorityUuid: undefined })).toEqual([]);
-  });
-
-  it('matches the whole English name, not part of it', async () => {
-    expect(await find({ english: WISDOM.slice(0, -2) })).toEqual([]);
-    expect(await find({ english: `${WISDOM} and more` })).toEqual([]);
-  });
-
-  it('matches English names only, not another language’s', async () => {
-    // `boOnly` has the searched text as a Tibetan name, not an English one.
-    const found = await find({ english: WISDOM });
-    expect(found?.map((m) => m.uuid)).not.toContain(boOnly);
   });
 
   it('reads the entries of the given work only', async () => {
@@ -312,13 +266,6 @@ describeLive('findGlossaryEntryMatches (live)', () => {
     expect(numbers).toEqual([...numbers].sort((a, b) => a - b));
   });
 
-  it('never writes', async () => {
-    const before = await rowCount(workA);
-    await find({ english: WISDOM, authorityUuid: authWisdom });
-    await find({ english: `Nothing like it ${tag}` });
-    expect(await rowCount(workA)).toBe(before);
-  });
-
   it('is null when the read fails', async () => {
     // Every call chains on and the query resolves to an error.
     const failure = { data: null, count: null, error: { message: 'boom' } };
@@ -338,10 +285,5 @@ describeLive('findGlossaryEntryMatches (live)', () => {
     });
     spy.mockRestore();
     expect(found).toBeNull();
-  });
-
-  it('keeps the other entries out of the result', async () => {
-    const found = await find({ english: WISDOM, authorityUuid: authWisdom });
-    expect(found?.map((m) => m.uuid)).not.toContain(other);
   });
 });

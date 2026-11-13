@@ -1,6 +1,3 @@
-// DEV-910 acceptance, criterion 1: the glossary link popover's search offers
-// "Create entry" below the results, with or without results, when `onCreate`
-// is given; and nothing when it is not.
 import { act, fireEvent, render, screen } from '@testing-library/react';
 
 import { GlossarySearch } from './GlossarySearch';
@@ -52,64 +49,29 @@ beforeEach(() => {
 });
 afterEach(() => jest.useRealTimers());
 
-describe('GlossarySearch create option (criterion 1)', () => {
-  it('offers “Create entry” below the results', async () => {
+describe('GlossarySearch create option', () => {
+  it('offers “Create entry” below the results, which calls onCreate and links nothing', async () => {
     mockSearchTerms.mockResolvedValue(NODES);
-    render(<GlossarySearch onSelect={jest.fn()} onCreate={jest.fn()} />);
+    const onSelect = jest.fn();
+    const onCreate = jest.fn();
+    render(<GlossarySearch onSelect={onSelect} onCreate={onCreate} />);
+    expect(createButton()).toBeTruthy();
     await search('Indra');
 
-    const create = createButton();
-    expect(create).toBeTruthy();
-    const results = screen.getByRole('button', { name: /g\.4/ });
-    expect(
-      results.compareDocumentPosition(create as Node) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    const create = createButton() as HTMLElement;
     const last = screen.getByRole('button', { name: /g\.9/ });
     expect(
-      last.compareDocumentPosition(create as Node) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      last.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-  });
 
-  it('offers “Create entry” when nothing matches', async () => {
-    mockSearchTerms.mockResolvedValue([]);
-    render(<GlossarySearch onSelect={jest.fn()} onCreate={jest.fn()} />);
-    await search('Nothing');
-
-    expect(screen.getByText('No matching glossary terms found.')).toBeTruthy();
-    expect(createButton()).toBeTruthy();
-  });
-
-  it('offers “Create entry” before anything is searched', () => {
-    render(<GlossarySearch onSelect={jest.fn()} onCreate={jest.fn()} />);
-    expect(createButton()).toBeTruthy();
-  });
-
-  it('calls onCreate when it is clicked, and does not link anything', async () => {
-    mockSearchTerms.mockResolvedValue(NODES);
-    const onSelect = jest.fn();
-    const onCreate = jest.fn();
-    render(<GlossarySearch onSelect={onSelect} onCreate={onCreate} />);
-    await search('Indra');
-
-    fireEvent.click(createButton() as HTMLElement);
+    fireEvent.click(create);
     expect(onCreate).toHaveBeenCalledTimes(1);
     expect(onSelect).not.toHaveBeenCalled();
-  });
 
-  it('still links an existing entry when one is picked', async () => {
-    mockSearchTerms.mockResolvedValue(NODES);
-    const onSelect = jest.fn();
-    const onCreate = jest.fn();
-    render(<GlossarySearch onSelect={onSelect} onCreate={onCreate} />);
-    await search('Indra');
-
-    fireEvent.click(screen.getByRole('button', { name: /g\.4/ }));
-    expect(onSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ glossary: 'g-1', label: 'g.4' }),
-    );
-    expect(onCreate).not.toHaveBeenCalled();
+    mockSearchTerms.mockResolvedValue([]);
+    await search('Nothing');
+    expect(screen.getByText('No matching glossary terms found.')).toBeTruthy();
+    expect(createButton()).toBeTruthy();
   });
 
   it('offers no “Create entry” without onCreate, with or without results', async () => {

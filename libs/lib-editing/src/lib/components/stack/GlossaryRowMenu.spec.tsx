@@ -1,6 +1,14 @@
 import { useContext, type ReactNode } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type {
+  GlossaryAuthorityMatch,
   GlossaryEntry,
   GlossaryExcerptsPage,
 } from '@eightyfourthousand/data-access';
@@ -18,11 +26,24 @@ jest.mock('next/server', () => ({
 }));
 jest.mock('resend', () => ({ Resend: class {} }));
 
+const mockClient = { client: 'browser' };
 const mockExcerpts = jest.fn();
+const mockCreate = jest.fn();
+const mockMatches = jest.fn();
+const mockAuthoritySearch = jest.fn();
 jest.mock('@eightyfourthousand/data-access', () => ({
   ...jest.requireActual('@eightyfourthousand/data-access'),
-  createBrowserClient: () => ({}),
+  createBrowserClient: () => mockClient,
   getGlossaryTermExcerpts: (args: unknown) => mockExcerpts(args),
+  createGlossaryEntry: (args: unknown) => mockCreate(args),
+  findGlossaryEntryMatches: (args: unknown) => mockMatches(args),
+  searchGlossaryAuthorities: (args: unknown) => mockAuthoritySearch(args),
+}));
+
+const mockToast = jest.fn();
+jest.mock('@eightyfourthousand/design-system', () => ({
+  ...jest.requireActual('@eightyfourthousand/design-system'),
+  toast: (...args: unknown[]) => mockToast(...args),
 }));
 
 const ENTRY = {
@@ -222,5 +243,156 @@ describe('GlossaryRowMenu', () => {
     });
     expect(screen.getByRole('alert').textContent).toContain('Not allowed');
     expect(screen.getByText('Delete g.4 Indra')).toBeTruthy();
+  });
+});
+
+describe('GlossaryRowMenu: New Entry', () => {
+  const AUTHORITY: GlossaryAuthorityMatch = {
+    uuid: 'auth-1',
+    headword: 'Indra',
+    headwordLanguage: 'Sa-Ltn',
+    definition: null,
+    names: [],
+    matchedName: null,
+  };
+  const NEW_ENTRY = { uuid: 'entry-new', workUuid: 'work-1' } as GlossaryEntry;
+  /** Waits long enough for the debounced searches on a loaded machine. */
+  const SLOW = { timeout: 5000 };
+
+  /** The editor context, with permission to edit or not. */
+  const withPermission = (editPermitted: boolean | undefined) => {
+    const Provider = ({ children }: { children: ReactNode }) => {
+      const state = useContext(EditorContext);
+      return (
+        <EditorContext.Provider
+          value={{
+            ...state,
+            editPermitted,
+            work: { ...state.work, uuid: 'work-1' },
+          }}
+        >
+          {children}
+        </EditorContext.Provider>
+      );
+    };
+    return Provider;
+  };
+
+  const setupNew = (editPermitted: boolean | undefined) => {
+    const addGlossaryRow = jest.fn().mockResolvedValue(true);
+    const controller = {
+      getMeta: (uuid: string) => ({ uuid, label: 'g.4', type: 'glossary' }),
+      getGlossaryEntry: () => undefined,
+      deleteGlossaryEntry: jest.fn(),
+      addGlossaryRow,
+    } as unknown as StackController;
+    const target = {
+      uuid: 'e1',
+      rect: { top: 0, left: 0, width: 1, height: 1 },
+    };
+    const onClose = jest.fn();
+    const view = render(
+      <GlossaryRowMenu
+        controller={controller}
+        target={target}
+        onClose={onClose}
+      />,
+      { wrapper: withPermission(editPermitted) },
+    );
+    // Choosing an item closes the menu, which the stack does by clearing it.
+    const choose = async () => {
+      await act(async () => {
+        fireEvent.click(screen.getByText('New Entry'));
+      });
+      view.rerender(
+        <GlossaryRowMenu
+          controller={controller}
+          target={null}
+          onClose={onClose}
+        />,
+      );
+      await act(async () => undefined);
+    };
+    return { addGlossaryRow, choose };
+  };
+
+  const fillAndCreate = async () => {
+    fireEvent.change(await screen.findByLabelText('English name'), {
+      target: { value: 'Indra' },
+    });
+    fireEvent.change(screen.getByRole('searchbox'), {
+      target: { value: 'Indra' },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: /Indra/ }, SLOW));
+    await screen.findByRole('button', { name: 'Change' }, SLOW);
+    fireEvent.click(screen.getByRole('button', { name: 'Create entry' }));
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAuthoritySearch.mockResolvedValue([AUTHORITY]);
+    mockMatches.mockResolvedValue([]);
+    mockCreate.mockResolvedValue({
+      success: true,
+      dryRun: false,
+      entries: [NEW_ENTRY],
+      deleted: [],
+      changes: {},
+    });
+  });
+
+  it('is offered only once the editor may edit', () => {
+    setupNew(false);
+    expect(screen.queryByText('New Entry')).toBeNull();
+    cleanup();
+    setupNew(undefined);
+    expect(screen.queryByText('New Entry')).toBeNull();
+    cleanup();
+    setupNew(true);
+    expect(screen.getByText('New Entry')).toBeTruthy();
+  });
+
+  it('creates the entry and places its row through the controller', async () => {
+    const { choose, addGlossaryRow } = setupNew(true);
+    await choose();
+    await fillAndCreate();
+
+    await waitFor(() => expect(addGlossaryRow).toHaveBeenCalledTimes(1));
+    expect(addGlossaryRow).toHaveBeenCalledWith(
+      NEW_ENTRY,
+      expect.objectContaining({ client: mockClient }),
+    );
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate.mock.calls[0][0].workUuid).toBe('work-1');
+    expect(mockCreate.mock.calls[0][0].entry.names[0]).toEqual(
+      expect.objectContaining({ language: 'en', content: 'Indra' }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByLabelText('English name')).toBeNull(),
+    );
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
+  it('says so when the new row cannot be shown', async () => {
+    const { choose, addGlossaryRow } = setupNew(true);
+    addGlossaryRow.mockResolvedValue(false);
+    await choose();
+    await fillAndCreate();
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText('English name')).toBeNull();
+  });
+
+  it('closes without creating anything on Cancel', async () => {
+    const { choose, addGlossaryRow } = setupNew(true);
+    await choose();
+    await screen.findByLabelText('English name');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText('English name')).toBeNull(),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(addGlossaryRow).not.toHaveBeenCalled();
   });
 });
