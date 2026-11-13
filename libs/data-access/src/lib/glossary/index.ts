@@ -1,3 +1,4 @@
+export * from './authority';
 export * from './batch';
 export * from './entry';
 export * from './excerpts';

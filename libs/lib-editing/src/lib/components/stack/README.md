@@ -797,3 +797,9 @@ What later glossary work builds on:
   reveals it.
 - **Reviewing and deleting instances.** "Passages ›" in the footer opens the
   shared passages dialog, which this stack does not change.
+- **Picking an authority.** `GlossaryAuthoritySearch`
+  (`shared/glossary/`) searches authorities by headword or any of their
+  names, in any language and in Tibetan script or Wylie, and hands back the
+  one picked; it never creates one. It reads through data-access
+  `searchGlossaryAuthorities`, and `getGlossaryAuthorities` reads authorities
+  by uuid with every name.
