@@ -386,7 +386,18 @@ describe('GlossaryRowMenu: New Entry', () => {
   it('closes without creating anything on Cancel', async () => {
     const { choose, addGlossaryRow } = setupNew(true);
     await choose();
-    await screen.findByLabelText('English name');
+    // Nothing is selected to name the entry from, so the form starts empty.
+    const name = (await screen.findByLabelText(
+      'English name',
+    )) as HTMLInputElement;
+    expect(name.value).toBe('');
+    expect(
+      (
+        screen.getByRole('button', {
+          name: 'Create entry',
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() =>

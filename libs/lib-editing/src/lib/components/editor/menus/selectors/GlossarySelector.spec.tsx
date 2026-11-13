@@ -30,6 +30,12 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   searchGlossaryAuthorities: (args: unknown) => mockAuthoritySearch(args),
 }));
 
+const mockToast = jest.fn();
+jest.mock('@eightyfourthousand/design-system', () => ({
+  ...jest.requireActual('@eightyfourthousand/design-system'),
+  toast: (...args: unknown[]) => mockToast(...args),
+}));
+
 const mockSearchTerms = jest.fn();
 jest.mock('@eightyfourthousand/client-graphql', () => ({
   ...jest.requireActual('@eightyfourthousand/client-graphql'),
@@ -307,5 +313,50 @@ describe('GlossarySelector: Create entry', () => {
       expect(screen.queryByLabelText('English name')).toBeNull(),
     );
     expect(instances(editor)).toEqual([]);
+    expect(mockToast).toHaveBeenCalledWith(
+      'Entry created, but not linked because the text changed.',
+    );
+  });
+
+  it('does not link when the popover closed while the entry was created', async () => {
+    const editor = editorWithSelection();
+    let finish: (value: unknown) => void = () => undefined;
+    mockCreate.mockReturnValue(new Promise((resolve) => (finish = resolve)));
+    await openForm(editor);
+    await pickAuthority();
+    fireEvent.click(screen.getByRole('button', { name: 'Create entry' }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: 'Escape',
+    });
+    await waitFor(() =>
+      expect(screen.queryByLabelText('English name')).toBeNull(),
+    );
+    finish({ success: true, entries: [NEW_ENTRY] });
+
+    await waitFor(() =>
+      expect(mockToast).toHaveBeenCalledWith(
+        'Entry created, but not linked because the popover closed.',
+      ),
+    );
+    expect(instances(editor)).toEqual([]);
+  });
+});
+
+describe('GlossarySelector: linking an existing entry', () => {
+  it('links the selection to the entry picked from the results', async () => {
+    mockSearchTerms.mockResolvedValue([
+      { uuid: 'g-1', termNumber: 3, names: { english: 'Indra' } },
+    ]);
+    const editor = editorWithSelection();
+    await open(editor);
+    fireEvent.click(await screen.findByRole('button', { name: /g\.3/ }, SLOW));
+
+    await waitFor(() =>
+      expect(instances(editor)).toEqual([{ glossary: 'g-1', text: 'Indra' }]),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockToast).not.toHaveBeenCalled();
   });
 });

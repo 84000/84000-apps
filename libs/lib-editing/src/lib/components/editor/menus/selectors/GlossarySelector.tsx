@@ -57,16 +57,19 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
   );
 
   const link = useCallback(
-    (glossary: string) => {
+    (glossary: string, created = false) => {
       if (!range) return;
       const { from, to, text, opening } = range;
-      const stale =
-        openings.current.showing !== opening ||
-        editor.state.doc.textBetween(from, to, ' ') !== text;
-      if (stale) {
-        // Closed, reopened or edited meanwhile: the range may not hold the text.
-        toast('Entry created, but the text changed, so it was not linked.');
-        if (openings.current.showing === opening) onOpenChange(false);
+      // Closed, reopened or edited meanwhile: the range may not hold the text.
+      const closed = openings.current.showing !== opening;
+      if (closed || editor.state.doc.textBetween(from, to, ' ') !== text) {
+        const reason = closed ? 'the popover closed' : 'the text changed';
+        toast(
+          created
+            ? `Entry created, but not linked because ${reason}.`
+            : `Not linked because ${reason}.`,
+        );
+        if (!closed) onOpenChange(false);
         return;
       }
       editor
@@ -115,7 +118,7 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
           <GlossaryEntryForm
             workUuid={workUuid}
             initialEnglish={selected}
-            onCreated={(entry) => link(entry.uuid)}
+            onCreated={(entry) => link(entry.uuid, true)}
             onPickExisting={(match) => link(match.uuid)}
             onCancel={() => setCreating(false)}
           />

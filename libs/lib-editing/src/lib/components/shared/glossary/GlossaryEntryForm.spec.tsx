@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import type {
   GlossaryAuthorityMatch,
   GlossaryEntry,
@@ -117,6 +123,17 @@ const pickAuthority = async () => {
   await screen.findByRole('button', { name: 'Change' }, SLOW);
 };
 
+/** Silences the errors a failing create logs, for the rest of one test. */
+let silenced: jest.SpyInstance | undefined;
+const quiet = () => {
+  silenced = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+};
+
+afterEach(() => {
+  silenced?.mockRestore();
+  silenced = undefined;
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockSearch.mockResolvedValue([AUTHORITY]);
@@ -149,6 +166,7 @@ describe('GlossaryEntryForm', () => {
 
   it('creates only with a name and an authority', async () => {
     setup();
+    expect(englishInput().value).toBe('');
     expect(createButton().disabled).toBe(true);
     setName('Indra');
     expect(createButton().disabled).toBe(true);
@@ -162,6 +180,11 @@ describe('GlossaryEntryForm', () => {
     expect(createButton().disabled).toBe(true);
     setName('Indra');
     expect(createButton().disabled).toBe(false);
+
+    // Change goes back to the search, and the authority must be picked again.
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    expect(screen.getByRole('searchbox')).toBeTruthy();
+    expect(createButton().disabled).toBe(true);
   });
 
   it('creates the entry with the English name as edited and hands it on once saved', async () => {
@@ -222,7 +245,7 @@ describe('GlossaryEntryForm', () => {
     expect(englishInput().value).toBe('Indra');
     expect(createButton().disabled).toBe(false);
 
-    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    quiet();
     mockCreate.mockRejectedValue(new Error('offline'));
     fireEvent.click(createButton());
     await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(2));
@@ -239,7 +262,7 @@ describe('GlossaryEntryForm', () => {
   });
 
   it('does not offer to create again when what follows the create fails', async () => {
-    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    quiet();
     setup({
       initialEnglish: 'Indra',
       onCreated: jest.fn().mockRejectedValue(new Error('not shown')),
@@ -303,6 +326,19 @@ describe('GlossaryEntryForm', () => {
       expect(onPickExisting).toHaveBeenCalledWith(DUPLICATES[1]);
       expect(mockCreate).not.toHaveBeenCalled();
       expect(onCreated).not.toHaveBeenCalled();
+    });
+
+    it('shows no duplicates section when nothing matches', async () => {
+      setup({ initialEnglish: 'Indra' });
+      await pickAuthority();
+      await waitFor(() => expect(mockMatches).toHaveBeenCalled());
+      await act(async () => undefined);
+
+      expect(screen.queryByText('Possible duplicates')).toBeNull();
+      expect(
+        screen.queryByText('Possible duplicates could not be checked.'),
+      ).toBeNull();
+      expect(createButton().disabled).toBe(false);
     });
 
     it('says when they could not be checked, and still creates', async () => {

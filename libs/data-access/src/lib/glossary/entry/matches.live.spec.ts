@@ -198,6 +198,9 @@ describeLive('findGlossaryEntryMatches (live)', () => {
     expect(await find({ english: WISDOM.slice(0, -2) })).toEqual([]);
     expect(await find({ english: `${WISDOM} and more` })).toEqual([]);
     expect(await find({ authorityUuid: authUnused })).toEqual([]);
+    // With neither a name nor an authority there is nothing to match on.
+    expect(await find({})).toEqual([]);
+    expect(await find({ english: '  ' })).toEqual([]);
   });
 
   it('says why each entry matches: its name, its authority or both', async () => {
