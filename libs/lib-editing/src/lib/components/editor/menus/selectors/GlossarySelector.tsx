@@ -8,6 +8,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  toast,
 } from '@eightyfourthousand/design-system';
 import { BookOpenTextIcon } from 'lucide-react';
 import { useCallback, useContext, useRef, useState } from 'react';
@@ -17,13 +18,13 @@ import { GlossaryEntryForm } from '../../../shared/glossary/GlossaryEntryForm';
 import { useNavigation } from '../../../shared';
 
 /** The passage text the popover links, as selected when it opened. */
-type Range = { from: number; to: number; text: string };
+type Range = { from: number; to: number; text: string; opening: number };
 
 export const GlossarySelector = ({ editor }: { editor: Editor }) => {
   const [open, setOpen] = useState(false);
   const [range, setRange] = useState<Range | null>(null);
-  // Read by a create that finishes after the popover has closed.
-  const openRef = useRef(false);
+  // Which opening is showing, if any: a create that finishes later checks it.
+  const openings = useRef({ count: 0, showing: 0 });
   const [creating, setCreating] = useState(false);
   const { editPermitted } = useContext(EditorContext);
   const { uuid: workUuid } = useNavigation();
@@ -38,13 +39,17 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
     (next: boolean) => {
       if (next) {
         const { from, to } = editor.state.selection;
+        const opening = ++openings.current.count;
         setRange({
           from,
           to,
           text: editor.state.doc.textBetween(from, to, ' '),
+          opening,
         });
+        openings.current.showing = opening;
+      } else {
+        openings.current.showing = 0;
       }
-      openRef.current = next;
       setCreating(false);
       setOpen(next);
     },
@@ -53,11 +58,15 @@ export const GlossarySelector = ({ editor }: { editor: Editor }) => {
 
   const link = useCallback(
     (glossary: string) => {
-      if (!openRef.current) return;
-      const { from, to } = range ?? editor.state.selection;
-      // The passage changed under the popover: its range no longer holds the text.
-      if (range && editor.state.doc.textBetween(from, to, ' ') !== range.text) {
-        onOpenChange(false);
+      if (!range) return;
+      const { from, to, text, opening } = range;
+      const stale =
+        openings.current.showing !== opening ||
+        editor.state.doc.textBetween(from, to, ' ') !== text;
+      if (stale) {
+        // Closed, reopened or edited meanwhile: the range may not hold the text.
+        toast('Entry created, but the text changed, so it was not linked.');
+        if (openings.current.showing === opening) onOpenChange(false);
         return;
       }
       editor

@@ -73,6 +73,8 @@ export const GlossaryEntryForm = ({
   const [definition, setDefinition] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Created, but what followed failed: it must not be created again.
+  const [created, setCreated] = useState(false);
   const [found, setFound] = useState<Matches | null>(null);
   const nameId = useId();
   const definitionId = useId();
@@ -101,7 +103,7 @@ export const GlossaryEntryForm = ({
     };
   }, [workUuid, name, authority, key]);
 
-  const ready = !!name && !!authority && !pending;
+  const ready = !!name && !!authority && !pending && !created;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -144,6 +146,8 @@ export const GlossaryEntryForm = ({
       await onCreated(entry);
     } catch (cause) {
       console.error('Failed after creating glossary entry:', cause);
+      setCreated(true);
+      setPending(false);
     }
   };
 
@@ -205,6 +209,12 @@ export const GlossaryEntryForm = ({
       {checked?.matches === null && (
         <p className="text-muted-foreground text-xs">
           Possible duplicates could not be checked.
+        </p>
+      )}
+
+      {created && (
+        <p role="alert" className="text-destructive text-sm">
+          The entry was created, but could not be shown here.
         </p>
       )}
 
