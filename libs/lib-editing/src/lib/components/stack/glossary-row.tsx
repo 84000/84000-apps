@@ -18,7 +18,6 @@ import {
   keepMyGlossaryEntry,
   takeTheirGlossaryEntry,
 } from './glossary-save';
-import { GlossaryRowComment } from './GlossaryRowComment';
 import { renderGlossaryRow, type GlossaryWork } from './glossary-work';
 import { useStackWork } from './stack-work-context';
 
@@ -204,13 +203,10 @@ export const glossaryRowChrome = (
       </>
     ),
     footer: (
-      <div className="flex flex-col gap-1">
-        <GlossaryPassagesLink
-          uuid={entry.uuid}
-          english={englishNameOf(entry)?.content}
-        />
-        <GlossaryRowComment uuid={entry.uuid} />
-      </div>
+      <GlossaryPassagesLink
+        uuid={entry.uuid}
+        english={englishNameOf(entry)?.content}
+      />
     ),
   };
 };

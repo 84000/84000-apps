@@ -29,6 +29,11 @@ import { useEditorState } from '../editor/EditorProvider';
 import type { StackController } from './StackController';
 import type { StackPassageMenuTarget } from './StackPassageMenu';
 import { englishNameOf } from './glossary-row';
+import {
+  GlossaryCommentDialog,
+  GlossaryCommentMenuItem,
+  useGlossaryRowComments,
+} from './GlossaryRowComments';
 import { useStackWork } from './stack-work-context';
 
 const plural = (count: number, one: string, many: string) =>
@@ -60,6 +65,7 @@ export const GlossaryRowMenu = ({
   const [error, setError] = useState<string | null>(null);
   const stack = useStackWork();
   const { isSaving } = useEditorState();
+  const comments = useGlossaryRowComments(stack?.work.workUuid);
 
   const meta = target ? controller.getMeta(target.uuid) : null;
   const uuid = meta?.uuid ?? '';
@@ -188,6 +194,12 @@ export const GlossaryRowMenu = ({
               <DropdownMenuItem onSelect={copyLink}>
                 <CopyIcon className="text-primary" /> Copy Link
               </DropdownMenuItem>
+              <GlossaryCommentMenuItem
+                comments={comments}
+                controller={controller}
+                uuid={uuid}
+                onClose={onClose}
+              />
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={() => {
@@ -203,6 +215,8 @@ export const GlossaryRowMenu = ({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <GlossaryCommentDialog comments={comments} />
 
       <Dialog open={!!deleting} onOpenChange={(open) => !open && close()}>
         {deleting && (

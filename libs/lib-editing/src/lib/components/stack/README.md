@@ -759,13 +759,15 @@ entry that no longer exists. A row whose entry was deleted elsewhere shows that
 in place of a conflict, with "Remove it", which does the same without the
 request, and "Discard my edit".
 
-The row's footer holds "Passages ›" and, in the studio, "Comment"
-(`GlossaryRowComment`): a composer that starts a thread on the entry
-(`comments.entity_type` `glossary`, `entity_uuid` the entry's uuid) and opens
-it in the comments panel. An entry has no text for a thread to point at, so its
-threads are listed by `Work.glossaryComments` under "Glossary <name>" and are
-never unanchored; clicking one opens the entry in the Glossary tab. A thread
-outlives a deleted entry in the table but is no longer listed.
+The label menu also holds the comment entry (`GlossaryRowComments`): "See
+comments" when the entry has a thread, which opens it in the comments panel, and
+"Add comment" otherwise, which asks for the first comment in a dialog. Which
+entries have threads is read once for the work, and again when a comment is
+written (`Work.glossaryComments`), never per row or per menu open. An entry has
+no text for a thread to point at, so its threads are listed in the panel under
+"Glossary <name>" and are never unanchored; clicking one opens the entry in the
+Glossary tab. A thread outlives a deleted entry in the table but is no longer
+listed.
 
 What later glossary work builds on:
 

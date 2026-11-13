@@ -21,11 +21,6 @@ jest.mock('next/server', () => ({
   NextResponse: class {},
 }));
 jest.mock('resend', () => ({ Resend: class {} }));
-jest.mock('./GlossaryRowComment', () => ({
-  GlossaryRowComment: ({ uuid }: { uuid: string }) => (
-    <div data-testid="row-comment">{uuid}</div>
-  ),
-}));
 
 const name = (
   nameUuid: string,
@@ -131,12 +126,6 @@ describe('glossaryRowChrome', () => {
   it('draws names above a glossary row', () => {
     const chrome = glossaryRowChrome(controller('glossary', ENTRY), 'e1');
     expect(chrome.header).toBeDefined();
-  });
-
-  it('offers a comment on the entry in the footer', () => {
-    const chrome = glossaryRowChrome(controller('glossary', ENTRY), 'e1');
-    render(<>{chrome.footer}</>);
-    expect(screen.getByTestId('row-comment').textContent).toBe(ENTRY.uuid);
   });
 
   it('draws nothing around other rows, or an entry not read yet', () => {
