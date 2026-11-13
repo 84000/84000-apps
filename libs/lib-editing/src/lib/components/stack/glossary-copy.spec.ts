@@ -1,11 +1,13 @@
-import type {
-  DataClient,
-  GlossaryEntry,
-  GlossaryTermNode,
-} from '@eightyfourthousand/data-access';
-
-import { copyGlossaryRow, placeGlossaryRow } from './glossary-copy';
-import { loadGlossaryWork, type GlossaryWork } from './glossary-work';
+import { copyGlossaryRow } from './glossary-copy';
+import {
+  client,
+  entry,
+  loaded as loadedWith,
+  node,
+  page,
+  rows,
+  WORK,
+} from './glossary-rows.fixture';
 
 // See PassageStackController.spec.ts — building the schema reaches
 // `data-access/ssr` through two client barrels that leak it.
@@ -27,114 +29,13 @@ jest.mock('@eightyfourthousand/data-access', () => ({
   getGlossaryEntry: (args: unknown) => mockRead(args),
 }));
 
-const WORK = 'w1';
-const client = {} as DataClient;
+const mocks = { page: mockPage, entries: mockEntries };
 
-const entry = (uuid: string, workUuid = WORK): GlossaryEntry => ({
-  uuid,
-  workUuid,
-  authorityUuid: `a-${uuid}`,
-  definition: `<p>${uuid} defined.</p>`,
-  definitionRend: null,
-  glossMode: 'match',
-  names: [],
-});
-
-const node = (uuid: string, termNumber: number) =>
-  ({
-    uuid,
-    authority: `a-${uuid}`,
-    termNumber,
-    definition: `<p>${uuid} defined.</p>`,
-    names: { english: uuid },
-  }) as GlossaryTermNode;
-
-const page = (nodes: GlossaryTermNode[], more = { after: false }) => ({
-  nodes,
-  pageInfo: {
-    nextCursor: nodes.at(-1)?.uuid ?? null,
-    prevCursor: null,
-    hasMoreAfter: more.after,
-    hasMoreBefore: false,
-  },
-  totalCount: 9,
-});
-
-/** A glossary whose first page holds t1, t2, t3. */
-const loaded = async (more = { after: false }) => {
-  mockPage.mockResolvedValueOnce(
-    page([node('t1', 1), node('t2', 2), node('t3', 3)], more),
-  );
-  mockEntries.mockImplementation(async ({ uuids }: { uuids: string[] }) =>
-    uuids.map((uuid) => entry(uuid)),
-  );
-  return (await loadGlossaryWork({
-    workUuid: WORK,
-    client,
-    graphql: {} as never,
-  })) as GlossaryWork;
-};
-
-const rows = (glossary: GlossaryWork) =>
-  glossary.work.spine.entries().map(({ uuid, label }) => `${label} ${uuid}`);
+const loaded = (more?: { after: boolean }) => loadedWith(mocks, more);
 
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(console, 'error').mockImplementation(() => undefined);
-});
-
-describe('placeGlossaryRow', () => {
-  it('puts the row between its neighbours and renumbers the rows after it', async () => {
-    const glossary = await loaded();
-    mockPage.mockResolvedValueOnce(
-      page([node('t1', 1), node('c', 2), node('t2', 3)]),
-    );
-
-    expect(await placeGlossaryRow({ glossary, uuid: 'c', client })).toBe(true);
-
-    expect(mockPage).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        workUuid: WORK,
-        cursor: 'c',
-        direction: 'AROUND',
-        source: 'draft',
-      }),
-    );
-    expect(rows(glossary)).toEqual(['g.1 t1', 'g.2 c', 'g.3 t2', 'g.4 t3']);
-    expect(glossary.work.spine.meta('c')).toMatchObject({
-      type: 'glossary',
-      sort: 2,
-    });
-  });
-
-  it('puts a row that sorts first before the first row', async () => {
-    const glossary = await loaded();
-    mockPage.mockResolvedValueOnce(page([node('c', 1), node('t1', 2)]));
-
-    await placeGlossaryRow({ glossary, uuid: 'c', client });
-
-    expect(rows(glossary)).toEqual(['g.1 c', 'g.2 t1', 'g.3 t2', 'g.4 t3']);
-  });
-
-  it('puts a row that sorts last after the last row', async () => {
-    const glossary = await loaded();
-    mockPage.mockResolvedValueOnce(page([node('t3', 3), node('c', 4)]));
-
-    await placeGlossaryRow({ glossary, uuid: 'c', client });
-
-    expect(rows(glossary).at(-1)).toBe('g.4 c');
-  });
-
-  it('leaves a row outside the window for the feed', async () => {
-    const glossary = await loaded({ after: true });
-    mockPage.mockResolvedValueOnce(
-      page([node('t7', 7), node('c', 8), node('t8', 9)]),
-    );
-
-    expect(await placeGlossaryRow({ glossary, uuid: 'c', client })).toBe(false);
-
-    expect(rows(glossary)).toEqual(['g.1 t1', 'g.2 t2', 'g.3 t3']);
-  });
 });
 
 describe('copyGlossaryRow', () => {
