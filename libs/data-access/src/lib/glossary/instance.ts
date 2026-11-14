@@ -52,10 +52,7 @@ const byEnglishName = (a: GlossaryTermInstance, b: GlossaryTermInstance) =>
 /** PostgREST truncates a read at 1000 rows without an error. */
 const PUBLISHED_PAGE_ROWS = 1000;
 
-/**
- * Reads a work's published glossary terms a page at a time. Returns null on a
- * read error, so the caller can tell a failure from an empty glossary.
- */
+/** Reads a work's published glossary terms a page at a time; [] on error. */
 const fetchPublishedTerms = async (client: DataClient, workUuid: string) => {
   const rows: GlossaryTermIndexInstanceRow[] = [];
   for (let from = 0; ; from += PUBLISHED_PAGE_ROWS) {
@@ -70,7 +67,7 @@ const fetchPublishedTerms = async (client: DataClient, workUuid: string) => {
         `Error fetching published glossary instances for work: ${workUuid} `,
         error,
       );
-      return null;
+      return [];
     }
     const page = (data ?? []) as GlossaryTermIndexInstanceRow[];
     rows.push(...page);
@@ -96,7 +93,7 @@ export const getGlossaryInstances = async ({
 }): Promise<GlossaryTermInstance[]> => {
   if (source === 'published') {
     const rows = await fetchPublishedTerms(client, uuid);
-    return (rows ?? [])
+    return rows
       .map((row) => glossaryTermInstanceFromDTO(indexRowToDTO(row)))
       .sort(byEnglishName);
   }
