@@ -94,7 +94,10 @@ export async function POST(req: Request) {
     : null;
   const tools = [
     // The studio serves the draft, so its translation search does too.
-    ...createReadTools(auth.client, { searchTranslationSource: 'draft' }),
+    ...createReadTools(auth.client, {
+      searchTranslationSource: 'draft',
+      glossaryInstancesSource: 'draft',
+    }),
     ...createHarnessTools(auth.client),
     createOpenPolicyEditorTool(auth.client),
     ...createSessionTools(auth.client, auth.userId),

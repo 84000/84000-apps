@@ -97,6 +97,8 @@ describe('lookup', () => {
     expect(queries.map(({ table }) => table)).toEqual(['works', 'passages']);
   });
 
+  // The draft glossaries table; published lookups are covered by
+  // lookup.acceptance.spec.ts.
   it('limits lookup to the provided type', async () => {
     const { client, queries } = createClient({
       passages: [{ uuid: 'passage-uuid' }],
@@ -104,7 +106,12 @@ describe('lookup', () => {
     });
 
     await expect(
-      lookup({ client, uuid: 'glossary-uuid', type: 'glossary' }),
+      lookup({
+        client,
+        uuid: 'glossary-uuid',
+        type: 'glossary',
+        source: 'draft',
+      }),
     ).resolves.toEqual({ uuid: 'glossary-uuid', type: 'glossary' });
 
     expect(queries).toEqual([
@@ -127,7 +134,9 @@ describe('lookup', () => {
       bibliographies: [{ uuid: 'bibliography-uuid', xmlId: 'xml-id' }],
     });
 
-    await expect(lookup({ client, xmlId: 'xml-id' })).resolves.toEqual({
+    await expect(
+      lookup({ client, xmlId: 'xml-id', source: 'draft' }),
+    ).resolves.toEqual({
       uuid: 'glossary-uuid',
       type: 'glossary',
     });
@@ -158,7 +167,7 @@ describe('lookup', () => {
     });
 
     await expect(
-      lookup({ client, xmlId: 'xml-id', type: 'glossary' }),
+      lookup({ client, xmlId: 'xml-id', type: 'glossary', source: 'draft' }),
     ).resolves.toBeNull();
   });
 

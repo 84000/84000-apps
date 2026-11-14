@@ -94,14 +94,13 @@ export const workGlossaryResolver = async (
   args: { withAttestations?: boolean },
   ctx: GraphQLContext,
 ) => {
-  // NOTE: draft-only. `show_glossary_entries` has no published variant because
-  // no client selects this field — only `Work.glossaryTerms` is used — and it is
-  // slated for deletion rather than a published path. Do not select it from a
-  // reader context.
+  // Published reads the published terms; only draft reads the draft glossary
+  // tables, which need editor.read.
   const instances = await getGlossaryInstances({
     client: ctx.supabase,
     uuid: parent.uuid,
     withAttestations: args.withAttestations ?? false,
+    source: ctx.source,
   });
 
   return instances;

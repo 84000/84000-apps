@@ -1,5 +1,6 @@
 import {
   DataClient,
+  GlossaryTermInstance,
   GlossaryTermInstanceDTO,
   GlossaryTermInstancesDTO,
   glossaryTermInstanceFromDTO,
@@ -9,35 +10,6 @@ import {
   relationFor,
   type ContentSource,
 } from '../content-source';
-
-export const getGlossaryInstances = async ({
-  client,
-  uuid,
-  withAttestations = false,
-}: {
-  client: DataClient;
-  uuid: string;
-  withAttestations?: boolean;
-}) => {
-  const { data, error } = await client.rpc('show_glossary_entries', {
-    v_work_uuid: uuid,
-    v_with_attestation: withAttestations,
-  });
-  if (error) {
-    console.error(
-      `Error fetching glossary instances for work: ${uuid} `,
-      error,
-    );
-    return [];
-  }
-
-  const dto = data as GlossaryTermInstancesDTO;
-  return dto.glossary_entries.map(glossaryTermInstanceFromDTO).sort((a, b) => {
-    const nameA = a.names.english || '';
-    const nameB = b.names.english || '';
-    return nameA.localeCompare(nameB);
-  });
-};
 
 const GLOSSARY_INDEX_COLUMNS =
   'glossary_uuid, authority_uuid, work_uuid, definition, english, wylie, tibetan, sanskrit_plain, chinese, pali, alternatives';
@@ -74,6 +46,79 @@ const indexRowToDTO = (
   },
 });
 
+const byEnglishName = (a: GlossaryTermInstance, b: GlossaryTermInstance) =>
+  (a.names.english || '').localeCompare(b.names.english || '');
+
+/** PostgREST truncates a read at 1000 rows without an error. */
+const PUBLISHED_PAGE_ROWS = 1000;
+
+/**
+ * Reads a work's published glossary terms a page at a time. Returns null on a
+ * read error, so the caller can tell a failure from an empty glossary.
+ */
+const fetchPublishedTerms = async (client: DataClient, workUuid: string) => {
+  const rows: GlossaryTermIndexInstanceRow[] = [];
+  for (let from = 0; ; from += PUBLISHED_PAGE_ROWS) {
+    const { data, error } = await client
+      .from(relationFor('glossaryTerms', 'published'))
+      .select(GLOSSARY_INDEX_COLUMNS)
+      .eq('work_uuid', workUuid)
+      .order('glossary_uuid')
+      .range(from, from + PUBLISHED_PAGE_ROWS - 1);
+    if (error) {
+      console.error(
+        `Error fetching published glossary instances for work: ${workUuid} `,
+        error,
+      );
+      return null;
+    }
+    const page = (data ?? []) as GlossaryTermIndexInstanceRow[];
+    rows.push(...page);
+    if (page.length < PUBLISHED_PAGE_ROWS) return rows;
+  }
+};
+
+/**
+ * A work's glossary terms, sorted by English name. The published source reads
+ * the published snapshot; only the draft source reads the draft glossary
+ * tables (through `show_glossary_entries`), which need editor.read.
+ */
+export const getGlossaryInstances = async ({
+  client,
+  uuid,
+  withAttestations = false,
+  source = DEFAULT_CONTENT_SOURCE,
+}: {
+  client: DataClient;
+  uuid: string;
+  withAttestations?: boolean;
+  source?: ContentSource;
+}): Promise<GlossaryTermInstance[]> => {
+  if (source === 'published') {
+    const rows = await fetchPublishedTerms(client, uuid);
+    return (rows ?? [])
+      .map((row) => glossaryTermInstanceFromDTO(indexRowToDTO(row)))
+      .sort(byEnglishName);
+  }
+
+  const { data, error } = await client.rpc('show_glossary_entries', {
+    v_work_uuid: uuid,
+    v_with_attestation: withAttestations,
+  });
+  if (error) {
+    console.error(
+      `Error fetching glossary instances for work: ${uuid} `,
+      error,
+    );
+    return [];
+  }
+
+  const dto = data as GlossaryTermInstancesDTO;
+  return dto.glossary_entries
+    .map(glossaryTermInstanceFromDTO)
+    .sort(byEnglishName);
+};
+
 const fetchIndexRow = async (
   client: DataClient,
   uuid: string,
@@ -109,15 +154,11 @@ export const getGlossaryInstance = async ({
   // 1) Direct lookup of the term (the published snapshot mirrors its shape).
   let row = await fetchIndexRow(client, uuid, source);
 
-  // 2) Fallback: the uuid may be a non-translationMain child that isn't a term
-  //    of its own. Resolve its parent via glossary_edges and retry the lookup
-  //    with the parent uuid.
-  //
-  //    glossary_edges stays on the draft table in both sources: it is an
-  //    unversioned child→parent map, and the UUIDs it returns are stable across
-  //    the draft and published copies, so the retry below still resolves against
-  //    whichever source was asked for.
-  if (!row) {
+  // 2) Draft only: the uuid may be a non-translationMain child that isn't a
+  //    term of its own. Resolve its parent via glossary_edges and retry with the
+  //    parent uuid. The published source never reads glossary_edges (it needs
+  //    editor.read), so a child uuid is not found there.
+  if (!row && source === 'draft') {
     const { data: edge, error: edgeError } = await client
       .from('glossary_edges')
       .select('parent_uuid')

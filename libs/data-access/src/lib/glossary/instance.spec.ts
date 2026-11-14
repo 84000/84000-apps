@@ -92,44 +92,21 @@ describe('getGlossaryInstance', () => {
     });
   });
 
-  it('falls back to glossary_edges and retries the lookup with the parent uuid', async () => {
-    const indexResults: QueryResult[] = [
-      { data: null, error: null }, // first index lookup misses
-      { data: indexRow, error: null }, // retry with parent hits
-    ];
-
-    const client = {
-      from: jest.fn((table: string) => {
-        const builder: MockQueryBuilder = {
-          select: jest.fn(() => builder),
-          eq: jest.fn(() => builder),
-          limit: jest.fn(() => builder),
-          maybeSingle: jest.fn(() => {
-            if (table === 'glossary_edges') {
-              return Promise.resolve({
-                data: { parent_uuid: 'parent-uuid' },
-                error: null,
-              });
-            }
-            return Promise.resolve(
-              indexResults.shift() ?? { data: null, error: null },
-            );
-          }),
-        };
-        return builder;
-      }),
-    } as unknown as DataClient;
+  it('does not resolve a child uuid through glossary_edges', async () => {
+    const { client, fromCalls } = createMockClient({
+      published_glossaries_live: { data: null, error: null },
+      glossary_edges: { data: { parent_uuid: 'parent-uuid' }, error: null },
+    });
 
     const result = await getGlossaryInstance({ client, uuid: 'child-uuid' });
 
-    expect(result?.uuid).toBe('parent-uuid');
-    expect(result?.workUuid).toBe('work-uuid');
+    expect(result).toBeUndefined();
+    expect(fromCalls).toEqual(['published_glossaries_live']);
   });
 
-  it('returns undefined when neither the term nor an edge resolves', async () => {
+  it('returns undefined when the term is not published', async () => {
     const { client } = createMockClient({
       published_glossaries_live: { data: null, error: null },
-      glossary_edges: { data: null, error: null },
     });
 
     const result = await getGlossaryInstance({ client, uuid: 'missing-uuid' });

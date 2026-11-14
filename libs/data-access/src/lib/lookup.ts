@@ -1,3 +1,8 @@
+import {
+  DEFAULT_CONTENT_SOURCE,
+  relationFor,
+  type ContentSource,
+} from './content-source';
 import { DataClient } from './types';
 
 export const LOOKUP_ENTITY_TYPES = [
@@ -43,18 +48,20 @@ const lookupWorkByToh = async ({
 const lookupUuidInTable = async ({
   client,
   table,
+  column = 'uuid',
   type,
   uuid,
 }: {
   client: DataClient;
   table: string;
+  column?: string;
   type: LookupEntityType;
   uuid: string;
 }): Promise<LookupResult | null> => {
   const { data, error } = await client
     .from(table)
-    .select('uuid')
-    .eq('uuid', uuid)
+    .select(column)
+    .eq(column, uuid)
     .maybeSingle();
 
   if (error) {
@@ -62,7 +69,8 @@ const lookupUuidInTable = async ({
     return null;
   }
 
-  return data?.uuid ? { uuid: data.uuid, type } : null;
+  const found = (data as Record<string, string> | null)?.[column];
+  return found ? { uuid: found, type } : null;
 };
 
 const lookupXmlIdInTable = async ({
@@ -108,6 +116,35 @@ const XML_ID_COLUMN_BY_TYPE: Record<LookupEntityType, string> = {
   bibliography: 'xmlId',
 };
 
+/**
+ * The published source never reads the draft `glossaries` table (it needs
+ * editor.read): a glossary uuid resolves through the published terms, and a
+ * glossary xmlId, which the published terms do not carry, does not resolve.
+ */
+const lookupGlossaryUuid = ({
+  client,
+  uuid,
+  source,
+}: {
+  client: DataClient;
+  uuid: string;
+  source: ContentSource;
+}) =>
+  source === 'published'
+    ? lookupUuidInTable({
+        client,
+        table: relationFor('glossaryTerms', source),
+        column: 'glossary_uuid',
+        type: 'glossary',
+        uuid,
+      })
+    : lookupUuidInTable({
+        client,
+        table: TABLE_BY_TYPE.glossary,
+        type: 'glossary',
+        uuid,
+      });
+
 const LOOKUP_ORDER: LookupEntityType[] = [
   'work',
   'passage',
@@ -121,12 +158,14 @@ export const lookup = async ({
   uuid,
   xmlId,
   type,
+  source = DEFAULT_CONTENT_SOURCE,
 }: {
   client: DataClient;
   toh?: string | null;
   uuid?: string | null;
   xmlId?: string | null;
   type?: string | null;
+  source?: ContentSource;
 }): Promise<LookupResult | null> => {
   const scopedTypes = isLookupEntityType(type) ? [type] : LOOKUP_ORDER;
 
@@ -139,12 +178,15 @@ export const lookup = async ({
 
   if (uuid) {
     for (const lookupType of scopedTypes) {
-      const result = await lookupUuidInTable({
-        client,
-        table: TABLE_BY_TYPE[lookupType],
-        type: lookupType,
-        uuid,
-      });
+      const result =
+        lookupType === 'glossary'
+          ? await lookupGlossaryUuid({ client, uuid, source })
+          : await lookupUuidInTable({
+              client,
+              table: TABLE_BY_TYPE[lookupType],
+              type: lookupType,
+              uuid,
+            });
       if (result) {
         return result;
       }
@@ -154,6 +196,9 @@ export const lookup = async ({
 
   if (xmlId) {
     for (const lookupType of scopedTypes) {
+      if (lookupType === 'glossary' && source === 'published') {
+        continue;
+      }
       const result = await lookupXmlIdInTable({
         client,
         table: TABLE_BY_TYPE[lookupType],
