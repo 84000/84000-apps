@@ -49,16 +49,20 @@ const indexRowToDTO = (
 const byEnglishName = (a: GlossaryTermInstance, b: GlossaryTermInstance) =>
   (a.names.english || '').localeCompare(b.names.english || '');
 
+type PublishedTermRow = GlossaryTermIndexInstanceRow & {
+  sanskrit_attested: string | null;
+};
+
 /** PostgREST truncates a read at 1000 rows without an error. */
 const PUBLISHED_PAGE_ROWS = 1000;
 
 /** Reads a work's published glossary terms a page at a time; [] on error. */
 const fetchPublishedTerms = async (client: DataClient, workUuid: string) => {
-  const rows: GlossaryTermIndexInstanceRow[] = [];
+  const rows: PublishedTermRow[] = [];
   for (let from = 0; ; from += PUBLISHED_PAGE_ROWS) {
     const { data, error } = await client
       .from(relationFor('glossaryTerms', 'published'))
-      .select(GLOSSARY_INDEX_COLUMNS)
+      .select(`${GLOSSARY_INDEX_COLUMNS}, sanskrit_attested`)
       .eq('work_uuid', workUuid)
       .order('glossary_uuid')
       .range(from, from + PUBLISHED_PAGE_ROWS - 1);
@@ -69,7 +73,7 @@ const fetchPublishedTerms = async (client: DataClient, workUuid: string) => {
       );
       return [];
     }
-    const page = (data ?? []) as GlossaryTermIndexInstanceRow[];
+    const page = (data ?? []) as PublishedTermRow[];
     rows.push(...page);
     if (page.length < PUBLISHED_PAGE_ROWS) return rows;
   }
@@ -94,7 +98,15 @@ export const getGlossaryInstances = async ({
   if (source === 'published') {
     const rows = await fetchPublishedTerms(client, uuid);
     return rows
-      .map((row) => glossaryTermInstanceFromDTO(indexRowToDTO(row)))
+      .map(({ sanskrit_attested, ...row }) =>
+        glossaryTermInstanceFromDTO(
+          indexRowToDTO(
+            withAttestations
+              ? { ...row, sanskrit_plain: sanskrit_attested }
+              : row,
+          ),
+        ),
+      )
       .sort(byEnglishName);
   }
 

@@ -1,4 +1,4 @@
-import { getGlossaryInstance } from './instance';
+import { getGlossaryInstance, getGlossaryInstances } from './instance';
 import { DataClient } from '../types';
 
 type QueryResult = { data: unknown; error: unknown };
@@ -239,5 +239,71 @@ describe('getGlossaryInstance, draft source', () => {
 
     expect(result).toBeUndefined();
     spy.mockRestore();
+  });
+});
+
+describe('getGlossaryInstances, published source', () => {
+  const term = (n: number) => ({
+    ...indexRow,
+    glossary_uuid: `term-${n}`,
+    english: `Term ${String(n).padStart(4, '0')}`,
+    sanskrit_plain: 'plain',
+    sanskrit_attested: 'attested',
+  });
+
+  /** Serves `rows` through `.range(from, to)`, recording each range read. */
+  const createPagedClient = (rows: ReturnType<typeof term>[]) => {
+    const ranges: Array<[number, number]> = [];
+    const client = {
+      from: jest.fn(() => {
+        type PagedBuilder = {
+          select: () => PagedBuilder;
+          eq: () => PagedBuilder;
+          order: () => PagedBuilder;
+          range: (from: number, to: number) => Promise<QueryResult>;
+        };
+        const builder: PagedBuilder = {
+          select: jest.fn(() => builder),
+          eq: jest.fn(() => builder),
+          order: jest.fn(() => builder),
+          range: jest.fn((from: number, to: number) => {
+            ranges.push([from, to]);
+            return Promise.resolve({
+              data: rows.slice(from, to + 1),
+              error: null,
+            });
+          }),
+        };
+        return builder;
+      }),
+    };
+    return { client: client as unknown as DataClient, ranges };
+  };
+
+  it('reads every page past the 1000-row cap', async () => {
+    const rows = Array.from({ length: 1001 }, (_, n) => term(n));
+    const { client, ranges } = createPagedClient(rows);
+
+    const result = await getGlossaryInstances({ client, uuid: 'work-uuid' });
+
+    expect(result).toHaveLength(1001);
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+
+  it('returns attested Sanskrit only when asked for attestations', async () => {
+    const { client } = createPagedClient([term(1)]);
+
+    const [plain] = await getGlossaryInstances({ client, uuid: 'work-uuid' });
+    const [attested] = await getGlossaryInstances({
+      client,
+      uuid: 'work-uuid',
+      withAttestations: true,
+    });
+
+    expect(plain.names.sanskrit).toBe('plain');
+    expect(attested.names.sanskrit).toBe('attested');
   });
 });
