@@ -251,20 +251,33 @@ describe('getGlossaryInstances, published source', () => {
     sanskrit_attested: 'attested',
   });
 
-  /** Serves `rows` through `.range(from, to)`, recording each range read. */
+  /**
+   * Serves `rows` through `.range(from, to)`, recording each relation, filter
+   * and range read. Any rpc call fails the test: the published read must not
+   * reach `show_glossary_entries`, which reads the draft glossary tables.
+   */
   const createPagedClient = (rows: ReturnType<typeof term>[]) => {
     const ranges: Array<[number, number]> = [];
+    const relations: string[] = [];
+    const filters: Array<[string, unknown]> = [];
     const client = {
-      from: jest.fn(() => {
+      rpc: jest.fn((fn: string) => {
+        throw new Error(`unexpected rpc ${fn}`);
+      }),
+      from: jest.fn((relation: string) => {
+        relations.push(relation);
         type PagedBuilder = {
           select: () => PagedBuilder;
-          eq: () => PagedBuilder;
+          eq: (column: string, value: unknown) => PagedBuilder;
           order: () => PagedBuilder;
           range: (from: number, to: number) => Promise<QueryResult>;
         };
         const builder: PagedBuilder = {
           select: jest.fn(() => builder),
-          eq: jest.fn(() => builder),
+          eq: jest.fn((column: string, value: unknown) => {
+            filters.push([column, value]);
+            return builder;
+          }),
           order: jest.fn(() => builder),
           range: jest.fn((from: number, to: number) => {
             ranges.push([from, to]);
@@ -277,7 +290,12 @@ describe('getGlossaryInstances, published source', () => {
         return builder;
       }),
     };
-    return { client: client as unknown as DataClient, ranges };
+    return {
+      client: client as unknown as DataClient,
+      ranges,
+      relations,
+      filters,
+    };
   };
 
   it('reads every page past the 1000-row cap', async () => {
@@ -293,6 +311,26 @@ describe('getGlossaryInstances, published source', () => {
     ]);
   });
 
+  it("reads the work's published terms, sorted by English name, and nothing draft", async () => {
+    const { client, relations, filters } = createPagedClient([
+      term(2),
+      term(1),
+    ]);
+
+    const result = await getGlossaryInstances({
+      client,
+      uuid: 'work-uuid',
+      withAttestations: true,
+    });
+
+    expect(relations).toEqual(['published_glossaries_live']);
+    expect(filters).toEqual([['work_uuid', 'work-uuid']]);
+    expect(result.map((instance) => instance.uuid)).toEqual([
+      'term-1',
+      'term-2',
+    ]);
+  });
+
   it('returns attested Sanskrit only when asked for attestations', async () => {
     const { client } = createPagedClient([term(1)]);
 
@@ -305,5 +343,48 @@ describe('getGlossaryInstances, published source', () => {
 
     expect(plain.names.sanskrit).toBe('plain');
     expect(attested.names.sanskrit).toBe('attested');
+  });
+});
+
+describe('getGlossaryInstances, draft source', () => {
+  it('reads show_glossary_entries with the attestation flag, sorted by English name', async () => {
+    const rpc = jest.fn(() =>
+      Promise.resolve({
+        data: {
+          work_uuid: 'work-uuid',
+          glossary_entries: [
+            {
+              uuid: 'g-b',
+              authority_uuid: 'a',
+              work_uuid: 'work-uuid',
+              names: { english: 'Beta' },
+            },
+            {
+              uuid: 'g-a',
+              authority_uuid: 'a',
+              work_uuid: 'work-uuid',
+              names: { english: 'Alpha' },
+            },
+          ],
+        },
+        error: null,
+      }),
+    );
+    const from = jest.fn();
+    const client = { rpc, from } as unknown as DataClient;
+
+    const result = await getGlossaryInstances({
+      client,
+      uuid: 'work-uuid',
+      withAttestations: true,
+      source: 'draft',
+    });
+
+    expect(rpc).toHaveBeenCalledWith('show_glossary_entries', {
+      v_work_uuid: 'work-uuid',
+      v_with_attestation: true,
+    });
+    expect(from).not.toHaveBeenCalled();
+    expect(result.map((instance) => instance.uuid)).toEqual(['g-a', 'g-b']);
   });
 });

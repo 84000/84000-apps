@@ -13,12 +13,14 @@ const createClient = ({
   workToh = [],
   passages = [],
   glossaries = [],
+  publishedGlossaries = [],
   bibliographies = [],
 }: {
   works?: Row[];
   workToh?: Row[];
   passages?: Row[];
   glossaries?: Row[];
+  publishedGlossaries?: Row[];
   bibliographies?: Row[];
 }) => {
   const tables: Record<string, Row[]> = {
@@ -26,6 +28,7 @@ const createClient = ({
     work_toh: workToh,
     passages,
     glossaries,
+    published_glossaries_live: publishedGlossaries,
     bibliographies,
   };
   const queries: Array<{
@@ -169,6 +172,67 @@ describe('lookup', () => {
     await expect(
       lookup({ client, xmlId: 'xml-id', type: 'glossary', source: 'draft' }),
     ).resolves.toBeNull();
+  });
+
+  describe('published source', () => {
+    // A draft-only glossary: the published lookup must neither find nor read it.
+    const glossaries = [
+      {
+        uuid: 'draft-glossary-uuid',
+        glossary_xmlId: 'glossary-xml-id',
+        termType: 'translationMain',
+      },
+    ];
+
+    it('resolves a glossary uuid through the published terms', async () => {
+      const { client, queries } = createClient({
+        glossaries,
+        publishedGlossaries: [{ glossary_uuid: 'glossary-uuid' }],
+      });
+
+      await expect(
+        lookup({ client, uuid: 'glossary-uuid', type: 'glossary' }),
+      ).resolves.toEqual({ uuid: 'glossary-uuid', type: 'glossary' });
+
+      expect(queries).toEqual([
+        {
+          table: 'published_glossaries_live',
+          filters: [{ column: 'glossary_uuid', value: 'glossary-uuid' }],
+        },
+      ]);
+    });
+
+    it('does not resolve a glossary that is only in the draft table', async () => {
+      const { client, queries } = createClient({ glossaries });
+
+      await expect(
+        lookup({ client, uuid: 'draft-glossary-uuid', type: 'glossary' }),
+      ).resolves.toBeNull();
+      await expect(
+        lookup({ client, xmlId: 'glossary-xml-id', type: 'glossary' }),
+      ).resolves.toBeNull();
+
+      expect(queries.map(({ table }) => table)).not.toContain('glossaries');
+    });
+
+    it('skips the glossary step for an untyped xml ID', async () => {
+      const { client, queries } = createClient({
+        glossaries,
+        bibliographies: [
+          { uuid: 'bibliography-uuid', xmlId: 'glossary-xml-id' },
+        ],
+      });
+
+      await expect(
+        lookup({ client, xmlId: 'glossary-xml-id' }),
+      ).resolves.toEqual({ uuid: 'bibliography-uuid', type: 'bibliography' });
+
+      expect(queries.map(({ table }) => table)).toEqual([
+        'works',
+        'passages',
+        'bibliographies',
+      ]);
+    });
   });
 
   it('returns null when no identifier is provided', async () => {
