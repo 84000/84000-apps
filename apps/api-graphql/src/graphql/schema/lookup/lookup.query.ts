@@ -18,6 +18,7 @@ export const lookupQueries = {
       uuid: args.uuid,
       xmlId: args.xmlId,
       type: args.type,
+      source: ctx.source,
     });
   },
 };

@@ -4,6 +4,8 @@ import type { DataClient } from '@eightyfourthousand/data-access';
 import { getGlossaryInstances } from '@eightyfourthousand/data-access';
 
 jest.mock('@eightyfourthousand/data-access', () => ({
+  CONTENT_SOURCES: ['draft', 'published'],
+  DEFAULT_CONTENT_SOURCE: 'published',
   getGlossaryInstances: jest.fn(),
 }));
 const mocked = jest.mocked(getGlossaryInstances);
@@ -28,6 +30,7 @@ describe('get-glossary-instances tool', () => {
       client,
       uuid: 'w1',
       withAttestations: true,
+      source: 'published',
     });
   });
 });

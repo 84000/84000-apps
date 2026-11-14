@@ -14,7 +14,10 @@ import { createSearchEntitiesTool } from './search-entities';
 import { createGetGlossaryTermTool } from './get-glossary-term';
 import { createListGlossaryTermsTool } from './list-glossary-terms';
 import { createSearchGlossaryTermsTool } from './search-glossary-terms';
-import { createGetGlossaryInstancesTool } from './get-glossary-instances';
+import {
+  createGetGlossaryInstancesTool,
+  type GetGlossaryInstancesToolOptions,
+} from './get-glossary-instances';
 import { createGetBibliographyEntryTool } from './get-bibliography-entry';
 import { createListWorkBibliographiesTool } from './list-work-bibliographies';
 import { createGetImprintTool } from './get-imprint';
@@ -29,11 +32,13 @@ import { createTransliterateTool } from '../transliterate';
 export type ReadToolsOptions = {
   /** Which copy `search-translation` searches; published by default. */
   searchTranslationSource?: SearchTranslationToolOptions['source'];
+  /** Which copy `get-glossary-instances` reads by default; published by default. */
+  glossaryInstancesSource?: GetGlossaryInstancesToolOptions['source'];
 };
 
 export function createReadTools(
   client: DataClient,
-  { searchTranslationSource }: ReadToolsOptions = {},
+  { searchTranslationSource, glossaryInstancesSource }: ReadToolsOptions = {},
 ): McpToolDefinition[] {
   return [
     createGetTranslationTool(client),
@@ -46,7 +51,7 @@ export function createReadTools(
     createGetGlossaryTermTool(client),
     createListGlossaryTermsTool(client),
     createSearchGlossaryTermsTool(client),
-    createGetGlossaryInstancesTool(client),
+    createGetGlossaryInstancesTool(client, { source: glossaryInstancesSource }),
     createGetBibliographyEntryTool(client),
     createListWorkBibliographiesTool(client),
     createGetImprintTool(client),
@@ -72,6 +77,7 @@ export { createGetGlossaryTermTool } from './get-glossary-term';
 export { createListGlossaryTermsTool } from './list-glossary-terms';
 export { createSearchGlossaryTermsTool } from './search-glossary-terms';
 export { createGetGlossaryInstancesTool } from './get-glossary-instances';
+export type { GetGlossaryInstancesToolOptions } from './get-glossary-instances';
 export { createGetBibliographyEntryTool } from './get-bibliography-entry';
 export { createListWorkBibliographiesTool } from './list-work-bibliographies';
 export { createGetImprintTool } from './get-imprint';

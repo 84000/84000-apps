@@ -164,7 +164,9 @@ export const rpcFor = (
  * no `xmlId` column — so selecting it there would error. Published passages
  * therefore surface `xmlId` as null. Nothing in the reader render path reads it;
  * hash deep links resolve through `lookup()`, which keys xmlIds against the draft
- * tables and returns a UUID that is stable across both copies.
+ * tables and returns a UUID that is stable across both copies. Glossary xmlIds
+ * are the exception: `glossaries` needs editor.read, so a published lookup does
+ * not resolve them.
  */
 export const passageColumnsFor = (
   source: ContentSource = DEFAULT_CONTENT_SOURCE,
